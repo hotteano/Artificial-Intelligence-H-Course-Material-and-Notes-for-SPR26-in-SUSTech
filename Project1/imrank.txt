@@ -1,0 +1,1046 @@
+IMRank: Influence Maximization via Finding
+Self-Consistent Ranking
+Suqi Cheng, Huawei Shen, Junming Huang, Wei Chen, Xueqi Cheng
+InstituteofComputingTechnology,ChineseAcademyofSciences,Beijing,China
+{chengsuqi, shenhuawei, huangjunming, chenwei2012, cxq}@ict.ac.cn
+ABSTRACT [Software Engineering]: Metrics—complexity measures,
+performance measures
+Influence maximization, fundamental for word-of-mouth
+marketing and viral marketing, aims to find a set of
+seed nodes maximizing influence spread on social network. GeneralTerms
+Early methods mainly fall into two paradigms with certain
+Algorithms, Experiments, Performance
+benefits and drawbacks: (1) Greedy algorithms, selecting
+seed nodes one by one, give a guaranteed accuracy relying
+Keywords
+ontheaccurateapproximationofinfluencespreadwithhigh
+computational cost; (2) Heuristic algorithms, estimating influence maximization; social network analysis; viral mar-
+influence spread using efficient heuristics, have low compu- keting; iterative method; self-consistent ranking
+tational cost but unstable accuracy.
+We first point out that greedy algorithms are essential- 1. INTRODUCTION
+ly finding a self-consistent ranking, where nodes’ ranks
+Theprosperityofonlinesocialnetworksandsocialmedia
+are consistent with their ranking-based marginal influence
+invokes a new wave of research on social influence analy-
+spread. This insight motivates us to develop an iterative
+sis [18, 8]. Finding influential individuals is an important
+ranking framework, i.e., IMRank, to efficiently solve in-
+problem for many applications such as expert finding,
+fluence maximization problem under independent cascade
+online advertising and marketing. Influence maximization
+model. Starting from an initial ranking, e.g., one obtained
+is identified as a fundamental problem for viral marketing
+from efficient heuristic algorithm, IMRank finds a self-
+in the area of online marketing. It aims to find a fixed-size
+consistent ranking by reordering nodes iteratively in terms
+set of seed nodes in social network to maximize their in-
+of their ranking-based marginal influence spread computed
+fluence spread,i.e.,theexpectednumberofactivatednodes
+according to current ranking. We also prove that IMRank
+triggered by the seed nodes. Ever since being formalized
+definitelyconvergestoaself-consistentrankingstartingfrom
+by Kempe et al. [11], influence maximization has attracted
+any initial ranking. Furthermore, within this framework, a
+muchresearchattentionfromvariousfields,includingsocial
+last-to-first allocating strategy and a generalization of this
+network analysis, data mining and marketing.
+strategyareproposedtoimprovetheefficiencyofestimating
+Early methods for influence maximization mainly use
+ranking-basedmarginalinfluencespreadforagivenranking.
+greedy framework, iteratively selecting the node with the
+In this way, IMRank achieves both remarkable efficiency
+largest marginal influence spread as seed node. with an
+andhighaccuracybyleveragingsimultaneouslythebenefits
+accurate estimation of influence spread,the greedy frame-
+of greedy algorithms and heuristic algorithms. As demon-
+work provides a (1 − 1/e) approximation to the optimal
+strated by extensive experiments on large scale real-world
+solution of influence maximization [11], guaranteed by the
+social networks, IMRank always achieves high accuracy
+submodularity and monotonicity properties of influence
+comparable to greedy algorithms, while the computational
+cost is reduced dramatically, about 10−100 times faster spreadasafunctionofseednodeset. Accordingtotheways
+of estimating the influence spread, these methods roughly
+than other scalable heuristics.
+fall into two paradigms: greedy algorithms [11, 13, 4, 7, 5]
+and heuristic algorithms [12, 3, 20, 10]. Greedy algorithms
+CategoriesandSubjectDescriptors provide a (1 − 1/e − ϵ) approximation by approximating
+influencespreadthroughMonteCarlosimulation. However,
+F.2.2 [Analysis of Algorithms and Problem Com-
+they have high computation cost, for the calculation of
+plexity]: Non-numerical Algorithms and Problems; D.2.8
+marginal influence spread invokes estimating the influence
+spread of nodes from scratch, using time-consuming Monte
+Carlosimulation. Thelatter,incontrast,resortstoestimate
+Permissiontomakedigitalorhardcopiesofallorpartofthisworkforpersonalor
+classroomuseisgrantedwithoutfeeprovidedthatcopiesarenotmadeordistributed the influence spread via efficient heuristic methods. The
+forprofitorcommercialadvantageandthatcopiesbearthisnoticeandthefullcitation scalability of these heuristics generally outperforms the
+onthefirstpage. Copyrightsforcomponentsofthisworkownedbyothersthan greedyalgorithmsbyseveralordersofmagnitude. Yet,their
+ACMmustbehonored. Abstractingwithcreditispermitted. Tocopyotherwise,or high scalability is gained with the pain of unguaranteed ac-
+republish,topostonserversortoredistributetolists,requirespriorspecificpermission curacyandunreliableperformanceonvariousscenarios. To
+and/orafee.Requestpermissionsfrompermissions@acm.org. thebestofourknowledge,welackanefficientandaccurate
+SIGIR’14,July6–11,2014,GoldCoast,Queensland,Australia.
+algorithmofinfluencemaximizationforapplicationstolarge
+Copyright2014ACM978-1-4503-2257-7/14/07...$15.00.
+scale social networks in real world.
+http://dx.doi.org/10.1145/2600428.2609592.
+475In this paper, we propose an efficient and accurate Many efforts have been made to improve the scalability
+algorithm to solve influence maximization problem under of Kempe’s greedy algorithm for influence maximization.
+the widely-adopted independent cascade model [11]. This “cost-effective lazy forward” (CELF) optimization strat-
+algorithm is motivated by the key insight that greedy egy [13] and CELF++ [7] are proposed to reduce the
+algorithms are essentially finding a self-consistent rank- times of influence spread estimation in Kempe’s greedy
+ing, where nodes’ ranks are consistent with their ranking- algorithm by exploiting the submodularity property of
+based marginal influence spread. We prove that such influence spread function. To reduce the number of Monte
+self-consistent ranking can be obtained directly using an Carlo simulations, Chen et al. [4] proposed NewGreedy
+iterative ranking framework, i.e., IMRank, proposed in this algorithm and MixedGreedy algorithm. The NewGreedy
+paper. Starting from an initial ranking, e.g., one obtained algorithm reusing the results of Monte Carlo simulations in
+from efficient heuristic algorithm, IMRank efficiently finds thesameiterationtocalculatemarginalinfluencespreadfor
+a self-consistent ranking by reordering nodes iteratively allcandidatenodes. Yet,itincreasesthecomputationalcost
+in terms of their ranking-based marginal influence spread for a single Monte Carlo simulation because the simulation
+computed according to current ranking. Different from is now conducted globally rather than locally as done in
+greedyalgorithmscomputingmarginalinfluencespreadfrom Kempe’s greedy algorithm. As a remedy, the MixedGreedy
+scratch, IMRank conducts the computation of ranking- algorithm was developed, integrating the CELF strategy
+based marginal influence spread via an efficient last-to-first into the NewGreedy algorithm. Recently, Sheldon et
+allocatingstrategy. Asaresult,IMRankachievesbothhigh al. [17] proposed a sample average approximation approach
+efficiency and high accuracy by leveraging simultaneously from stochastic optimization for maximizing the spread of
+the benefits of greedy algorithms and heuristic algorithms. cascadesunderbudgetrestriction. Chengetal.[5]proposed
+To evaluate the performance of IMRank, we conduct aStaticGreedyalgorithm,remarkablyreducingthenumber
+extensive experiments on large-scale social networks with of Monte-Carlo simulations through strictly guaranteeing
+hundreds of thousands of edges to millions of edges. Ex- thesubmodularityandmonotonicitypropertiesofinfluence
+perimental results demonstrate that IMRank achieves high spread function. The above two works further improve the
+accuracy comparable to greedy algorithms with computa- scalability of greedy algorithm effectively. These improve-
+tional cost reduced dramatically. ments can speedup the original greedy algorithm in several
+Our main contributions are summarized as follows: orders of magnitude, however, scalability is still a challenge
+for greedy algorithms.
+• We propose a novel framework IMRank, which uni- Heuristicalgorithms,incontrast,mainlyreducethecom-
+fies the estimation of marginal influence spread and plexity of Kempe’s greedy algorithm through computing
+the selection of seed nodes. IMRank achieves both influencespreadheuristically. DegreeDiscount, designedfor
+remarkable efficiency and high accuracy by exploiting uniform independent cascade model, only computes direct
+theinterplaybetweenthecalculationofranking-based influence[4]. Community-basedgreedyalgorithmconducted
+marginal influence spread and the ranking of nodes. MonteCarlosimulationwithineachcommunityratherthan
+• WeprovethatIMRank,startingfromanyinitialrank- on the whole network [20]. SPM/SP1M algorithms [12]
+estimatedinfluencespreadaccordingtoshortestpaths,while
+ing,definitelyconvergestoaself-consistentrankingin
+PMIA algorithm [3] [19] used maximum influence paths.
+afinitenumberofsteps. ThisindicatesthatIMRankis
+SP1N algorithm employed the concept of Shapley value
+efficientatsolvingtheinfluencemaximizationproblem
+fromthecooperativegametheory[15]. IRIEalgorithm[10]
+via finding a final self-consistent ranking.
+efficiently estimated marginal influence spread through an
+• We design an efficient last-to-first allocating strategy iterativemethod. Besidestheaboveheuristicsusinggreedy
+toapproximatelyestimatetheranking-basedmarginal approach, Jiang et al. proposed a simulated annealing
+influence spread of nodes for a given ranking, further approachwithseveralheuristics[9],andMathioudakisetal.
+improving the efficiency of IMRank. suggestedtospeedupinfluencemaximizationusingasimpli-
+fiedinfluencenetwork[14]. However,theseheuristicscannot
+• We conduct extensive experiments on several real- give rise to guaranteed accuracy and their performance is
+world networks under different types of independent unstable on different networks and diffusion models.
+cascade model. Through comparing two instances Takentogether,inexistingalgorithmsforinfluencemaxi-
+of IMRank with both greedy algorithm and exist- mization,theestimationofinfluencespreadandtheranking
+ing state-of-the-art heuristics, we show that IMRank of nodes are studied separately. On one hand, without
+always achieves comparable accuracy to the greedy leveragingtherankingofnodes,greedyalgorithmsestimate
+algorithm,whileruns10−100timesfasterthanother
+the influence spread of nodes from scratch, causing high
+heuristics with comparable accuracy. computational cost. On the other hand, lacking a reliable
+estimationofinfluencespread,heuristicalgorithmshaveno
+2. RELATEDWORK guaranteed accuracy. Hence, in this paper, we improve
+Influence maximization problem was first studied by thestate-of-the-artsolutionofinfluencemaximizationprob-
+Domingos and Richardson from algorithmic perspective [6, lem by exploiting the interplay between marginal influence
+16]. Kempe et al. then formulated it as a combinatorial spread and the ranking of nodes.
+optimization problem of finding a set of seed nodes with
+maximum influence spread [11]. They proved that this
+3. SELF-CONSISTENTRANKING
+problemisNP-hardandproposedagreedyalgorithmwhich
+can guarantee a (1−1/e−ϵ) approximation ratio. Here, ϵ For influence maximization on a social network G =
+is caused by the inaccurate estimation of influence spread. (V,E), influence spread function I(S) of a node set S ⊆ V
+The biggest problem suffered by Kempe’s greedy algorithm is defined as the expected number of nodes in G eventually
+isitslowscalability,limitingittosocialnetworkswithsmall activated by S under certain diffusion model. The function
+or moderate size. I(·) is nonnegative, monotone, and submodular, satisfying
+476Table 1: Notations.
+Notation Description
+v a node with index i
+i
+r the index of node with rank i with respect to a given ranking r
+i
+S ={v ,v ,...,v } a set of nodes
+1 2 n
+I(S) expected number of nodes eventually activated by set S
+M(v|S) marginal influence spread by adding node v into a seed set S
+M (v ) ranking-based marginal influence, short for M(v|{v ,v ,...,v })
+p(v i |{v 1 ,v r 2 ,. r . i .,v i−1 }) probabilitythatv i isactivatedgiventhatacollection r1 ofn r o 2 des{v 1 ri , − v 1 2 ,...,v i−1 }arealreadyactivated
+η (v ,v ) influence score that node v sends to node v with respect to a given ranking r
+r i j i j
+d(v ,v ) a simple path starting from v and ending at v , i.e., {w =v ,w ,...,w =v }
+j i j i 1 j 2 n i
+d (v ,v ) influence path, which is a simple path where v is the only node ranked higher than v on the path
+r j i j i
+ρ (v ,v ) probability that v is activated by v through any influence path, with respect to a given ranking r
+r i j i j
+l maximal length of all influence paths to account into
+• Nonnegative: I(S)≥0; Theorem 1. Greedy algorithms for in(cid:13)uence maxi-
+mization gives a self-consistent ranking.
+• Monotone: I(S)≤I(T), if S ⊆T ⊆V;
+Proof. Greedy algorithms iteratively select the node
+• Submodular: I(S∪{v})−I(S)≥I(T ∪{v})−I(T),
+with maximum marginal influence spread as seed node.
+for all v∈V and S ⊆T ⊆V.
+Witharankingrdenotingtheorderseednodesareselected,
+T o b m p y h a t e x i g m s i r e m e a p e u l d r m s o y o p l m u e a r t l a g t i r o i o e g n r s i i n t o g a h f u l m a i i n r n s fl a , fl n u u i t e t e e n e n e r c c a e t e t h m i s a v p t e a r l x a y e i a m f d a se i i z r l a e a s a c t p t i s o i e p n n e r g d o c x a t n i h n m o e d b a e t e n . i o o o d n b e t t a o w in t i h e th d e w v e ≥ p n r l e e i c M − t h e e 1 a s ( } t v p v ) h e r r , e j e M f | a p o { d r r v ( o v r f i o u 1 r f i , n < | v w c { r t v i j 2 i t r . o , h 1 n · , I M · n v i · m r , 2 a ( p v , d v l r · d i j · e − i · s t ) 1 i , t o = } v h n ) r a . , M i t − t U M 1 h ( } v s e i ) ( n v s ≥ g | u r { j b v t M | m r { a v ( o n , r v v d 1 s r i , u j t v l i | , a v { r · 2 r v i · t i , r t y · · 1 y , · , , · w v v o r , f e 2 v i , c r n . i o fl − } . m . u 1 ) , } - - ≥ )
+Definition 1. Marginal in(cid:13)uence spread: Given a M(v |{v ,v ,··· ,v r ri})=M ( r v i ). r1 r2 ri−1
+node set S ⊆ V and a node v ∈ V, the marginal influence rj r1 r2 rj−1 r rj
+spreadofv uponS isdefinedasM(v|S)=I(S∪{v})−I(S). For a given social network, however, there are multiple
+self-consistent rankings besides the one obtained by greedy
+However, the influence spread function is not extensive,
+i.e., I(S ∪{v}) ̸= I(S)+I({v}) if v ∈/ S, since the nodes algorithms. Hence it is critical to develop effective algo-
+rithms to achieve a desired self-consistent ranking which is
+activated by S may overlap with the nodes activated by
+either the very ranking obtained by greedy algorithms or
+v. Therefore, one has to compute the marginal influence
+spreadbycomputingbothI(S)andI(S∪{v})fromscratch, comparable to it from the point of influence maximization.
+resultinginhugecomputationcost. Toremedythisproblem,
+we further analyze the property of the set of seed nodes 4. IMRANK
+obtained by greedy algorithms. Indeed, greedy algorithms In this section, we develop an efficient iterative frame-
+implicitly give a ranking of nodes, where nodes are ranked work IMRank to solve the influence maximization problem
+in decreasing order of their marginal influence spread. through finding a desired self-consistent ranking. IMRank
+Meanwhile, their marginal influence spread are computed distinguishesitselffromgreedyalgorithmsinonekeypoint:
+based on their ranks in the implicit ranking. Hence, greedy ineachiteration,IMRankefficientlyestimatesthemarginal
+algorithms obtain a self-consistent ranking of nodes. influencespreadofallnodesbasedoncurrentranking,while
+Before formally defining self-consistent ranking, we first greedy algorithms compute the marginal influence spread
+introduce several related notations for clarity. Without loss from scratch with high computational cost.
+of generality, we index all the nodes into {v ,v ,··· ,v }
+1 2 n
+where n = |V|. A ranking of nodes, determined by a 4.1 IMRank: iterativeframework
+permutation (r 1 ,r 2 ,··· ,r n ) with r i ∈ {1,2,··· ,n} de- IMRank aims to find a self-consistent ranking from any
+noting the index of node with rank i, is denoted as initial ranking. It achieves the goal by iteratively adjusting
+r = {v r1 ,v r2 ,··· ,v rn }. With these notations, for conve- current ranking as follows:
+nience, we now define the ranking-based marginal influence
+spread of node with respect to a ranking r as M (v ) = • Computetheranking-basedmarginalinfluencespread
+M(v ri |{v r1 ,v r2 ,··· ,v ri−1 }). Inaddition,forclarity
+r
+,Ta
+ri
+ble1 ofallnodesM r withrespecttothecurrentrankingr;
+lists all important notations used in this paper. • Obtain a new ranking by sorting all nodes according
+Definition 2. Self-consistent ranking: Arankingr is to M r .
+a self-consistent ranking iff M (v ) ≥ M (v ),∀1 ≤ i <
+j ≤n.
+r ri r rj This iterative process is formally described in Algorithm 1.
+It definitely converges to a self-consistent ranking, starting
+For the set of seed nodes obtained by greedy algorithms, from any initial ranking (see Section 4.3 for proof). In-
+there exists an interplay between the ranks of nodes and tuitively, IMRank iteratively promotes influential nodes to
+their marginal influence spread. On one hand, these nodes toppositionsintheranking,alwaysincreasingtheinfluence
+are ranked in descending order of their marginal influence spreadoftop-knodesduringtheprocessuntilitconvergesto
+spread. On the other hand, the marginal influence spread a self-consistent ranking. Indeed, different initial rankings
+of nodes is calculated with respect to the ranks of nodes. could make IMRank converge to different self-consistent
+Indeed,thesetofseednodesobtainedbygreedyalgorithms rankings. We leave the discussion about initial ranking to
+forms a self-consistent ranking. Section 4.4.
+477Algorithm 1 IMRank (r) Algorithm 2 Calculate M (r)
+r
+1: r(0) =r 1: for i=1 to n do
+2: t←0 2: M r (v ri )←1
+3: repeat 3: end for
+4: t←t+1 4: for i=n to 2 do
+5: Calculate M with respect to the ranking r 5: for j =1 to i do
+6: Generate a r n (t e ) w ranking r(t) by sorting nodes in 6: M r (v rj ) ← (M r (v rj ) + p(v r)j ,v ri )×M r (v ri )
+7: un
+d
+t
+e
+i
+c
+l
+r
+r
+e
+(
+a
+t)
+si
+=
+ng
+r
+o
+(t
+r
+−
+d
+1
+e
+)
+r according to M r(t) 7
+8
+:
+: en
+M
+d
+r
+f
+(
+o
+v
+r
+ri ) ← 1−p(v rj ,v ri ) ×M r (v ri )
+8: output the self-consistent ranking r(t) 9: end for
+10: output M
+r
+4.2 Calculate ranking-based marginal influ-
+where p(v ,v ) is the propagation probability that
+encespread rj ri
+nodev directlyactivatesnodev ,knownasapriori
+The core step in IMRank is the calculation of ranking- for the rj independent cascade mode r l i .
+basedmarginalinfluencespread. Onestraightforwardwayis
+to directly compute M (v )=M(v |{v ,v ,··· ,v }) The calculation of the ranking-based marginal influence
+r ri ri r1 r2 ri−1
+usingMonteCarlosimulation,asdonebygreedyalgorithms. spread M is completed after all nodes are scanned. The
+r
+However,prohibitivelyhighcomputationalcostmakesitim- LFA strategy is formally depicted in Algorithm 2.
+practical for IMRank. To combat this problem, we propose NowweuseanexampletoillustratetheLFAstrategy. In
+a Last-to-First Allocating (LFA) strategy to efficiently esti- Figure 1, v denotes the node with rank k for convenience,
+k
+mate M , leveraging the intrinsic interdependence between and p is the propagation probability along edge ⟨v ,v ⟩.
+r i;j i j
+ranking and ranking-based marginal influence spread. We Here, the ranking is simply r = {v ,v ,v ,v ,v }. Solid
+1 2 3 4 5
+develop the LFA strategy under the independent cascade lines represent the edges where influence could propagate,
+model[11]. Fortheindependentcascademodel,whenanode while dashed lines depict the edges where influence score is
+u is activated, it has one chance to independently activate delivered when nodes are scanned. The lack of dashed line
+itsneighboringnodeswithapropagationprobabilityp(u,v) fromnodev tonodev reflectsthatnodev isrankedhigher
+3 2 2
+ifv hasnotbeenactivatedyet. Eachnodecanbeactivated thannodev . Forthiscase,theLFAstrategycomputesthe
+3
+for only once. ranking-based marginal influence spread as follows:
+TheLFAstrategyisbasedonthefollowingfact: bydefini-
+tion, the ranking-based marginal influence spread M r (v) is 1. Initially, M r (v i )=1,1≤i≤5.
+equaltotheexpectednumberofnodesactivatedbyv,given
+2. Nodev isthenscannedasthelastnodeintheranking.
+that when all nodes ranked higher than it have finished the 5
+According to Equation( 1), v delivers p M (v ) =
+propagation of their influence. This implies two basic rules 5 3;5 r 5
+p tov andp (1−p )tov respectively. Accord-
+under the calculation of M (v): 3;5 3 4;5 3;5 4
+r ingly, M (v ) becomes (1−p )(1−p ).
+r 5 4;5 3;5
+1. Each node can only be activated by nodes ranked
+3. Then node v is scanned. Since M (v ) is now 1+
+higher than it in the given ranking; 4 r 4
+p (1−p ),v deliversp +p p (1−p )tov .
+4;5 3;5 4 2;4 2;4 4;5 3;5 2
+2. When a node could be activated by multiple nodes, Note that the second item characterizes the influence
+higher-ranked node has higher priority to activate it. ofv 2 tov 5 throughthepath⟨v 2 ,v 4 ,v 5 ⟩,reflectingthat
+theLFAstrategycouldeffectivelycapturetheindirect
+Following the two basic rules, the LFA strategy is de- influence among nodes. After v is scanned, the final
+4
+scribed as follows: value of M (v ) is (1−p )(1+p (1−p )).
+r 4 2;4 4;5 3;5
+• Givenarankingr,theinitialvalueofM (v )ofeach 4. When node v is scanned. it delivers p (1+p ) to
+r ri 3 1;3 3;5
+nodeissettedtobe1,satisfyingthefactthatthesum node v , with (1−p )(1+p ) remained.
+1 1;3 3;5
+of M (v ) over all nodes is equal to the number of
+nodes r , si r n i ce each node can only be activated once. 5. Finally, node v 2 is scanned. After v 2 is scanned, the
+final scores of M (v ) and M (v ) are (1−p )(1+
+r 2 r 1 1;2
+• Scanningtherankingfromthelastnodetothetopone, p + p p (1 − p )) and 1 + p (1 + p +
+2;4 2;4 4;5 3;5 1;2 2;4
+a fraction of M (v ) is delivered to the nodes ranked p p (1−p ))+p (1+p )respectively. Theterm
+r ri 2;4 4;5 3;5 1;3 3;5
+higher than v , reflecting the first rule; p p p (1−p ) in M (v ) captures the indirect
+ri 1;2 2;4 4;5 3;5 r 1
+influencefromv tov throughthepath⟨v ,v ,v ,v ⟩,
+• The delivered influence score of M r (v ri ) is allocated indicatingthatt 1 heLF 5 Astrategydoescolle 1 ct 2 infl 4 uen 5 ce
+among the nodes v j (j < i) in terms of their ranks, with multiple intermediate nodes on the path. Note
+reflecting the second rule. that it is not necessary to scan node v since it does
+1
+Specifically, with η(v ,v ) denoting the fraction of not delivery influence to other nodes
+rj ri
+influencescoredeliveredtonodev fromnodev ,we
+rj ri The above illustration tells us that the LFA strategy
+have η(v ,v )=
+rj ri efficiently calculates the ranking-based marginal influence
+ ∏ ( )
+M (v )p(v ,v ) 1−p(v ,v ) ,j <i, spread for all nodes, scanning each node only once. Mean-
+r ri rj ri rk ri while, with indirect influence propagation being effectively
+
+k:1≤k<j
+captured, the LFA strategy provides a good delegate to
+0, otherwise. calculateranking-basedmarginalinfluencespread. Weshow
+(1) the numerical results of the LFA strategy and 20,000 times
+478Figure 1: Illustration of the LFA strategy.
+Table 2: Estimation on ranking-based marginal (a) Top-50 nodes (b) Influence spread
+influence spread. MC indicates Monte Carlo
+simulation, and LAF indicates the LAF strategy.
+Figure 2: Convergence of IMRank
+v v v v v
+1 2 3 4 5
+MC 1.29846 1.38800 0.77941 0.89406 0.64007
+nodes ranked higher than it in ranking r. According to the
+LAF 1.24000 1.42400 0.76800 0.92800 0.64000
+submodularity of influence spread function, we can obtain
+M r (v r′) ≤ ∑ M r′′(v r′) for each ∑ node v r′ (1 ≤ i ≤ k). Thus,
+M a sh ll o o e n w d t n e ge C i s n a a r T s lo a d b o s l i n e m e u 2 i , n la o t u i u n o r i n f s o st r i r m n at t i e h n g e d y e c p a o s e ff e n e d r o s e f n s v t e e t c r t a y in sc c g a lo p d s u e e ;v m r = e o s d u 0 e l . l t 2 . s f A o to s r t N I h r o ′ e ′ t r ( e e k) w i . is e T h a a k v 1 e e ≤ n i p ≤ t r k o o g v M e e i t d r h ( e I v r r r , i ( ′ k ) w ) e ≤ ≤ ca ∑ n 1 1 o ≤ ≤ b i i t ≤ ≤ a k k in i M M I r r r ( ′ ( ′ v k ( r v ) i ′ r ) ≤ i ′ a ) n I = d r′( I k r I ′ ) r ( , ′ k ′ a ( ) k n = ) d .
+the time-consuming Monte Carlo simulations. the equal-sign is tenable iff the sets of the top-k nodes in
+Finally, we sum up the LFA strategy by explaining why ranking r and r′ are the same, otherwise I r (k)<I r′(k).
+itworksremarkably. First,itachieveshighefficiencybyex- Based on the above conclusion, as long as the current
+ploiting the interdependence between ranking and ranking- rankingisnotaself-consistentranking,ineachiterationall
+based marginal influence spread, avoiding the adoption of
+thevaluesofI(k)(1≤k≤n)arenondecreasing,andatleast
+MonteCarlosimulationsdoneingreedyalgorithms. Second, oneI(k)increases. SinceeachI(k)hasanupperbound(i.e.,
+itemploystheintermediatenodesasdelegates,inalast-to- n),IMRankeventuallyconvergestoaself-consistentranking
+first manner, to capture both direct and indirect influence withinafinitenumberofiterations,startingfromanyinitial
+propagation among nodes. In this way, ranking-based ranking.
+marginalinfluencespreadcouldbeefficientlycalculatedvia
+We now empirically illustrate the quick convergence of
+scanningallnodesonlyonce. Inaddition,theLFAstrategy
+IMRank, using a scientific collaboration network, namely
+only offers one effective approximation rather than exact
+HEPT, extracted from the “High Energy Physics-Theory”
+calculationofinfluencespread. Thisispartlycausedbythe
+sectionofthee-printarXivwebsitearXiv.org. Thisnetwork
+restriction that lower-ranked nodes only deliver influence
+is composed of 15K nodes and 59K edges. We run
+score to higher-ranked neighboring nodes. In Section 5,
+IMRank to select 50 seed nodes. Figure 2(a) shows the
+we further improve the LFA strategy via relaxing this
+percent of different nodes in two successive iterations.
+restriction.
+For two widely-used models, weighted independent cascade
+4.3 ConvergenceofIMRank (WIC)model[11]andtrivalencyindependentcascade(TIC)
+model [3], the set of top-50 nodes becomes unchanged after
+Inthissection,wefirsttheoreticallyprovetheconvergence
+5 and 8 iterations respectively. Clearly, IMRank converges
+of IMRank. Then we illustrate the quick convergence of
+much quicker than greedy algorithms, which requires k
+IMRank empirically using a real-word network as example.
+iteration for selecting k seed nodes. Figure 2(b) depicts
+Theorem 2. Starting from any initial ranking of the influence spread of top-50 nodes. We employ the
+relative influence spread, i.e., the ratio of the obtained
+nodes, IMRank converges to a self-consistent ranking
+influence spread in each iteration to the obtained influence
+after a (cid:12)nite number of iterations.
+spread when IMRank converges. IMRank only takes 3
+Proof. We first prove that, for any k, the influence and 5 iterations to achieve a stable and high influence
+spread of the top-k nodes, denoted as I(k) for convenience, spread under the two models respectively. The influence
+is nondecreasing in the iterative process of IMRank. spread of top-k nodes seems always converges with smaller
+After each iteration of IMRank, a ranking r is adjusted numberofiterationsthantheconvergenceofthesetoftop-k
+to another ranking r′. Since IMRank adjusts all nodes in nodes. Therefore,onecanstopIMRanksafelyinpracticeby
+decreasing order of their current ranking-based influence checking the change of top-k nodes between two successive
+spread M r (v), the values of M r (v r′)(1 ≤ i ≤ k) are the iterations.
+i
+l∑argestkvaluesamon∑galltheM
+r
+(v). Hence,thereisI
+r
+(k)= Insum,wehavetheoreticallyandempiricallydemonstrat-
+∑ r′ N 1 1 a ≤ ≤ r o e i i w ≤ ≤ t k k h le
+M
+M e t’ s r r s a
+(
+( m
+v
+v c r r o e i i ′ n ,
+)
+) s o i i d ff
+≤
+th e t r e h r a e w 1 i s n ≤ s e e e t i w ≤ s I k r o r (
+M
+f a k t n ) r o k
+(
+< p i
+v
+n - r k ∑ g i
+′)
+n
+.
+r 1 o ≤ ′′ d i
+M
+e ≤ o s b k
+o
+t i
+r
+M n a
+e
+i
+o
+r n r
+v
+a ( e
+e
+v n d
+r
+r k
+,
+i ′ f i ) r n
+I
+. o g r m
+(
+r
+k)
+j a u n s
+=
+d t
+e
+I e I d M M
+d
+n e c s R R
+t
+i e r
+h
+a a a s
+e
+n n p b k k r l
+c
+e e
+o
+c w a
+n
+r o d a
+v
+i u t n
+e
+e h l
+r
+k d s
+g
+t i t n
+e
+b i h m
+n
+g e e
+c
+s a a
+e
+L t i ff n i F
+o
+o e A
+f
+n c S t .
+I
+e s e
+M
+c E t d t r
+R
+x i a b o t t
+a
+y n e e
+n
+n g t 6
+k
+s y h .
+.
+i e v a
+I
+e a l
+n
+w c e
+d
+c x a
+e
+u y p
+e
+r s e
+d
+a r q
+,
+c im y u
+th
+i o e c
+e
+n k f t l m
+c
+y s
+o
+a f
+n
+c u r o
+v
+g r n
+e
+t i
+r
+v n h
+g
+e a e
+e
+r l r
+n
+g i s
+c
+e n h
+e
+s fl o t u
+o
+w o -
+f
+reorderingthetop-k nodesofrankingr′ indecreasingorder
+of their ranks in ranking r, and keeping the ranks of other 4.4 Analysisofinitialranking
+nodes still. Apparently, the sets of top-k nodes are the SinceIMRankisguaranteedtoconvergetoaself-consistent
+same between ranking r′ and r′′, thus I r′(k) = I r′′(k). rankingfromanyinitialranking,itisnecessarytoextendthe
+Then, for each node v r′, the set of nodes ranked higher discussion to its dependence on the initial ranking: does an
+than it in ranking r′′ is i definitely a subset of the set of arbitrary initial ranking results in a unique convergence? If
+479not,whatinitialrankingcorrespondstoabetterresult? We
+explore those questions by empirically simulating IMRank
+with five typical initial rankings as follows,
+• Random: Nodes are initially ranked randomly;
+• Degree: Nodes are initially ranked in descending
+order of degrees (undirected networks) or out-degrees
+(directed networks);
+• InversedDegree: Nodes are initially ranked in as-
+cendingorderofdegrees(undirectednetworks)orout-
+degrees (directed networks);
+• Strength: Nodes are initially ranked in descending
+(a) Influence spread
+orderofnodestrengths(undirectednetworks)ornode
+out-strengths (directed networks). The node strength
+is the sum of all weights on its edges. The node out-
+strength is the sum of all weights on its out-edges;
+• PageRank: Nodes are initially ranked in descending
+order of PageRank scores [2], with the default value
+0.15 for the damping factor parameter.
+Empirical results on the HEPT dataset under the WIC
+modelarereportedinFigure3,tocomparetheperformance
+of IMRank with different initial rankings, as well as the
+performance of those rankings alone. We also report the
+performance of classic greedy algorithm for comparison, (b) Running time when k=50
+implemented with CELF optimization [13]. Performance of
+IMRank with Random initial ranking and Random ranking
+Figure 3: Comparison between IMRank with
+alone are averaged over 50 trials.
+different initial rankings under the WIC model.
+With the empirical results we conclude:
+• Withdifferentinitialrankings,IMRankcouldconverge
+todifferentself-consistentrankings. However,IMRank 5. ADVANCEDIMRANK
+consistently improves the initial rankings in terms of
+IntheLFAstrategy,anodev isonlyallowedtoallocate
+obtained influence spread. ri
+its influence score to a higher ranked neighboring node v ,
+rj
+• Comparable with the greedy algorithm, IMRank with implying an assumption that a node can only be activated
+a “good” initial ranking such as Degree, Strength, by higher ranked neighbors. That assumption ignores the
+and PageRank shows indistinguishable performance, possibility that, a lower ranked node v rj activates a higher
+s
+ra
+h
+n
+ow
+ki
+n
+ng
+in
+p
+a
+re
+s
+fe
+in
+rs
+gl
+n
+e
+o
+c
+d
+u
+e
+r
+s
+ve
+w
+i
+i
+n
+th
+F
+h
+ig
+ig
+u
+h
+re
+in
+3
+fl
+(
+u
+a
+e
+)
+n
+.
+c
+A
+e;
+goodinitial r
+o
+a
+f
+n
+a
+k
+n
+e
+o
+d
+th
+n
+e
+o
+r
+de
+no
+v
+d
+ri
+e
+b
+v
+y
+rk
+pl
+w
+ay
+it
+in
+h
+g
+k
+th
+<
+er
+i.
+ole
+T
+o
+a
+f
+ke
+an
+th
+in
+e
+te
+p
+r
+a
+m
+th
+ed
+⟨
+i
+v
+a
+1
+t
+,
+e
+v
+a
+3
+g
+,
+e
+v
+n
+2 ⟩
+t
+inFigure1forexample. Whenv isselectedasaseed,itis
+• IMRank with a“neural”initial ranking such as Ran- 1
+possible that it activates v and then v as an intermediate
+3 3
+dom ranking also shows fair performance, slightly
+agent activates v .
+2
+poorer than the greedy algorithm and IMRank with
+To combat the above problem, we propose a generalized
+agoodinitialranking. Aneuralinitialrankingprefers
+LFA strategy that trades a slight increase in running time
+no nodes;
+forbetteraccuracyinestimatingM ,andthereforeimproves
+r
+• IMRankwitha“bad”initialrankingsuchasInversed- the performance of IMRank on influence spread. The
+Degreerankingshowsremarkablyimprovementsupon generalizedLFAstrategyrelaxestheaboveassumptionand
+the initial ranking alone but is dominated by the exploresinfluence paths insteadofhigherrankedneighbors,
+greedy algorithm. A bad initial ranking prefers nodes which is introduced below to avoid duplicated computation
+with low influence. that a path is contained in another path.
+Therefore, IMRank is robust to the selection of initial Definition 3. In(cid:13)uence path: Given a ranking r, a
+ranking, and IMRank works well with an initial ranking simple path d (v ,v )=⟨v ,··· ,v ⟩ is an influence path
+preferingnodeswithhighinfluence,whichcouldbeobtained r rj ri rj ri
+if v is the only node along the path that is ranked higher
+efficiently in practice. A possible explanation is the priori rj
+than v .
+biasthat,ahigh-rankednodeearnsmoreallocatedinfluence ri
+score than a low-ranked node, even with the same topolog- Lemma 1. A directed edge ⟨v ,v ⟩ is an influence path
+ical circumstance. Thus, it helps IMRank to converge to a rj ri
+if j <i.
+good ranking if influential nodes are initially ranked high.
+Among the three “good” initial rankings with indistin- Lemma 2. Anodev allocatesinfluencescoretoanother
+guishable performance, Degree offers a good candidate of ri
+node v only along an influence path d (v ,v ).
+initialranking,sincecomputingtheinitialrankingconsumes rj r rj ri
+alargepartinthetotalrunningtimeofIMRank,asshownin Proof. Consider a path d (v ,v ). It is not negligible
+r rj ri
+Figure3(b). Moreover,Figure3(b)alsoshowsthat,IMRank only when j < i, since v has no chance to trigger a
+rj
+runsmorethan4ordersofmagnitudefasterthantraditional cascade to activate v immediately or eventually if j > i.
+ri
+greedy algorithm. Besides, v has no chance to activate v along this path
+rj ri
+480if there exists an intermediate node v with k < j, since
+rk
+v is triggered earlier. The path should also be neglected
+rk
+if there exists an intermediate node v with j < k < i
+rk
+to avoid duplicated computation, since the influence score
+allocated from v to v already contains the fraction that
+rk rj
+v activates v , as discussed in Section 4.2. Therefore,
+rj ri
+influencescoreisallocatedthoughasimplepathd (v ,v )
+r rj ri
+if and only if v is the only node along the path that is
+rj
+ranked higher than v .
+ri
+We denote ρ (v ,v ) to the probability that v is
+r ri rj ri
+activated by v through any influence path. It is equal to
+rj
+the probability that at least one influence path d (v ,v ) Figure 4: Impact of l on the performance of
+r rj ri
+has all its nodes activated, minus the probability that v IMRank.
+ri
+isalreadyactivatedbeforev attempts. ρ (v ,v )canbe
+rj r ri rj
+obtained as follows,
+becarefullyselectedaccordingtotheexpectedaccuracyand
+affordable computational cost.
+ρ (v ,v )=
+r ri rj 
+∏ ∏ 6. EXPERIMENTS
+ 1− (1−p(d ))  (1−ρ (v ,v )),
+r r ri rk
+In this section, we evaluate IMRank on real-world net-
+dr∈Dr(vrj ;vri ) 1≤k<i
+worksbycomparingIMRankwithstate-of-the-artinfluence
+∏ (2) maximization algorithms.
+wherep(d )= p isthejointprobabil-
+r ⟨vrx;vry ⟩∈dr vrx;vry
+6.1 ExperimentalSetup
+itythatv activatesallnodesonapathd ,andD (v ,v )
+rj r r ri rj
+denotes the set of all influence paths from v to v .
+To summarize, the generalized LFA strate r g j y rep r l i aces the 6.1.1 Diffusionmodels
+allocating method: a node v ri delivers a fraction of its Experiments are conducted under two widely-used inde-
+influence score to each higher ranked node reachable with pendent cascade models:
+an influence path, instead of each higher ranked neighbor,
+while replacing p(·,v ) with ρ(·,v ). • Weighted independent cascade (WIC) model
+ri ri
+In practice, we limit the search range within influence [11]: Each edge (u,v) is assigned a propagation
+paths no longer than l hops, since long paths are expensive probability p(u,v) = 1/d v , where d v is the indegree
+to count but contribute little due to low probability to of node v.
+propagate influence. The LFA strategy is a special case of
+the generalized LFA strategy with l=1. • Trivalency independent cascade (TIC) model
+The time and space complexity of IMRank with the [3]: Each edge is assigned a propagation probability
+generalized LFA strategy is low. Its space complexity is selected from {0.1,0.01,0.001} in a uniform random
+O(n), storing the value of M (v) for each node. Its time manner, indicating high, medium and low levels of
+r
+complexity mainly depends on l. We denote d to the influence.
+max
+largestnumberofpathsendinanarbitrarynodewithlength
+6.1.2 Baselinealgorithms
+no more than l. The time required for scanning each node
+is O(d logd ), including the time used for searching Thecomparedalgorithmsincludetwoimplementationsof
+max max
+candidatenodes,sortingcandidatenodesbytheirranks,and IMRank and two state-of-the-art heuristic algorithms, i.e.,
+allocatinginfluence. Finally,thetimecomplexityofIMRank PMIA and IRIE. Details are as follows:
+isO(nTd logd ),whereT isthenumberofiterations
+max max • IMRank1: ThisistheIMRankwithDegreeasinitial
+IMRank takes before convergence. According to extensive
+ranking and l = 1. According to the analysis of
+experimentresults,T isalwayssignificantlysmallerthank.
+section 4.3, we set its stopping criteria as when the
+Besides, d is usually much smaller than n, e.g. d
+max max
+setsoftop-k nodesarethesameduringtwosuccessive
+equals to the largest indegree among all nodes when l = 1.
+iterations or the iteration runs 10 rounds.
+Therefore, the running time of IMRank is affordable.
+Figure 4 shows the impact of l on the performance of
+• IMRank2: ThisistheIMRankwithDegreeasinitial
+IMRank, measured with the influence spread on the NEPT
+ranking and l =2, with the same stopping criteria as
+network with WIC model and k = 50 for example. We
+IMRank1.
+report the results of IMRank with Degree and Random
+initialrankingsandtheresultsforotherinitialrankingsare • PMIA: This heuristic algorithm estimates influence
+similar. When l increases from 1 to 2, there is an obvious
+spreadbasedonmaximuminfluencepaths[3]. Weuse
+increaseontheperformance. Itsupportsthatalargerlleads
+the recommended parameter setting θ=1/320.
+to more accurate estimation of marginal influence spread,
+and thus a better solution. With l > 2, the performance • IRIE: This heuristic algorithm integrates influence
+increaseslittle,becausethepropagationprobabilitiesoflong rankingwithinfluenceestimation[10]. Itsparameters
+paths decrease exponentially with their length, resulting in α and θ are setted to be 0.7 and 1/320 respectively,
+little necessity to count long paths. On the other hand, the and the maximum times of iterations for initial round
+running time of IMRank increases rapidly with l, as shown and subsequent rounds are 20 and 5 respectively as
+in the inset figure of Figure 4. In that case l = 2 is good recommended.
+enoughandfast,whileinfuturepracticeasuitablel should
+481(a) WIC model (b) TIC model (c) Running Time
+Figure 5: Influence spread and running time on the PHY dataset
+(a) WIC model (b) TIC model (c) Running Time
+Figure 6: Influence spread and running time on the DBLP dataset
+these five networks based on the consideration that these
+Table 3: Statistics of test networks
+networkspossessvariouskindsofrelationshipsanddifferent
+Datasets #Nodes #Edges Directed? sizes ranging from hundreds of thousands edges to millions
+PHY 37K 231K undirected of edges. Actually we test these algorithms on many other
+DBLP 655K 2M undirected networks, and the results are similar. Limited by space,
+EPINIONS 76K 509K directed results on these networks are not included in this paper.
+DOUBAN 552K 22M directed All experiments are conducted on a server with 1.9GHz
+LIVEJOURNAL 4M 69M directed Quad-Core AMD Opteron(tm) Processor 8347HEx4 and
+64G memory.
+6.2 Experimentalresults
+6.1.3 Datasets
+We evaluate IMRank on real-world networks by compar-
+Experiments are conducted on five real-world networks, ing it with state-of-the-art algorithms. Evaluation metrics
+two undirected scientific collaboration networks and three include influence spread and running time. For the com-
+directedonlinesocialnetworks. Table3givesbasicstatistics parison of obtained influence spread, we test the cases of
+of those networks. One of the two scientific collaboration k = 1,5,10,15,20,25,30,35,40,45,50. For the comparison
+networks, denoted as PHY, is obtained from the complete of running time, we focus on the typical case k =50. Each
+list of papers of the Physics section of the e-print arXiv figureofFigures5-8showstheresultsonacertainnetwork.
+website. The other one, denoted as DBLP, is extracted The first two subfigures give the results of influence spread
+from the DBLP Computer Science Bibliography 1. The under the WIC model and the TIC model respectively, and
+threeonlinesocialnetworksareEPINIONS,DOUBAN,and the last one gives the results of running time.
+LIVEJOURNAL2,respectivelyextractedfromthewebsites Figure 5 shows the experimental results on the PHY
+of epinions.com, douban.com and livejournal.com. In the dataset. Under the WIC model, IMRank2 achieves the
+EPINIONS dataset, an edge between two users u and v, best influence spread, followed by IMRank1, outperforming
+denoted as ⟨u,v⟩, represents that user u trusts user v. In PMIAandIRIE.ThedistinguishedaccuracyofIMRank2is
+theDOUBANdataset[8],anedgebetweentwousersuandv attributedtothefactthat,IMRank2exploresmoreinfluence
+representsthatuserufollowsuserv. IntheLIVEJOURNAL paths to accurately estimate marginal influence spread.
+network [1], an edge between two users u and v represents PMIAexhibitstheworstperformance,6.3%lowerinfluence
+that user u declares user v as his/her friend. We choose spread than IMRank2 when k=50. Under the TIC model,
+as shown in Figure 5(b), similar results are obtained, and
+1http://www.informatik.uni-trier.de/∼ley/db/ the gaps between those algorithms become more visible.
+2EPINIONSandLIVEJOURNALcanbedownloadedfrom For influence spread, IMRank2 and IMRank1 are the top
+http://snap.stanford.edu/data/. DOUBANcanbeobtained twoalgorithmswhilePMIAslightlyoutperformsIRIE.The
+on demand via email to the authors. influence spread obtained by IMRank2 is 13.8% and 12.7%
+482(a) WIC model (b) TIC model (c) Running Time
+Figure 7: Influence spread and running time on the EPINIONS dataset
+(a) DOUBAN (b) LIVEJOURNAL (c) Running Time
+Figure 8: Influence spread and running time on the DOUBAN and LIVEJOURNAL datasets
+higher than that obtained by IRIE and PMIA respectively. order of magnitude faster. For the TIC model, IMRank2
+Moreover,asshowninFigure5(c),IMRank1andIMRank2 achieves the best influence spread and IMRank1 takes the
+runfasterthanthecompetingalgorithmsunderboththetwo second place. Both IMRank1 and IMRank2 significantly
+models. IMRank1 is the fastest one followed by IMRank2 outperformPMIAandIRIE.Moreover,therunningtimeof
+,whilePMIAtakesthethirdplaceandIRIErunsslowest. In IMRank1 is only 0.1% of the running time of PMIA and
+particular,therunningtimesofIRIEandPMIAare30times 5% of that of IRIE. With similar running time, IMRank2
+and10timeslongerthantherunningtimeofIMRank1under achieves significant higher influence spread than that of
+theWICmodelrespectively,and18timesand9timeslonger PMIA and IRIE.
+than that of IMRank1 under the TIC model. With the Figure 8 shows the results on the DOUBAN and LIVE-
+running time dramatically reduced, IMRank1 still achieves JOURNALdatasets. ThenumberofedgesofDOUBANand
+betterinfluencespreadwhichisabout5.5%and4.5%higher LIVEJOURNALis22millionsand69millionsrespectively.
+than that of IRIE and PMIA respectively. The consistent Here we only give the results under the WIC model.
+performance of IMRank1 and IMRank2 demonstrates the On the DOUBAN network, the four algorithms achieve
+effectiveness of IMRank. The inconsistent performance of comparable influence spread. However, IMRank1 runs
+PMIA and IRIE under the two diffusion models illustrates more than two orders of magnitude faster than PMIA and
+that both PMIA and IRIE are unstable. more than one order of magnitude faster than IRIE. On
+Figure 6 shows the results on DBLP dataset. The the LIVEJOURNAL network, IMRank2 and IRIE have
+four algorithms performs similar on this dataset as on the similar influence spread, while IMRank1 follows and PMIA
+PHY dataset. For the WIC model, IMRank2 achieves the achieves the lowest influence spread. Note that IMRank2
+highest influence spread and IMRank1 is the fastest one. runs faster than IRIE, and IMRank1 runs much faster
+In particular, when k = 50, the highest influence spread is than PMIA. We do not show the results under the TIC
+achievedbyIMRank2anditsrunningtimeislessthanPMIA modelsincenovisibledifferenceisobservedamongthefour
+and IRIE. IMRank1 obtains similar influence spread to tested algorithms. This is due to the fact that selecting
+PMIAanditsrunningtimeisoneorderofmagnitudesmaller one influential node always achieves a very large influence
+thanthatofPMIA.FortheTICmodel,IMRank1,IMRank2 spreadonDOUBANandLIVEJOURNALnetworks,andno
+and PMIA achieve very similar influence spread, which is increase of influence spread can be gained by adding a new
+significantly higher than the influence spread achieved by seed. Such phenomenon has been observed and discussed
+IRIE.Moreover,IMRank1runsnearly8timesand13times in [11] and [3]. The possible reason is that the influence
+faster than PMIA and IRIE. networks generated by the TIC model on the two networks
+Figure7 givestheresultsonEPINIONSdataset. For the have a relatively large strongly connected component.
+WICmodel,IMRank1andIMRank2runfasterthanPMIA These experiments show that, in different scenarios, IM-
+andIRIE.Inparticular,comparedtoPMIA,IMRank1runs Rank consistently perform well while PMIA and IRIE per-
+two orders of magnitudes faster and IMRank2 runs one form unstable. IMRank1 always runs more than one order
+483of magnitude faster than PMIA and IRIE, and achieves [3] W. Chen, C. Wang, and Y. Wang. Scalable influence
+similar influence spread as them. IMRank2 consistently maximization for prevalent viral marketing in
+provides better influence spread than PMIA and IRIE, and large-scale social networks. In KDD’10, pages
+runs faster than them. In addition, under the two differ- 1029–1038, 2010.
+ent diffusion models, IMRank shows similar improvements [4] W. Chen, Y. Wang, and S. Yang. Efficient influence
+on influence spread from the relative improvement angle. maximization in social networks. In KDD’09, pages
+However, the improvements of IMRank seems more visible 199–208, 2009.
+under the TIC model. With respect to this model, the [5] S. Cheng, H. Shen, J. Huang, G. Zhang, and
+links between influential nodes have high probability to be X. Cheng. Staticgreedy: Solving the
+assigned a relative high propagation probability(p = 0.1), scalability-accuracy dilemma in influence
+whichcountsagainstheuristicmethodstoaccurateestimate maximization. In CIKM’13, 2013.
+influence spread. Hence, we speculate that, IMRank has [6] P. Domingos and M. Richardson. Mining the network
+moreadvantagesthanPMIAandIRIEtohandlesuchcases. value of customers. In KDD’01, pages 57–66, 2001.
+[7] A. Goyal, W. Lu, and L. V. Lakshmanan. Celf++:
+7. CONCLUSIONS optimizing the greedy algorithm for influence
+In this paper, we investigated influence maximization maximization in social networks. In WWW’11, pages
+from a novel ranking perspective. We proposed an efficient 47–48, 2011.
+iterative framework IMRank to explore the benefits of [8] J. Huang, X.-Q. Cheng, H.-W. Shen, T. Zhou, and
+accurategreedyalgorithmsandefficientheuristicestimation X. Jin. Exploring social influence via posterior effect
+of influence spread. This framework effectively tunes any of word-of-mouth recommendations. In WSDM’12,
+initial ranking into a self-consistent ranking in an iterative WSDM ’12, pages 573–582, 2012.
+manner through fully leveraging the interplay between the [9] Q. Jiang, G. Song, C. Gao, Y. Wang, W. Si, and
+rankingofnodesandtheirranking-basedmarginalinfluence K. Xie. Simulated annealing based influence
+spread. Alast-to-firstallocatingstrategyisfurtherproposed maximization in social networks. In AAAI’11, 2011.
+to efficiently estimate the ranking-based marginal influence [10] K. Jung, W. Heo, and W. Chen. Irie: Scalable and
+spreadundertheindependentcascademodel. Thisstrategy robust influence maximization in social networks. In
+is elaborately designed according to the characteristics ICDM’12, pages 918–923, 2012.
+of the independent cascade model and the ranking-based [11] D. Kempe, J. Kleinberg, and E. Tardos. Maximizing
+marginal influence spread. We further generalize the last- the spread of influence through a social network. In
+to-firstallocatingstrategyinordertoachievemoreaccurate KDD’03, pages 137–146, 2003.
+estimation. We also prove the convergence of IMRank and [12] M. Kimura, K. Saito, R. Nakano, and H. Motoda.
+analyze the impact of initial ranking. Moreover, IMRank Extracting influential nodes on a social network for
+always works well with simple heuristic rankings, such as information diffusion. Data Mining and Knowledge
+degree,strength. Extensiveexperimentsonlargescalereal- Discovery, 20(1):70–97, 2010.
+worldsocialnetworksdemonstratetheefficiencyofIMRank.
+[13] J. Leskovec, A. Krause, C. Guestrin, C. Faloutsos,
+Its scalability outperforms the state-of-the-art heuristics
+J. VanBriesen, and N. Glance. Cost-effective outbreak
+while its accuracy is comparable to the greedy algorithms.
+detection in networks. In KDD’07, pages 420–429,
+For future work, we will try to analyze the accuracy of
+2007.
+IMRank theoretically. Moreover, we believe our proposed
+[14] M. Mathioudakis, F. Bonchi, C. Castillo, A. Gionis,
+iterative framework is of generality for some cases which
+and A. Ukkonen. Sparsification of influence networks.
+greedy algorithm is suitable for, and it can also be adapted
+In KDD’11, pages 529–537, 2011.
+in some re-ranking applications. We will try to extend it
+[15] R. Narayanam and Y. Narahari. A shapley
+to other problems beyond influence maximization, such as
+value-based approach to discover influential nodes in
+diversity problem in information retrieval.
+social networks. IEEE Transactions on Automation
+Science and Engineering, 8(1):130–147, 2011.
+8. ACKNOWLEDGMENTS
+[16] M. Richardson and P. Domingos. Mining
+This work was funded by the National Basic Research knowledge-sharing sites for viral marketing. In
+Program of China (973 program) under grant numbers KDD’02, pages 61–70, 2002.
+(2012CB316303, 2013CB329602), and the National Natural [17] D.Sheldon,B.Dilkina,A.N.Elmachtoub,R.Finseth,
+Science Foundation of China withNos 61202215, 61174152, A. Sabharwal, J. Conrad, C. P. Gomes, D. Shmoys,
+61232010,61202213,and11305219. TheauthorsthankWei W. Allen, O. Amundsen, and W. Vaughan.
+Chen for providing the codes of the PMIA algorithm, and Maximizing the spread of cascades using network
+thank Kyomin Jung for providing the codes of the IRIE design. In UAI’10, pages 517–526, 2010.
+algorithm. The authors also thank to the members of the [18] J. Tang, J. Sun, C. Wang, and Z. Yang. Social
+group NASC (www.groupnasc.org) for helpful discussions. influence analysis in large-scale networks. In KDD’09,
+pages 807–816, 2009.
+9. REFERENCES [19] C. Wang, W. Chen, and Y. Wang. Scalable influence
+maximization for independent cascade model in
+[1] L. Backstrom, D. Huttenlocher, J. Kleinberg, and
+large-scale social networks. Data Mining and
+X. Lan. Group formation in large social networks:
+Knowledge Discovery, 25(3):545–576, 2012.
+membership, growth, and evolution. In KDD’06, pages
+[20] Y. Wang, G. Cong, G. Song, and K. Xie.
+44–54, 2006.
+Community-based greedy algorithm for mining top-k
+[2] S. Brin and L. Page. The anatomy of a large-scale
+influential nodes in mobile social networks. In
+hypertextual web search engine. In WWW’98, pages
+KDD’10, pages 1039–1048, 2010.
+107–117, 1998.
+484
