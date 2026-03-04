@@ -45,7 +45,7 @@ Information Exposure Maximization Problem (IEMP, 2 campaigns version): Given a s
 $$
 \mathbb{E}[V\setminus (r(S_1 \cup I_1) \Delta r(S_2 \cup I_2))], |S_1| + |S_2| \leq k, 
 $$
-where $S_1, S_2 \subseteq V$ is the target seed set for campaign $A$ and $B$ respectively, $I_1, I_2$ is the initial seed set for campaign $A$ and $B$ respectively, and $r(S)$ is the set of nodes that are exposed to the campaign with seed set $S$. The operator $\Delta$ denotes the symmetric difference between two sets, which means that we want to maximize the expected number of nodes that are either exposed to both campaigns or not exposed to any campaign.
+where $S_1, S_2 \subseteq V$ is the target seed set for campaign $A$ and $B$ respectively, $I_1, I_2$ is the initial seed set for campaign $A$ and $B$ respectively, and $r(S)$ is the set of nodes that are \textit{reached} by the campaign with seed set $S$. Note that a node is considered reached if it is (1) a seed node, (2) successfully activated during propagation, or (3) attempted to be activated but failed. The operator $\Delta$ denotes the symmetric difference between two sets, which means that we want to maximize the expected number of nodes that are either exposed to both campaigns or not exposed to any campaign.
 \end{definition}
 
 The problem is a NP-hard combinatorial optimization problem, and finding an exact solution is computationally infeasible for large networks. Therefore, we propose heuristic and genetic algorithms approaches to find approximate solutions.
@@ -121,37 +121,50 @@ The gain computation using LFA estimation is as Algorithm \ref{alg:computegain}.
 \end{algorithm}
 
 \begin{algorithm}
-\caption{LFAEstimate}
+\caption{LFAEstimateReach}
 \label{alg:lfaestimate}
 \begin{algorithmic}[1]
 \Require Seed set $S$, campaign index $c$
-\Ensure Activation probability for each node
+\Ensure Reached probability $\textit{reach}[v]$ for each node $v \in V$
 \For{each $v \in V$}
-    \State $\textit{exp}[v] \gets 0$
+    \State $\textit{reach}[v] \gets 0$, $\textit{active}[v] \gets 0$
 \EndFor
 \For{each $s \in S$}
-    \State $\textit{exp}[s] \gets 1$
+    \State $\textit{reach}[s] \gets 1$, $\textit{active}[s] \gets 1$
 \EndFor
 \For{$\textit{iter} = 1$ to $\textit{max\_iter}$}
-    \State $\textit{new\_exp} \gets \textit{exp}$
-    \For{each $u \in V$ where $\textit{exp}[u] > 0$}
+    \State $\textit{new\_reach} \gets \textit{reach}$, $\textit{new\_active} \gets \textit{active}$
+    \For{each $u \in V$ where $\textit{active}[u] > 0$}
         \For{each $(u, v, p_1, p_2) \in E$}
             \State $p \gets p_1$ if $c=1$ else $p_2$
-            \State $\textit{contribution} \gets \textit{exp}[u] \times p$
+            \If{$\textit{active}[u] > \epsilon$}
+                \State \Comment{Node $v$ is reached if any active parent attempts to activate it}
+                \State $\textit{new\_reach}[v] \gets 1 - (1 - \textit{active}[u]) \times (1 - \textit{new\_reach}[v])$
+            \EndIf
+            \State \Comment{Node $v$ is activated if any parent succeeds}
+            \State $\textit{contribution} \gets \textit{active}[u] \times p$
             \If{$\textit{contribution} > \epsilon$}
-                \State $\textit{new\_exp}[v] \gets \max(\textit{new\_exp}[v], \textit{contribution})$
+                \State $\textit{new\_active}[v] \gets 1 - (1 - \textit{contribution}) \times (1 - \textit{new\_active}[v])$
             \EndIf
         \EndFor
     \EndFor
-    \State $\textit{exp} \gets \textit{new\_exp}$
+    \State $\textit{reach} \gets \textit{new\_reach}$, $\textit{active} \gets \textit{new\_active}$
 \EndFor
-\State \textbf{return} $\textit{exp}$
+\State \textbf{return} $\textit{reach}$
 \end{algorithmic}
 \end{algorithm}
 
 The algorithm is implemented in Python in the file \texttt{IEMP\_heur.py}. 
 
-\paragraph{Rationale} The optimization target is to minimize the expected symmetric difference between the two campaigns' influence spreads. The algorithm greedily selects nodes that maximize the reduction of symmetric difference. Specifically, for each candidate node, we estimate its marginal contribution to reducing the symmetric difference using the LFA (Last-to-First Allocating) strategy, which efficiently approximates the expected influence spread without expensive Monte Carlo simulations. The node with the highest marginal gain is selected and added to either $S_1$ or $S_2$, whichever yields better improvement.
+\paragraph{Key Distinction: Reached vs. Active Nodes} According to the IEMP problem definition, a node is considered \textit{reached} (or \textit{exposed}) by a campaign if it is either (1) a seed node, (2) successfully activated, or (3) \textit{attempted to be activated but failed}. This is a crucial distinction from standard influence maximization problems where only successfully activated nodes count. Therefore, our estimation must track two quantities: the probability that a node is \textit{reached} (exposed to the campaign), and the probability that a node is \textit{activated} (can propagate further).
+
+\paragraph{Rationale} The optimization target is to minimize the expected symmetric difference between the two campaigns' \textit{reached} node sets (not just activated nodes). The algorithm greedily selects nodes that maximize the reduction of symmetric difference. Specifically, for each candidate node, we estimate its marginal contribution using the LFA (Last-to-First Allocating) strategy with the following key features:
+\begin{itemize}
+    \item \textbf{Dual tracking:} We simultaneously track $\textit{reach}[v]$ (probability $v$ is exposed to the campaign) and $\textit{active}[v]$ (probability $v$ is activated and can propagate).
+    \item \textbf{Reached propagation:} A node $v$ becomes reached if any active parent attempts to activate it, regardless of success (using OR-formula: $1 - \prod(1 - p_{\text{parent}})$).
+    \item \textbf{Active propagation:} A node $v$ becomes active only if the activation attempt succeeds (using OR-formula over all parents' success probabilities).
+\end{itemize}
+This approach efficiently approximates the expected influence spread under the IEM definition without expensive Monte Carlo simulations. The node with the highest marginal gain in reducing symmetric difference is selected and added to either $S_1$ or $S_2$, whichever yields better improvement.
 
 \subsection{Genetic Approach}
 

@@ -1,15 +1,3 @@
-"""
-IEMP (Information Exposure Maximization Problem) Heuristic Algorithm
-基于 IMRank (Influence Maximization via Finding Self-Consistent Ranking) 的启发式算法
-
-核心思想：
-1. 初始排名：按节点度数排序
-2. LFA策略：从后向前计算每个节点的排名基边际影响力
-3. 迭代优化：按边际影响力重新排名，直到收敛
-4. 输出：选择top-k节点作为平衡种子集 S1, S2
-"""
-
-
 class IEMData:
     """
     数据类：封装所有IEM问题相关数据，包括图结构和种子集
@@ -375,4 +363,4 @@ if __name__ == "__main__":
     print(f"S2: {S2}")
     
     # 保存结果到文件
-    data.save_solution("map1/seed_balanced")
+    data.save_solution("map2/seed_balanced2")
