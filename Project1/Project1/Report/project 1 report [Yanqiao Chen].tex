@@ -1,0 +1,58 @@
+\documentclass[a4paper, UTF8]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{\indent Theorem}[section]
+\newtheorem{lemma}[theorem]{\indent Lemma}
+\newtheorem{assumption}{\indent Assumption}[section]
+\newtheorem{note}[theorem]{\indent Notation}
+\newtheorem{proposition}[theorem]{\indent Proposition}
+\newtheorem{corollary}[theorem]{\indent Corollary}
+\newtheorem{definition}{\indent Definition}[section]
+\newtheorem{example}{\indent Example}[section]
+\newtheorem{remark}{\indent Remark}[section]
+\newenvironment{solution}{\begin{proof}[\indent\bf Solution]}{\end{proof}}
+\renewcommand{\proofname}{\indent\bf Proof}
+
+\title{IEM Problem Solving Report: An Heuristic Approach}
+
+\author{\bf{Yanqiao Chen}\\
+        Southern University of Science and Technology\\
+        \texttt{12412115@mail.sustech.edu.cn}}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Introduction}
+
+In this report, we present a heuristic approach and a genetic algorithm to solve the Information Exposure Maximization Problem (IEMP) in social networks. The IEMP aims to identify a set of seed nodes in a social network that maximizes the expected number of nodes that are exposed to both campaigns or that are not exposed to any campaigns under a given budget constraint. We first describe our heuristic approach, which is based on the concept of node centrality and influence spread. Then, we introduce a genetic algorithm that iteratively evolves a population of candidate solutions to find an optimal or near-optimal set of seed nodes.
+
+\section{IEMP} 
+
+\subsection{Problem Formulation}
+
+The IEMP can be formally defined as follows: 
+
+\begin{definition}
+Information Exposure Maximization Problem (IEMP, 2 campaigns version): Given a social network represented as a graph \( G = (V, E) \), where \( V \) is the set of nodes and \( E \) is the set of edges, and two campaigns \( A \) and \( B \), the goal is to find a set of seed nodes \( S \subseteq V \) with a budget constraint \( |S| \leq k \) that maximizes 
+$$
+\mathbb{E}[V\setminus (r(S_1 \cup I_1) \Delta r(S_2 \cup I_2))], |S_1| + |S_2| \leq k, 
+$$
+where $S_1, S_2 \subseteq V$ is the target seed set for campaign $A$ and $B$ respectively, $I_1, I_2$ is the initial seed set for campaign $A$ and $B$ respectively, and $r(S)$ is the set of nodes that are exposed to the campaign with seed set $S$. The operator $\Delta$ denotes the symmetric difference between two sets, which means that we want to maximize the expected number of nodes that are either exposed to both campaigns or not exposed to any campaign.
+\end{definition}
+
+The problem is a NP-hard combinatorial optimization problem, and finding an exact solution is computationally infeasible for large networks. Therefore, we propose heuristic and genetic algorithms approaches to find approximate solutions.
+
+\subsection{Heuristic Approach}
+
+We apply the IMRanking algorithm to optimize this problem.
+
+\subsection{Genetic Approach}
+
+\end{document}
