@@ -108,7 +108,7 @@ class IEMPHeuristic:
     - 自洽排名：节点的排名与它的排名基边际影响力一致
     """
 
-    def __init__(self, data, budget=10, max_iter=20):
+    def __init__(self, data, budget=10, max_iter=20, candidate_size=200, alpha=0.8, balance_lambda=0.05):
         """
         初始化启发式算法
         
@@ -120,6 +120,9 @@ class IEMPHeuristic:
         self.data = data
         self.budget = budget       # 总预算 k = |S1| + |S2|
         self.max_iter = max_iter   # 最大迭代次数
+        self.candidate_size = candidate_size
+        self.alpha = alpha
+        self.balance_lambda = balance_lambda
     
     def compute_degree_ranking(self):
         """
@@ -141,6 +144,17 @@ class IEMPHeuristic:
 
         # 只返回节点ID，不返回度数
         return [node for node, deg in degrees]
+
+    def compute_weighted_degree_ranking(self, campaign_idx):
+        weighted_degrees = []
+        for node in range(self.data.n_nodes):
+            score = 0.0
+            for _, p1, p2 in self.data.graph[node]:
+                score += p1 if campaign_idx == 0 else p2
+            weighted_degrees.append((node, score, len(self.data.graph[node])))
+
+        weighted_degrees.sort(key=lambda x: (x[1], x[2], -x[0]), reverse=True)
+        return [node for node, _, _ in weighted_degrees]
     
     def lfa_strategy(self, ranking, campaign_idx):
         """
@@ -163,87 +177,183 @@ class IEMPHeuristic:
         返回:
             M: 字典 {node: 边际影响力值}
         """
-        # 创建节点到排名的映射：node -> position (0-indexed)
-        # 排名越靠前（影响力越大），position越小
         pos = {node: i for i, node in enumerate(ranking)}
         n = len(ranking)
-    
-        # 初始化：每个节点至少激活自己
+
         M = {node: 1.0 for node in ranking}
-    
-        # 从后向前扫描：从排名最低（列表末尾）到排名最高
+
         for i in range(n - 1, 0, -1):
-            v = ranking[i]  # 当前节点（排名较低）
-        
-            # 计算v需要分配给排名更高节点的分数
+            v = ranking[i]
             remaining = M[v]
-        
-            # 按排名从高到低遍历（从0到i-1）
-            for j in range(i):
-                u = ranking[j]  # 排名更高的节点
-            
-                # 检查u是否能激活v（u->v的边）
-                for neighbor, p1, p2 in self.data.reverse_graph.get(v, []):
-                    if neighbor == u:
-                        p = p1 if campaign_idx == 0 else p2
-                    
-                        # 分配影响力：v的影响力 * 传播概率 * 竞争因子
-                        influence = remaining * p
-                        M[u] += influence
-                    
-                        # 更新剩余影响力（考虑u的优先激活权）
-                        remaining *= (1 - p)
-                        break  # 找到u->v的边就跳出
+            if remaining <= 0:
+                continue
+
+            higher_ranked_parents = []
+            for parent, p1, p2 in self.data.reverse_graph.get(v, []):
+                parent_pos = pos.get(parent)
+                if parent_pos is not None and parent_pos < i:
+                    p = p1 if campaign_idx == 0 else p2
+                    higher_ranked_parents.append((parent_pos, parent, p))
+
+            higher_ranked_parents.sort(key=lambda x: x[0])
+            for _, parent, p in higher_ranked_parents:
+                influence = remaining * p
+                if influence <= 0:
+                    continue
+                M[parent] += influence
+                remaining *= (1 - p)
+                if remaining <= 1e-12:
+                    break
     
         return M
+
+    def imrank_self_consistent(self, campaign_idx, initial_ranking=None):
+        if initial_ranking is None:
+            ranking = self.compute_weighted_degree_ranking(campaign_idx)
+        else:
+            ranking = list(initial_ranking)
+
+        if not ranking:
+            return {}, []
+
+        last_ranking = None
+        final_M = None
+        for _ in range(self.max_iter):
+            M = self.lfa_strategy(ranking, campaign_idx)
+            new_ranking = sorted(
+                ranking,
+                key=lambda node: (M.get(node, 0.0), len(self.data.graph[node]), -node),
+                reverse=True,
+            )
+            final_M = M
+            if new_ranking == ranking or new_ranking == last_ranking:
+                ranking = new_ranking
+                break
+            last_ranking = ranking
+            ranking = new_ranking
+
+        if final_M is None:
+            final_M = self.lfa_strategy(ranking, campaign_idx)
+
+        return final_M, ranking
+
+    def build_candidate_pool(self, available, rank1, rank2):
+        available_set = set(available)
+        pool = []
+        seen = set()
+
+        limit_each = max(1, self.candidate_size // 2)
+        for node in rank1[:limit_each]:
+            if node in available_set and node not in seen:
+                pool.append(node)
+                seen.add(node)
+        for node in rank2[:limit_each]:
+            if node in available_set and node not in seen:
+                pool.append(node)
+                seen.add(node)
+
+        if len(pool) < min(self.candidate_size, len(available_set)):
+            fallback = sorted(available_set - seen)
+            for node in fallback:
+                pool.append(node)
+                if len(pool) >= min(self.candidate_size, len(available_set)):
+                    break
+
+        return pool
+
+    def node_pick_score(self, node, M1, M2, max_m1, max_m2, s1_size, s2_size, for_s1):
+        m1 = M1.get(node, 1.0) / max_m1
+        m2 = M2.get(node, 1.0) / max_m2
+        if for_s1:
+            base = m1 - self.alpha * m2
+            penalty = self.balance_lambda * max(0, s1_size - s2_size)
+        else:
+            base = m2 - self.alpha * m1
+            penalty = self.balance_lambda * max(0, s2_size - s1_size)
+        return base - penalty
     
     def run(self):
         """
         贪心算法：基于对称差最小化选择 S1 和 S2
         目标：最小化 E[|r(S1∪I1) Δ r(S2∪I2)|]
         """
-        import random
-        
         available = set(range(self.data.n_nodes)) - self.data.I1 - self.data.I2
         S1, S2 = set(), set()
-        
-        # 贪心选择 budget 个节点
-        for i in range(self.budget):
-            best_gain = -float('inf')
+
+        if not available or self.budget <= 0:
+            self.data.S1 = S1
+            self.data.S2 = S2
+            return S1, S2
+
+        M1, rank1 = self.imrank_self_consistent(campaign_idx=0)
+        M2, rank2 = self.imrank_self_consistent(campaign_idx=1)
+
+        max_m1 = max(M1.values()) if M1 else 1.0
+        max_m2 = max(M2.values()) if M2 else 1.0
+        if max_m1 <= 0:
+            max_m1 = 1.0
+        if max_m2 <= 0:
+            max_m2 = 1.0
+
+        candidate_pool = self.build_candidate_pool(available, rank1, rank2)
+        steps = min(self.budget, len(available))
+
+        for i in range(steps):
+            best_score = -float('inf')
             best_node = None
             best_for_s1 = True
-            
-            print(f"Selecting {i+1}/{self.budget}...")
-            
-            for node in list(available)[:20]:  # 只评估前20个可用节点，提升效率
-                # 尝试加入 S1
-                gain_s1 = self.compute_balance_gain(node, S1, S2, 
-                                                     self.data.I1, self.data.I2, 
-                                                     for_s1=True)
-                if gain_s1 > best_gain:
-                    best_gain = gain_s1
+
+            print(f"Selecting {i+1}/{steps}...")
+
+            for node in candidate_pool:
+                if node not in available:
+                    continue
+                score_s1 = self.node_pick_score(
+                    node=node,
+                    M1=M1,
+                    M2=M2,
+                    max_m1=max_m1,
+                    max_m2=max_m2,
+                    s1_size=len(S1),
+                    s2_size=len(S2),
+                    for_s1=True,
+                )
+                if score_s1 > best_score:
+                    best_score = score_s1
                     best_node = node
                     best_for_s1 = True
-                
-                # 尝试加入 S2
-                gain_s2 = self.compute_balance_gain(node, S1, S2, 
-                                                     self.data.I1, self.data.I2, 
-                                                     for_s1=False)
-                if gain_s2 > best_gain:
-                    best_gain = gain_s2
+
+                score_s2 = self.node_pick_score(
+                    node=node,
+                    M1=M1,
+                    M2=M2,
+                    max_m1=max_m1,
+                    max_m2=max_m2,
+                    s1_size=len(S1),
+                    s2_size=len(S2),
+                    for_s1=False,
+                )
+                if score_s2 > best_score:
+                    best_score = score_s2
                     best_node = node
                     best_for_s1 = False
-            
-            # 执行选择
+
+            if best_node is None:
+                remaining = sorted(available)
+                if not remaining:
+                    break
+                best_node = remaining[0]
+                best_for_s1 = len(S1) <= len(S2)
+
             if best_for_s1:
                 S1.add(best_node)
-                print(f"  -> S1 adds node {best_node}, gain={best_gain:.2f}")
+                print(f"  -> S1 adds node {best_node}, score={best_score:.4f}")
             else:
                 S2.add(best_node)
-                print(f"  -> S2 adds node {best_node}, gain={best_gain:.2f}")
-            
+                print(f"  -> S2 adds node {best_node}, score={best_score:.4f}")
+
             available.remove(best_node)
-        
+
         self.data.S1 = S1
         self.data.S2 = S2
         return S1, S2
@@ -350,11 +460,23 @@ def main():
     parser.add_argument("-i", "--initial", required=True, help="Path to initial seed set file")
     parser.add_argument("-b", "--balanced", required=True, help="Path to output balanced seed set file")
     parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
+    parser.add_argument("--max-iter", type=int, default=10, help="IMRank max iterations")
+    parser.add_argument("--candidate-size", type=int, default=200, help="Candidate pool size")
+    parser.add_argument("--alpha", type=float, default=0.8, help="Cross-campaign penalty weight")
+    parser.add_argument("--balance-lambda", type=float, default=0.05, help="S1/S2 size imbalance penalty")
 
     args = parser.parse_args()
 
     if args.budget <= 0:
         raise ValueError("Budget k must be a positive integer.")
+    if args.max_iter <= 0:
+        raise ValueError("--max-iter must be a positive integer.")
+    if args.candidate_size <= 0:
+        raise ValueError("--candidate-size must be a positive integer.")
+    if args.alpha < 0:
+        raise ValueError("--alpha must be non-negative.")
+    if args.balance_lambda < 0:
+        raise ValueError("--balance-lambda must be non-negative.")
 
     if not os.path.exists(args.network):
         raise FileNotFoundError(f"Network file not found: {args.network}")
@@ -365,7 +487,14 @@ def main():
     data.load_graph(args.network)
     data.load_initial_seeds(args.initial)
 
-    heuristic = IEMPHeuristic(data, budget=args.budget, max_iter=10)
+    heuristic = IEMPHeuristic(
+        data,
+        budget=args.budget,
+        max_iter=args.max_iter,
+        candidate_size=args.candidate_size,
+        alpha=args.alpha,
+        balance_lambda=args.balance_lambda,
+    )
     heuristic.run()
 
     data.save_solution(args.balanced)
