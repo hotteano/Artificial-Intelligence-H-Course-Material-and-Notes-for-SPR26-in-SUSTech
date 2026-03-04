@@ -1,3 +1,7 @@
+import argparse
+import os
+
+
 class IEMData:
     """
     数据类：封装所有IEM问题相关数据，包括图结构和种子集
@@ -340,27 +344,32 @@ class IEMPHeuristic:
         return exp_reached
 
 
-# ========== 测试代码 ==========
-if __name__ == "__main__":
-    # 创建数据对象
+def main():
+    parser = argparse.ArgumentParser(description="IEM Heuristic Solver")
+    parser.add_argument("-n", "--network", required=True, help="Path to social network file")
+    parser.add_argument("-i", "--initial", required=True, help="Path to initial seed set file")
+    parser.add_argument("-b", "--balanced", required=True, help="Path to output balanced seed set file")
+    parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
+
+    args = parser.parse_args()
+
+    if args.budget <= 0:
+        raise ValueError("Budget k must be a positive integer.")
+
+    if not os.path.exists(args.network):
+        raise FileNotFoundError(f"Network file not found: {args.network}")
+    if not os.path.exists(args.initial):
+        raise FileNotFoundError(f"Initial seed file not found: {args.initial}")
+
     data = IEMData()
-    
-    # 读取图数据
-    data.load_graph("map2/dataset2")
-    
-    # 读取初始种子
-    data.load_initial_seeds("map2/seed")
-    
-    # 创建启发式算法对象
-    # budget=15：总共选15个节点（S1+S2=15）
-    # max_iter=10：最多迭代10次
-    heuristic = IEMPHeuristic(data, budget=15, max_iter=10)
-    
-    # 运行贪心对称差最小化算法
-    S1, S2 = heuristic.run()
-    
-    print(f"S1: {S1}")
-    print(f"S2: {S2}")
-    
-    # 保存结果到文件
-    data.save_solution("map2/seed_balanced2")
+    data.load_graph(args.network)
+    data.load_initial_seeds(args.initial)
+
+    heuristic = IEMPHeuristic(data, budget=args.budget, max_iter=10)
+    heuristic.run()
+
+    data.save_solution(args.balanced)
+
+
+if __name__ == "__main__":
+    main()
