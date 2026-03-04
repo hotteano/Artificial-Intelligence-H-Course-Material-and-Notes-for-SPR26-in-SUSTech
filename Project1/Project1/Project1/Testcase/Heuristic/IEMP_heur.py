@@ -174,99 +174,182 @@ class IEMPHeuristic:
         # 创建节点到排名的映射：node -> position (0-indexed)
         # 排名越靠前（影响力越大），position越小
         pos = {node: i for i, node in enumerate(ranking)}
-
-        # 初始化边际影响力：每个节点至少能激活自己，所以初始值为1
+        n = len(ranking)
+    
+        # 初始化：每个节点至少激活自己
         M = {node: 1.0 for node in ranking}
-
-        # 从后向前扫描：从排名最低（列表末尾）到排名最高（列表开头）
-        # range(start, stop, step): 从 len-1 到 1，步长 -1
-        for i in range(len(ranking) - 1, 0, -1): 
-            v = ranking[i]   # 当前节点（排名位置为i，排名较低）
-
-            # 遍历v的所有入边邻居（谁指向v，即谁可以激活v）
-            # 使用反向图：reverse_graph[v] = [(u, p1, p2), ...] 表示 u -> v
-            for u, p1, p2 in self.data.graph.get(v, []):
-
-                # 如果u在排名中且排名比v高（位置数字更小）
-                if u in pos and pos[u] < i:
-
-                    # 选择对应campaign的传播概率
-                    # campaign_idx=0 用 p1（第一个概率）
-                    # campaign_idx=1 用 p2（第二个概率）
-                    p = p1 if campaign_idx == 0 else p2
-
-                    # u的边际影响力 += v的边际影响力 * 传播概率
-                    # 含义：u可以通过激活v，获得v能激活的所有节点
-                    M[u] += M[v] * p 
+    
+        # 从后向前扫描：从排名最低（列表末尾）到排名最高
+        for i in range(n - 1, 0, -1):
+            v = ranking[i]  # 当前节点（排名较低）
         
+            # 计算v需要分配给排名更高节点的分数
+            remaining = M[v]
+        
+            # 按排名从高到低遍历（从0到i-1）
+            for j in range(i):
+                u = ranking[j]  # 排名更高的节点
+            
+                # 检查u是否能激活v（u->v的边）
+                for neighbor, p1, p2 in self.data.reverse_graph.get(v, []):
+                    if neighbor == u:
+                        p = p1 if campaign_idx == 0 else p2
+                    
+                        # 分配影响力：v的影响力 * 传播概率 * 竞争因子
+                        influence = remaining * p
+                        M[u] += influence
+                    
+                        # 更新剩余影响力（考虑u的优先激活权）
+                        remaining *= (1 - p)
+                        break  # 找到u->v的边就跳出
+    
         return M
     
-    def run_imrank(self): 
+    def run(self):
         """
-        IMRank主算法
-        
-        算法流程：
-        1. 初始化：按度数排序得到初始排名
-        2. 迭代优化（最多max_iter次）：
-           a. 用LFA计算当前排名下每个节点的边际影响力M
-           b. 按边际影响力M重新排序（M大的排前面）
-           c. 如果新排名的top-k与旧排名相同，则收敛，停止迭代
-        3. 输出：选择新排名的top-k节点作为S1, S2
-        
-        返回:
-            (S1, S2): 两个平衡种子集合，满足 |S1| + |S2| <= budget
+        贪心算法：基于对称差最小化选择 S1 和 S2
+        目标：最小化 E[|r(S1∪I1) Δ r(S2∪I2)|]
         """
-        # 步骤1：初始化排名（按出度降序）
-        ranking1 = self.compute_degree_ranking()
-        ranking2 = self.compute_degree_ranking()
-
-        # 排除已存在的初始种子（不能重复选择， budgets只用于新选的S1, S2）
+        import random
+        
         available = set(range(self.data.n_nodes)) - self.data.I1 - self.data.I2
-        ranking1 = [n for n in ranking1 if n in available]
-        ranking2 = [n for n in ranking2 if n in available]
-
-        # 步骤2：迭代优化
-        for iteration in range(self.max_iter): 
-
-            # 用LFA策略计算两个campaign的边际影响力
-            # M1[v] = 节点v在campaign 1下的排名基边际影响力
-            M1 = self.lfa_strategy(ranking1, 0)
-            M2 = self.lfa_strategy(ranking2, 1)
-
-            # 按边际影响力重新排序（降序）
-            # key=lambda n: M1[n] 表示按M1值排序
-            # reverse=True 表示降序（M大的排前面）
-            new_ranking1 = sorted(available, key=lambda n: M1[n], reverse=True)
-            new_ranking2 = sorted(available, key=lambda n: M2[n], reverse=True)
-
-            # 预算分配：budget = k1 + k2
-            # 整数除法：k1 = budget // 2
-            # k2 取剩余部分，处理奇数预算的情况
-            k1 = self.budget // 2
-            k2 = self.budget - k1
-
-            # 获取新旧排名的top-k节点集合（用于收敛判断）
-            topk1_old = set(ranking1[:k1])
-            topk2_old = set(ranking2[:k2])
-            topk1_new = set(new_ranking1[:k1])
-            topk2_new = set(new_ranking2[:k2])
-
-            # 更新排名为新的排名
-            ranking1, ranking2 = new_ranking1, new_ranking2
-
-            # 收敛判断：如果top-k节点集合没有变化，说明已找到自洽排名
-            if topk1_new == topk1_old and topk2_new == topk2_old:
-                break  # 收敛，跳出循环
+        S1, S2 = set(), set()
         
-        # 步骤3：选择最终的top-k节点作为解
-        k1 = self.budget // 2
-        k2 = self.budget - k1
+        # 贪心选择 budget 个节点
+        for i in range(self.budget):
+            best_gain = -float('inf')
+            best_node = None
+            best_for_s1 = True
+            
+            print(f"Selecting {i+1}/{self.budget}...")
+            
+            for node in list(available)[:20]:  # 只评估前20个可用节点，提升效率
+                # 尝试加入 S1
+                gain_s1 = self.compute_balance_gain(node, S1, S2, 
+                                                     self.data.I1, self.data.I2, 
+                                                     for_s1=True)
+                if gain_s1 > best_gain:
+                    best_gain = gain_s1
+                    best_node = node
+                    best_for_s1 = True
+                
+                # 尝试加入 S2
+                gain_s2 = self.compute_balance_gain(node, S1, S2, 
+                                                     self.data.I1, self.data.I2, 
+                                                     for_s1=False)
+                if gain_s2 > best_gain:
+                    best_gain = gain_s2
+                    best_node = node
+                    best_for_s1 = False
+            
+            # 执行选择
+            if best_for_s1:
+                S1.add(best_node)
+                print(f"  -> S1 adds node {best_node}, gain={best_gain:.2f}")
+            else:
+                S2.add(best_node)
+                print(f"  -> S2 adds node {best_node}, gain={best_gain:.2f}")
+            
+            available.remove(best_node)
+        
+        self.data.S1 = S1
+        self.data.S2 = S2
+        return S1, S2
 
-        # S1取ranking1的前k1个，S2取ranking2的前k2个
-        self.data.S1 = set(ranking1[:k1])
-        self.data.S2 = set(ranking2[:k2])
+    def compute_balance_gain(self, node, S1, S2, I1, I2, for_s1):
+        """
+        计算将 node 加入 S1 或 S2 对减少对称差的边际贡献（基于LFA估计）
+        """
+        # 当前对称差（用LFA快速估计）
+        curr = self.estimate_sym_diff_lfa(S1, S2, I1, I2)
+        
+        # 加入 node 后的对称差
+        if for_s1:
+            new = self.estimate_sym_diff_lfa(S1 | {node}, S2, I1, I2)
+        else:
+            new = self.estimate_sym_diff_lfa(S1, S2 | {node}, I1, I2)
+        
+        # 增益 = 减少的对称差大小
+        return curr - new
 
-        return self.data.S1, self.data.S2
+    def estimate_sym_diff_lfa(self, S1, S2, I1, I2):
+        """
+        用LFA策略快速估计期望对称差 E[|r(S1∪I1) Δ r(S2∪I2)|]
+        
+        核心思想：
+        1. 用LFA估计每个节点被campaign 1和campaign 2激活的期望次数
+        2. 期望对称差 = Σ_v [P1(v)(1-P2(v)) + (1-P1(v))P2(v)]
+        其中 P1(v), P2(v) 是节点v被两个campaign激活的概率（用期望值近似）
+        """
+        # 估计两个campaign的激活概率分布
+        prob1 = self.lfa_estimate_reach(S1 | I1, campaign=0)
+        prob2 = self.lfa_estimate_reach(S2 | I2, campaign=1)
+        
+        # 计算期望对称差：对于每个节点，计算它只属于一个campaign的概率
+        expected_sym_diff = 0.0
+        for v in range(self.data.n_nodes):
+            p1 = prob1.get(v, 0.0)
+            p2 = prob2.get(v, 0.0)
+            # 节点v贡献的对称差期望 = P1*(1-P2) + (1-P1)*P2
+            expected_sym_diff += p1 * (1 - p2) + (1 - p1) * p2
+        
+        return expected_sym_diff
+
+    def lfa_estimate_reach(self, seeds, campaign):
+        """
+        用类似LFA的策略估计每个节点被**到达/暴露**的期望次数（作为概率的近似）
+        
+        根据IEM问题定义，"暴露节点"包括：
+        - 种子节点
+        - 被尝试激活的节点（无论成功与否）
+        
+        算法：
+        1. 初始：种子节点的到达期望为1.0（确定被到达）
+        2. 传播阶段：
+           - 一个节点被"到达"当它至少有一个父节点被激活（尝试激活它）
+           - 一个节点被"激活"当它被到达且激活尝试成功
+        3. 按BFS顺序传播，同时追踪到达概率和激活概率
+        """
+        # 初始化：种子节点的到达概率和激活概率都为1.0
+        exp_reached = {node: 0.0 for node in range(self.data.n_nodes)}  # 被到达的概率
+        exp_active = {node: 0.0 for node in range(self.data.n_nodes)}   # 被激活的概率
+        
+        for seed in seeds:
+            exp_reached[seed] = 1.0
+            exp_active[seed] = 1.0
+        
+        # 按拓扑层次传播
+        max_iter = 10  # 最大传播深度/迭代次数
+        
+        for _ in range(max_iter):
+            new_reached = exp_reached.copy()
+            new_active = exp_active.copy()
+            
+            for u in range(self.data.n_nodes):
+                if exp_active[u] > 0:  # 只有被激活的节点才会尝试传播
+                    # u向其邻居传播
+                    for v, p1, p2 in self.data.graph.get(u, []):
+                        p = p1 if campaign == 0 else p2
+                        
+                        # v被u尝试激活的概率 = u被激活的概率
+                        # 只要有父节点尝试，v就被视为"reached"
+                        if exp_active[u] > 0.001:
+                            # v被到达的概率更新（OR公式：至少一个父节点激活它）
+                            # P(v reached) = 1 - (1 - P(u active)) * (1 - current P(v reached))
+                            new_reached[v] = 1.0 - (1.0 - exp_active[u]) * (1.0 - new_reached[v])
+                        
+                        # v被成功激活的概率（只有被到达且激活成功才算）
+                        # P(v active) 增量 = P(u active) * p(u->v)
+                        contribution = exp_active[u] * p
+                        if contribution > 0.001:
+                            # OR公式：至少一个父节点成功激活它
+                            new_active[v] = 1.0 - (1.0 - contribution) * (1.0 - new_active[v])
+            
+            exp_reached = new_reached
+            exp_active = new_active
+        
+        # 返回到达概率（包含尝试但未激活的节点）
+        return exp_reached
 
 
 # ========== 测试代码 ==========
@@ -275,18 +358,18 @@ if __name__ == "__main__":
     data = IEMData()
     
     # 读取图数据
-    data.load_graph("map1/dataset1")
+    data.load_graph("map2/dataset2")
     
     # 读取初始种子
-    data.load_initial_seeds("map1/seed")
+    data.load_initial_seeds("map2/seed")
     
     # 创建启发式算法对象
-    # budget=10：总共选10个节点（S1+S2=10）
+    # budget=15：总共选15个节点（S1+S2=15）
     # max_iter=10：最多迭代10次
-    heuristic = IEMPHeuristic(data, budget=10, max_iter=10)
+    heuristic = IEMPHeuristic(data, budget=15, max_iter=10)
     
-    # 运行IMRank算法
-    S1, S2 = heuristic.run_imrank()
+    # 运行贪心对称差最小化算法
+    S1, S2 = heuristic.run()
     
     print(f"S1: {S1}")
     print(f"S2: {S2}")

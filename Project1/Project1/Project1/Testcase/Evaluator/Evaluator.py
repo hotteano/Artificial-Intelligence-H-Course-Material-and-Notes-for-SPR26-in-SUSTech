@@ -1,5 +1,6 @@
 import os
 import random
+import argparse
 from typing import List, Tuple, Set, Dict
 
 
@@ -120,14 +121,19 @@ class IEMEvaluator:
         """
         Run one IC (Independent Cascade) simulation
         
+        According to the problem definition, "exposed nodes" includes:
+        - Nodes that were successfully activated
+        - Nodes that were once attempted to be activated but were not successfully activated
+        
         Args:
             seeds: Set of seed nodes
             campaign_idx: 0 for campaign 1, 1 for campaign 2
             
         Returns:
-            Set of all activated (exposed) nodes
+            Set of all reached/exposed nodes (including attempted but failed activations)
         """
-        active = set(seeds)
+        active = set(seeds)          # Successfully activated nodes
+        reached = set(seeds)         # All reached nodes (including attempted but failed)
         newly_active = set(seeds)
         
         while newly_active:
@@ -135,6 +141,10 @@ class IEMEvaluator:
             for node in newly_active:
                 for neighbor, p1, p2 in self.graph.get(node, []):
                     if neighbor not in active:
+                        # This neighbor is being attempted to be activated
+                        # So it is "reached" regardless of success or failure
+                        reached.add(neighbor)
+                        
                         # Get the appropriate probability for this campaign
                         p = p1 if campaign_idx == 0 else p2
                         if random.random() < p:
@@ -143,7 +153,7 @@ class IEMEvaluator:
             newly_active = current_new - active
             active.update(newly_active)
         
-        return active
+        return reached
     
     def evaluate(self, n_simulations: int = 1000) -> float:
         """
@@ -166,13 +176,14 @@ class IEMEvaluator:
         
         for _ in range(n_simulations):
             # Run IC simulation for both campaigns
-            exposed_1 = self.ic_simulation(full_seeds_1, 0)
-            exposed_2 = self.ic_simulation(full_seeds_2, 1)
+            reached_1 = self.ic_simulation(full_seeds_1, 0)
+            reached_2 = self.ic_simulation(full_seeds_2, 1)
             
-            # Calculate symmetric difference: nodes exposed to exactly one campaign
-            symmetric_diff = exposed_1.symmetric_difference(exposed_2)
+            # Calculate symmetric difference: nodes reached by exactly one campaign
+            symmetric_diff = reached_1.symmetric_difference(reached_2)
             
             # Balanced exposure: nodes NOT in symmetric difference
+            # (i.e., reached by both or reached by neither)
             balanced_exposed = self.n_nodes - len(symmetric_diff)
             total_score += balanced_exposed
         
@@ -182,31 +193,52 @@ class IEMEvaluator:
 def main():
     """
     Main function for command-line usage
+    
+    Usage: python Evaluator.py -n <social_network> -i <initial_seed> -b <balanced_seed> -k <budget> -o <output_path>
     """
-    import sys
+    parser = argparse.ArgumentParser(description='IEM Evaluator')
+    parser.add_argument('-n', '--network', required=True, help='Path to social network file')
+    parser.add_argument('-i', '--initial', required=True, help='Path to initial seed set file')
+    parser.add_argument('-b', '--balanced', required=True, help='Path to balanced seed set file')
+    parser.add_argument('-k', '--budget', type=int, required=True, help='Budget k')
+    parser.add_argument('-o', '--output', required=True, help='Path to output file for objective value')
+    parser.add_argument('--simulations', type=int, default=1000, help='Number of Monte Carlo simulations (default: 1000)')
     
-    if len(sys.argv) < 4:
-        print("Usage: python Evaluator.py <dataset_path> <seed_path> <seed_balanced_path> [n_simulations]")
-        print("Example: python Evaluator.py map1/dataset1 map1/seed map1/seed_balanced 1000")
-        sys.exit(1)
+    args = parser.parse_args()
     
-    dataset_path = sys.argv[1]
-    seed_path = sys.argv[2]
-    seed_balanced_path = sys.argv[3]
-    n_simulations = int(sys.argv[4]) if len(sys.argv) > 4 else 1000
+    # Validate input files exist
+    if not os.path.exists(args.network):
+        print(f"Error: Network file not found: {args.network}")
+        exit(1)
+    if not os.path.exists(args.initial):
+        print(f"Error: Initial seed file not found: {args.initial}")
+        exit(1)
+    if not os.path.exists(args.balanced):
+        print(f"Error: Balanced seed file not found: {args.balanced}")
+        exit(1)
     
     # Create evaluator and read data
     evaluator = IEMEvaluator()
-    evaluator.read_data(dataset_path, seed_path, seed_balanced_path)
+    evaluator.read_data(args.network, args.initial, args.balanced)
+    
+    # Validate budget constraint
+    total_balanced_seeds = len(evaluator.balanced_seeds[0]) + len(evaluator.balanced_seeds[1])
+    if total_balanced_seeds > args.budget:
+        print(f"Warning: Total balanced seeds ({total_balanced_seeds}) exceeds budget ({args.budget})")
     
     print(f"Graph: {evaluator.n_nodes} nodes, {evaluator.n_edges} edges")
     print(f"Initial seeds: Campaign 1: {len(evaluator.initial_seeds[0])}, Campaign 2: {len(evaluator.initial_seeds[1])}")
-    print(f"Balanced seeds: Campaign 1: {len(evaluator.balanced_seeds[0])}, Campaign 2: {len(evaluator.balanced_seeds[1])}")
-    print(f"Running {n_simulations} simulations...")
+    print(f"Balanced seeds: Campaign 1: {len(evaluator.balanced_seeds[0])}, Campaign 2: {len(evaluator.balanced_seeds[1])} (Total: {total_balanced_seeds}, Budget: {args.budget})")
+    print(f"Running {args.simulations} simulations...")
     
     # Evaluate
-    score = evaluator.evaluate(n_simulations)
+    score = evaluator.evaluate(args.simulations)
     print(f"\nBalanced Information Exposure: {score:.4f}")
+    
+    # Write output to file
+    with open(args.output, 'w') as f:
+        f.write(f"{score:.4f}\n")
+    print(f"Result written to: {args.output}")
 
 
 if __name__ == "__main__":

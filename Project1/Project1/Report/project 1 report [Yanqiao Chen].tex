@@ -20,7 +20,7 @@
 \newenvironment{solution}{\begin{proof}[\indent\bf Solution]}{\end{proof}}
 \renewcommand{\proofname}{\indent\bf Proof}
 
-\title{IEM Problem Solving Report: An Heuristic Approach}
+\title{\bf{IEM Problem Solving Report: Heuristic and Genetic Algorithm Approaches}}
 
 \author{\bf{Yanqiao Chen}\\
         Southern University of Science and Technology\\
@@ -52,46 +52,106 @@ The problem is a NP-hard combinatorial optimization problem, and finding an exac
 
 \subsection{Heuristic Approach}
 
-We apply the IMRanking algorithm to optimize this problem. 
+We propose a greedy algorithm based on the LFA (Last-to-First Allocating) strategy to minimize the symmetric difference between the two campaigns' influence spreads.
 
-The psuedocode of the algorithm is as Algorithm \ref{alg:IMRanking}.
+The pseudocode of the algorithm is as Algorithm \ref{alg:greedy}.
 
 \begin{algorithm}
-\caption{IMRanking Algorithm for IEMP}
-\label{alg:IMRanking}
+\caption{Greedy Algorithm for Symmetric Difference Minimization}
+\label{alg:greedy}
 \begin{algorithmic}[1]
-\State $r^{(0)} = r$
-\State $t \gets 0$
-\Repeat
-        \State $t \gets t + 1$
-        \State Calculate $M_{r^{(0)}}$ with respect to ranking $r$
-        \State Generate a new ranking $r^{(t)}$ by sorting nodes in decreasing order according to $M_{r^{(t)}}$
-\Until{$r^{(t)} = r^{(t-1)}$}
-\State \textbf{return} $r^{(t)}$
+\State $V_{avail} \gets V \setminus (I_1 \cup I_2)$
+\State $S_1 \gets \emptyset$, $S_2 \gets \emptyset$
+\For{$i = 1$ to $k$}
+    \State $\textit{best\_gain} \gets -\infty$, $\textit{best\_node} \gets \text{null}$, $\textit{best\_for\_S1} \gets \text{true}$
+    \For{each $v \in V_{avail}$}
+        \State $\textit{gain}_1 \gets \textsc{ComputeGain}(v, S_1, S_2, I_1, I_2, \text{for\_S1}=\text{true})$
+        \If{$\textit{gain}_1 > \textit{best\_gain}$}
+            \State $\textit{best\_gain} \gets \textit{gain}_1$, $\textit{best\_node} \gets v$, $\textit{best\_for\_S1} \gets \text{true}$
+        \EndIf
+        \State $\textit{gain}_2 \gets \textsc{ComputeGain}(v, S_1, S_2, I_1, I_2, \text{for\_S1}=\text{false})$
+        \If{$\textit{gain}_2 > \textit{best\_gain}$}
+            \State $\textit{best\_gain} \gets \textit{gain}_2$, $\textit{best\_node} \gets v$, $\textit{best\_for\_S1} \gets \text{false}$
+        \EndIf
+    \EndFor
+    \If{$\textit{best\_for\_S1}$}
+        \State $S_1 \gets S_1 \cup \{\textit{best\_node}\}$
+    \Else
+        \State $S_2 \gets S_2 \cup \{\textit{best\_node}\}$
+    \EndIf
+    \State $V_{avail} \gets V_{avail} \setminus \{\textit{best\_node}\}$
+\EndFor
+\State \textbf{return} $S_1, S_2$
 \end{algorithmic}
 \end{algorithm}
 
-The Calculation of $M_{r^{(0)}}$ is as Algorithm \ref{alg:calM}.
+The gain computation using LFA estimation is as Algorithm \ref{alg:computegain}.
 
 \begin{algorithm}
-\caption{Calculation of $M_{r^{(0)}}$}
-\label{alg:calM}
+\caption{ComputeGain using LFA Estimation}
+\label{alg:computegain}
 \begin{algorithmic}[1]
-\For{$i=1$ to $n$} 
-    \State $M_r(v_{r_i}) \gets 1$
+\Require Node $v$, current sets $S_1, S_2$, initial sets $I_1, I_2$, boolean $\text{for\_S1}$
+\Ensure Marginal gain of adding $v$ to $S_1$ or $S_2$
+\State $\textit{curr} \gets \textsc{EstimateSymDiff}(S_1, S_2, I_1, I_2)$
+\If{$\text{for\_S1}$}
+    \State $\textit{new} \gets \textsc{EstimateSymDiff}(S_1 \cup \{v\}, S_2, I_1, I_2)$
+\Else
+    \State $\textit{new} \gets \textsc{EstimateSymDiff}(S_1, S_2 \cup \{v\}, I_1, I_2)$
+\EndIf
+\State \textbf{return} $\textit{curr} - \textit{new}$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{EstimateSymDiff using LFA}
+\label{alg:estimatesymdiff}
+\begin{algorithmic}[1]
+\Require Sets $S_1, S_2$, initial sets $I_1, I_2$
+\Ensure Expected symmetric difference estimation
+\State $\textit{prob}_1 \gets \textsc{LFAEstimate}(S_1 \cup I_1, \text{campaign}=1)$
+\State $\textit{prob}_2 \gets \textsc{LFAEstimate}(S_2 \cup I_2, \text{campaign}=2)$
+\State $\textit{sym\_diff} \gets 0$
+\For{each $v \in V$}
+    \State $p_1 \gets \textit{prob}_1[v]$, $p_2 \gets \textit{prob}_2[v]$
+    \State $\textit{sym\_diff} \gets \textit{sym\_diff} + p_1(1-p_2) + (1-p_1)p_2$
 \EndFor
-\For{$i = n$ to $2$} 
-    \For{$j= 1$ to $i-1$} 
-        \State $M_r(v_{r_j}) \gets M_r(v_{r_n}) + p(v_{r_j}, v_{r_i}) \times M_r(v_{r_i})$
-        \State $M_r(v_{r_i}) \gets (1-p(v_{r_j}, v_{r_i})) \times M_r(v_{r_i})$
+\State \textbf{return} $\textit{sym\_diff}$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{LFAEstimate}
+\label{alg:lfaestimate}
+\begin{algorithmic}[1]
+\Require Seed set $S$, campaign index $c$
+\Ensure Activation probability for each node
+\For{each $v \in V$}
+    \State $\textit{exp}[v] \gets 0$
+\EndFor
+\For{each $s \in S$}
+    \State $\textit{exp}[s] \gets 1$
+\EndFor
+\For{$\textit{iter} = 1$ to $\textit{max\_iter}$}
+    \State $\textit{new\_exp} \gets \textit{exp}$
+    \For{each $u \in V$ where $\textit{exp}[u] > 0$}
+        \For{each $(u, v, p_1, p_2) \in E$}
+            \State $p \gets p_1$ if $c=1$ else $p_2$
+            \State $\textit{contribution} \gets \textit{exp}[u] \times p$
+            \If{$\textit{contribution} > \epsilon$}
+                \State $\textit{new\_exp}[v] \gets \max(\textit{new\_exp}[v], \textit{contribution})$
+            \EndIf
+        \EndFor
     \EndFor
+    \State $\textit{exp} \gets \textit{new\_exp}$
 \EndFor
+\State \textbf{return} $\textit{exp}$
 \end{algorithmic}
 \end{algorithm}
 
 The algorithm is implemented in Python in the file \texttt{IEMP\_heur.py}. 
 
-The algorithm 
+\paragraph{Rationale} The optimization target is to minimize the expected symmetric difference between the two campaigns' influence spreads. The algorithm greedily selects nodes that maximize the reduction of symmetric difference. Specifically, for each candidate node, we estimate its marginal contribution to reducing the symmetric difference using the LFA (Last-to-First Allocating) strategy, which efficiently approximates the expected influence spread without expensive Monte Carlo simulations. The node with the highest marginal gain is selected and added to either $S_1$ or $S_2$, whichever yields better improvement.
 
 \subsection{Genetic Approach}
 
