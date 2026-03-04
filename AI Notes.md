@@ -243,7 +243,9 @@ function RECURSIVE_DFS(problem, node):
 | $h(n)$ | 🎯 Estimated cost from $n$ to **goal** |
 | $f(n)$ | 💰 Estimated **total cost** of cheapest solution through $n$ |
 
-> 🏆 **Optimality**: A* is optimal if $h(n)$ is **admissible** (tree search) or **consistent** (graph search).
+> 🏆 **Optimality**: A* is optimal if $h(n)$ is **admissible** (tree search) or **consistent** (graph search). The function is **admissible** if the function never over estimate the true cost to reach the goal, formally, $\forall x, h(x) \leq h^*(x)$.
+
+> **Proof.** Prove by contradiction. Assume that the final point is $G'$, and $G$ is the optimal solution. Let $f(G') = g(G) > C^*$, where $C^*$ is the cost of the optimal solution. It can be concluded that, let the optimal path be $S \to n_1 \to n_2 \to \ldots \to G$, then before selecting $G'$, there must be a node $n$ in the OPEN table. For $f(n) = g(n)+h(n) = g^*(n) + h(n) \leq g^*(n) + h^*(n) = C^*$, thus we have $f(n) \leq C^* < f(G')$, then the algorithm must explore node $n$ before $G'$. For every nodes on the optimal path, we always have $f(n) \leq C^* < f(G')$, thus the algorithm will explore all nodes on the optimal path before $G'$, which contradicts the assumption that $G'$ is selected before $G$.
 
 ```python
 function A_STAR(problem):

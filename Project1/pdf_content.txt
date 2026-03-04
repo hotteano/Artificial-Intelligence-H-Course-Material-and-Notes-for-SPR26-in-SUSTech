@@ -1,0 +1,323 @@
+Project 1
+Information Exposure MaximizationOutline
+• Overview
+• Problem Description
+• IEM Example
+2Outline
+• Overview
+• Problem Description
+• IEM Example
+3Overview
+Information Exposure Maximization (IEM) is an important algorithmic problem
+that is proposed to solve the echo chamber effect on social media.
+Users tend to gather in groups whose members think alike,
+and that polarisation is greater when content feeds cannot
+be easily tweaked.
+[M. Cinelli et al. PNAS 2021]
+4Overview
+Assume that there are two viewpoints in a social network,
+the IEM problem is to select two campaigns, each containing a set of users who
+hold one of these viewpoints, to maximize the expected number of users that are
+either reached by both campaigns or remain oblivious to both campaigns.
+5Overview
+TASK: Two search algorithms to solve the IEM problem
+• One heuristic algorithm
+• One evolutionary algorithm or one simulated annealing algorithm
+Grading Rules
+• Project report
+• Code evaluation (15 points)
+• Objective evaluation (2.0 points)
+• Heuristic algorithm (6.5 points)
+• Evolutionary algorithm or simulated annealing algorithm (6.5 points)
+6Outline
+• Overview
+• Problem Description
+• IEM Example
+7Assumption
+The following information is available
+• A social network 𝐺 = (𝑉, 𝐸) with two campaigns
+• Two seed sets
+• each support one of the two viewpoints
+8Assumption
+The following information is available
+• A social network 𝐺 = (𝑉, 𝐸) with two campaigns
+• Two seed sets
+• each support one of the two viewpoints
+• Heterogeneous propagation
+• two viewpoints are propagated independently of each other
+• Two functions 𝑝: 𝐸 → [0,1]
+• associate probability 𝑝 with edge 𝑢, 𝑣 capturing the influence 𝑢 exerts over 𝑣
+(𝑢,𝑣)
+9Assumption
+The following information is available
+• A social network 𝐺 = (𝑉, 𝐸) with two campaigns
+• Two seed sets
+• each support one of the two viewpoints
+• Heterogeneous propagation
+• two viewpoints are propagated independently of each other
+• Two functions 𝑝: 𝐸 → [0,1]
+• associate probability 𝑝 with edge 𝑢, 𝑣 capturing the influence 𝑢 exerts over 𝑣
+(𝑢,𝑣)
+• A diffusion model
+• describe how influence propagates to a node from its neighbors
+10Influence Diffusion of Each Campaign
+The famous Independent Cascade (IC) model is used.
+• Each node 𝑣 ∈ 𝑉 has two possible states, inactive and active
+• active: adopts new information being propagated through the network
+• inactive: has not adopted new information yet
+• Ever been attempted to be activated but NOT
+• Never been attempted to be activated
+• Can ONLY switch from inactive to active
+11Influence Diffusion of Each Campaign
+The famous Independent Cascade (IC) model is used.
+• Each node 𝑣 ∈ 𝑉 has two possible states, inactive and active
+• active: adopts new information being propagated through the network
+• inactive: has not adopted new information yet
+• Ever been attempted to be activated but NOT
+• Never been attempted to be activated
+Exposed Node Set
+• Can ONLY switch from inactive to active
+12Influence Diffusion of Each Campaign
+Information proceeds in discrete time steps, with 𝑡 = 0,1,2, ⋯
+• Let 𝑈 be the set of active nodes in time 0
+• Let 𝑟(𝑈) be the FINAL exposed node set
+13Influence Diffusion of Each Campaign (Case)
+Seed set 𝑈 = {1}
+•
+Time step 𝑡 = 0
+•
+Active node set {1}
+•
+Exposed node set {1}
+•
+14Influence Diffusion of Each Campaign (Case)
+Seed set 𝑈 = {1}
+•
+Time step 𝑡 = 1
+•
+Active node set {1, 3, 4}
+•
+Exposed node set {1, 2, 3, 4}
+•
+15Influence Diffusion of Each Campaign (Case)
+Seed set 𝑈 = {1}
+•
+Time step 𝑡 = 2
+•
+Active node set {1, 3, 4, 6}
+•
+Exposed node set {1, 2, 3, 4, 6, 7}
+•
+16Influence Diffusion of Each Campaign (Case)
+Seed set 𝑈 = {1}
+•
+Time step 𝑡 = 2
+•
+Active node set {1, 3, 4, 6, 7}
+•
+Exposed node set {1, 2, 3, 4, 6, 7}
+•
+17Influence Exposure of Two Campaigns (Case)
+Seed set 𝑈 = {1}
+• 1
+Exposed node set {1, 2, 3, 4, 6, 7}
+•
+Seed set 𝑈 = {5}
+• 2
+Exposed node set {5}
+•
+18Influence Exposure of Two Campaigns (Case)
+Seed set 𝑈 = {1}
+• 1
+Exposed node set {1, 2, 3, 4, 6, 7}
+•
+Seed set 𝑈 = {5}
+• 2
+Exposed node set {5}
+•
+NO node can break through the echo
+chamber in this propagation
+19Balanced Seed Set
+Campaign 𝑐 , 𝑖 ∈ 1,2
+𝑖
+• Seed set 𝑈 = 𝐼 ∪ 𝑆
+𝑖 𝑖 𝑖
+• Initial seed set 𝐼 ⊆ 𝑉: available
+𝑖
+• Balanced seed set 𝑆 ⊆ 𝑉: to be found
+𝑖
+20Balanced Information Exposure
+The expected number of nodes that are either reached by both campaigns or
+remain oblivious to both campaigns
+𝐴 △ 𝐵 = (𝐴 ∖ 𝐵) ∪ (𝐵 ∖ 𝐴)
+Φ 𝑆 𝑆 = 𝔼 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆
+1 2 1 1 1 2 2 2
+Both are random variables determined by the
+stochastic process of the diffusion model and
+their diffusion probabilities
+21Problem Description
+Given a social network 𝐺 = 𝑉, 𝐸 , two initial seed sets 𝐼 and 𝐼 , and a budget 𝑘.
+1 2
+The IEM is to find two balanced seed sets 𝑺 and 𝑺 , where 𝑆 + |𝑆 | ≤ 𝑘, and
+𝟏 𝟐 1 2
+maximize the balanced information exposure, i.e.,
+max Φ(𝑆 , 𝑆 ) = max 𝔼 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆
+1 2 1 1 1 2 2 2
+s. t. 𝑆 + 𝑆 ≤ 𝑘
+1 2
+𝑆 , 𝑆 ⊆ 𝑉
+1 2
+22Outline
+• Overview
+• Problem Description
+• IEM Example
+23IEM Example
+Campaigns 𝒄 (Red), 𝒄 (blue)
+𝟏 𝟐
+Initial Seed Set 𝐼 = 1 , 𝐼 = {9}
+• 1 2
+Balanced Seed Set:
+•
+Solution 1: 𝑆 = 8 , 𝑆 = {2}
+• 1 2
+Solution 2: 𝑆 = 9 , 𝑆 = {1}
+• 1 2
+24IEM Solution 1
+Campaigns 𝒄
+𝟏
+Initial Seed Set 𝐼 = {1}
+• 1
+Balanced Seed Set 𝑆 = {8}
+• 1
+Exposed Node Set {1, 2, 3, 4, 5, 6, 7, 8}
+•
+𝒕 = 𝟒
+𝒕 = 𝟎 25IEM Solution 1
+Campaigns 𝒄
+𝟐
+Initial Seed Set 𝐼 = {9}
+• 2
+Balanced Seed Set 𝑆 = {2}
+• 2
+Exposed Node Set {2, 3, 4, 5, 6, 7, 8, 9}
+•
+𝒕 = 𝟒
+𝒕 = 𝟎 26IEM Solution 1
+Balanced Exposed Node
+Initial Seed Set 𝐼 = 1 , 𝐼 = {9}
+• 1 2
+Balanced Seed Set 𝑆 = 8 , 𝑆 = {2}
+• 1 2
+Φ 𝑆 , 𝑆 = 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆 = 2, 3, 4, 5, 6, 7, 8 = 7
+• 1 2 1 1 1 2 2 2
+𝒓 = {𝟏, 𝟐, 𝟑,𝟒, 𝟓, 𝟔, 𝟕, 𝟖} 𝒓 = {𝟐, 𝟑, 𝟒, 𝟓, 𝟔,𝟕, 𝟖, 𝟗}
+𝟏 𝟐 27IEM Solution 2
+Campaigns 𝒄
+𝟏
+Initial Seed Set 𝐼 = {1}
+• 1
+Balanced Seed Set 𝑆 = {9}
+• 1
+Case 1: node 8 activate with probability 0.1
+•
+Exposed Node Set {1, 2, 3, 4, 5, 6, 7, 8, 9}
+•
+𝒕 = 𝟎 𝒕 = 𝟏 𝒕 = 𝟒 28IEM Solution 2
+Campaigns 𝒄
+𝟏
+Initial Seed Set 𝐼 = {1}
+• 1
+Balanced Seed Set 𝑆 = {9}
+• 1
+Case 2: node 8 inactivate with probability 0.9
+•
+Exposed Node Set {1, 2, 3, 4, 5, 8, 9}
+•
+𝒕 = 𝟎 𝒕 = 𝟏 𝒕 = 𝟒 29IEM Solution 2
+Campaigns 𝒄
+𝟐
+Initial Seed Set 𝐼 = {9}
+• 2
+Balanced Seed Set 𝑆 = {1}
+• 2
+Case 1: node 2 activate with probability 0.1
+•
+Exposed Node Set {1, 2, 3, 4, 5, 6, 7, 8, 9}
+•
+𝒕 = 𝟎 𝒕 = 𝟏 𝒕 = 𝟒 30IEM Solution 2
+Campaigns 𝒄
+𝟐
+Initial Seed Set 𝐼 = {9}
+• 2
+Balanced Seed Set 𝑆 = {1}
+• 2
+Case 2: node 2 inactivate with probability 0.9
+•
+Exposed Node Set {1, 2, 5, 6, 7, 8, 9}
+•
+𝒕 = 𝟎 𝒕 = 𝟏 𝒕 = 𝟒 31IEM Solution 2
+Balanced Exposed Node
+Initial Seed Set 𝐼 = 1 , 𝐼 = {9}
+• 1 2
+Balanced Seed Set 𝑆 = 9 , 𝑆 = {1}
+• 1 2
+Probability 𝑝 (1) = 𝑝 × 𝑝 = 0.01
+• 1 2
+Φ(1) 𝑆 ,𝑆 = 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆 = 1, 2, 3, 4, 5, 6, 7, 8, 9 = 9
+• 1 2 1 1 1 2 2 2
+𝒑 = 𝟎. 𝟏, 𝒓 = {𝟏, 𝟐, 𝟑, 𝟒,𝟓, 𝟔, 𝟕, 𝟖, 𝟗} 𝒑 = 𝟎. 𝟏, 𝒓 = {𝟏, 𝟐, 𝟑, 𝟒, 𝟓,𝟔, 𝟕, 𝟖, 𝟗}
+𝟏 𝟏 𝟐 𝟐 32IEM Solution 2
+Balanced Exposed Node
+Initial Seed Set 𝐼 = 1 , 𝐼 = {9}
+• 1 2
+Balanced Seed Set 𝑆 = 9 , 𝑆 = {1}
+• 1 2
+Probability 𝑝 (2) = 𝑝 × 𝑝 = 0.09
+• 1 2
+Φ(2) 𝑆 , 𝑆 = 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆 = 1, 2, 3, 4, 5, 8, 9 = 7
+• 1 2 1 1 1 2 2 2
+𝒑 = 𝟎.𝟗, 𝒓 = {𝟏, 𝟐, 𝟑, 𝟒, 𝟓, 𝟖,𝟗} 𝒑 = 𝟎. 𝟏, 𝒓 = {𝟏, 𝟐, 𝟑, 𝟒, 𝟓,𝟔, 𝟕, 𝟖, 𝟗}
+𝟏 𝟏 𝟐 𝟐 33IEM Solution 2
+Balanced Exposed Node
+Initial Seed Set 𝐼 = 1 , 𝐼 = {9}
+• 1 2
+Balanced Seed Set 𝑆 = 9 , 𝑆 = {1}
+• 1 2
+Probability 𝑝 (3) = 𝑝 × 𝑝 = 0.09
+• 1 2
+Φ(3) 𝑆 , 𝑆 = 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆 = 1, 2, 5, 6, 7, 8, 9 = 7
+• 1 2 1 1 1 2 2 2
+𝒑 = 𝟎. 𝟏, 𝒓 = {𝟏, 𝟐, 𝟑, 𝟒,𝟓, 𝟔, 𝟕, 𝟖, 𝟗} 𝒑 = 𝟎. 𝟗, 𝒓 = {𝟏, 𝟐, 𝟓, 𝟔, 𝟕,𝟖, 𝟗}
+𝟏 𝟏 𝟐 𝟐 34IEM Solution 2
+Balanced Exposed Node
+Initial Seed Set 𝐼 = 1 , 𝐼 = {9}
+• 1 2
+Balanced Seed Set 𝑆 = 9 , 𝑆 = {1}
+• 1 2
+Probability 𝑝 (4) = 𝑝 × 𝑝 = 0.81
+• 1 2
+Φ(4) 𝑆 , 𝑆 = 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆 = 1, 2, 5, 8, 9 = 5
+• 1 2 1 1 1 2 2 2
+𝒑 = 𝟎.𝟗, 𝒓 = {𝟏, 𝟐, 𝟑, 𝟒, 𝟓, 𝟖,𝟗} 𝒑 = 𝟎. 𝟗, 𝒓 = {𝟏, 𝟐, 𝟓, 𝟔, 𝟕,𝟖, 𝟗}
+𝟏 𝟏 𝟐 𝟐 35IEM Solution 2
+Balanced Exposed Node
+Initial Seed Set 𝐼 = 1 , 𝐼 = {9}
+• 1 2
+Balanced Seed Set 𝑆 = 9 , 𝑆 = {1}
+• 1 2
+4
+(𝑖) (𝑖)
+Φ 𝑆 , 𝑆 = 𝔼 𝑉 ∖ 𝑟 𝐼 ⋃𝑆 △ 𝑟 𝐼 ⋃𝑆 = ෍ 𝑝 × Φ 𝑆 , 𝑆
+1 2 1 1 1 2 2 2 1 2
+𝑖=1
+= 0.01 × 9 + 0.09 × 7 + 0.09 × 7 + 0.81 × 5 = 5.4
+36Project1: Information Exposure Maximization
+• Information Exposure Maximization is computationally complex
+• Computing the balanced information exposure for a given solution is NP-hard.
+• Finding an optimal solution of IEM is NP-hard.
+• Three tasks
+• An objective estimator
+• Two search algorithms
+Thank you!
+For more information, please refer to Project1.PDF
+37
