@@ -5,6 +5,7 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amsthm}
+\usepackage{hyperref}
 
 \theoremstyle{plain}
 \newtheorem{theorem}{\indent Theorem}[section]
@@ -51,7 +52,46 @@ The problem is a NP-hard combinatorial optimization problem, and finding an exac
 
 \subsection{Heuristic Approach}
 
-We apply the IMRanking algorithm to optimize this problem.
+We apply the IMRanking algorithm to optimize this problem. 
+
+The psuedocode of the algorithm is as Algorithm \ref{alg:IMRanking}.
+
+\begin{algorithm}
+\caption{IMRanking Algorithm for IEMP}
+\label{alg:IMRanking}
+\begin{algorithmic}[1]
+\State $r^{(0)} = r$
+\State $t \gets 0$
+\Repeat
+        \State $t \gets t + 1$
+        \State Calculate $M_{r^{(0)}}$ with respect to ranking $r$
+        \State Generate a new ranking $r^{(t)}$ by sorting nodes in decreasing order according to $M_{r^{(t)}}$
+\Until{$r^{(t)} = r^{(t-1)}$}
+\State \textbf{return} $r^{(t)}$
+\end{algorithmic}
+\end{algorithm}
+
+The Calculation of $M_{r^{(0)}}$ is as Algorithm \ref{alg:calM}.
+
+\begin{algorithm}
+\caption{Calculation of $M_{r^{(0)}}$}
+\label{alg:calM}
+\begin{algorithmic}[1]
+\For{$i=1$ to $n$} 
+    \State $M_r(v_{r_i}) \gets 1$
+\EndFor
+\For{$i = n$ to $2$} 
+    \For{$j= 1$ to $i-1$} 
+        \State $M_r(v_{r_j}) \gets M_r(v_{r_n}) + p(v_{r_j}, v_{r_i}) \times M_r(v_{r_i})$
+        \State $M_r(v_{r_i}) \gets (1-p(v_{r_j}, v_{r_i})) \times M_r(v_{r_i})$
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+The algorithm is implemented in Python in the file \texttt{IEMP\_heur.py}. 
+
+The algorithm 
 
 \subsection{Genetic Approach}
 
