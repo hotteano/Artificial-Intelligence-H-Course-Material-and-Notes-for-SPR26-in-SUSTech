@@ -124,10 +124,11 @@ class IMRankIEM:
             Dictionary mapping node ID to marginal influence M_r(v)
         """
         # Create position mapping: node -> position in ranking (0-indexed)
+        # Only for nodes in the ranking
         pos = {node: i for i, node in enumerate(ranking)}
         
-        # Initialize marginal influence: each node starts with 1 (itself)
-        M = {node: 1.0 for node in range(self.n_nodes)}
+        # Initialize marginal influence: each node in ranking starts with 1 (itself)
+        M = {node: 1.0 for node in ranking}
         
         # Scan from last to first
         for i in range(len(ranking) - 1, 0, -1):
@@ -136,7 +137,7 @@ class IMRankIEM:
             # Look at all neighbors that are ranked HIGHER (j < i)
             # These are the nodes that can activate v_ri
             for neighbor, p1, p2 in self.reverse_graph[v_ri]:
-                if pos[neighbor] < i:  # Higher ranked neighbor
+                if neighbor in pos and pos[neighbor] < i:  # Higher ranked neighbor in ranking
                     p = p1 if campaign_idx == 0 else p2
                     if p > 0:
                         # Add influence from v_ri to neighbor
