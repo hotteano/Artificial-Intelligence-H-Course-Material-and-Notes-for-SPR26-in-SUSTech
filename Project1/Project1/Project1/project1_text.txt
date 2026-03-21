@@ -1,0 +1,262 @@
+Project 1 – Information Exposure Maximization
+1. Overview
+Information Exposure Maximization (IEM), which selects two sets of users (called
+campaigns) from a social network to maximize the expected number of vertices that
+are either reached by both campaigns or remain oblivious to both campaigns, is an
+important algorithmic problem in social influence analysis. The IEM problem is
+theoretically complex and it has been proven that obtaining an optimal solution of
+IEM is NP-hard. In this project, you need to design two search algorithms, one
+heuristic algorithm and one evolutionary algorithm (or simulated annealing
+algorithm), to solve the IEM problem. The score you get in this project will be given
+according to the performance of your algorithms in our test.
+2. Problem Description
+Information Exposure Maximization is modeled as an algorithmic problem in [1] to
+reduce the echo chamber and filter-bubble effect: users get less exposure to
+conflicting viewpoints and are isolated in their own informational bubble. This
+problem studies a social network represented as a graph G = (V,E), where V is
+the set of nodes in 𝐺 (i.e., users) and 𝐸 is the set of edges in 𝐺 (i.e., social links
+between users). The goal of the IEM problem is to find two sets of users with the
+maximum balanced information exposure. In the following, several preliminary
+definitions are provided first, and then a formal definition and an example of the
+IEM problem are presented.
+1) Preliminary Definitions
+Social Network: 𝑮 = (𝑽,𝑬) , where 𝑉 = {𝑣 ,⋯,𝑣 } represents the node
+1 𝑛
+set, and 𝐸 = 𝑉 ×𝑉 represents the edges between nodes.
+Campaigns: 𝑪 = {𝒄 ,𝒄 } represents two campaigns; each campaign holds
+𝟏 𝟐
+a viewpoint.
+Initial Seed Set: 𝑰 ⊆ 𝑽,𝒊 ∈ {𝟏，𝟐} represents the initial seed set for
+𝒊
+campaigns 𝑐 .
+𝑖
+Balanced Seed Set: 𝑺 ⊆ 𝑽,𝒊 ∈ {𝟏，𝟐} represents the target seed set that
+𝒊
+you need to find for each campaign 𝑐 .
+𝑖
+Budget: 𝒌 represents the size of the target seed set; |𝑆 |+|𝑆 | ≤ 𝑘.
+1 2
+Diffusion Probability: 𝑷 = {𝒑𝒊 |(𝒖,𝒗) ∈ 𝑬},𝒊 ∈ {𝟏，𝟐} represents
+𝒊 (𝒖,𝒗)
+the edge weight associated with campaign 𝑐 , where 𝑝𝑖 represents the
+𝑖 (𝑢,𝑣)
+probability of node 𝑢 activating node 𝑣 under each campaign 𝑐 .
+𝑖
+Diffusion Model: 𝑴 captures the stochastic process for seed set 𝑈 = 𝐼 ∪
+𝑖 𝑖
+𝑆 spreading information on 𝐺 . ee assume that information on the two
+𝑖
+campaigns propagates in the network following the independent cascade (IC)
+model. The two campaigns’ messages propagate independently of each other
+(such propagation is often called heterogeneous propagation). The diffusion
+process of the first campaign (the process for the second campaign is
+analogous) unfolds in the following discrete steps:
+i. In step 𝑡 = 0, the nodes in seed set 𝑈 are activated, while the other
+1
+nodes stay inactive;
+ii. Each active user 𝑢 for campaign 𝑐 in step 𝑡 will activate each of
+1
+its outgoing neighbor 𝑣 that is inactive for campaign 𝑐 in step 𝑡−
+1
+1 with probability 𝑝1 ;
+(𝑢,𝑣)
+The activation process can be considered as flipping a coin with head
+probability 𝑝1 : if the result is head, then 𝑣 is activated; otherwise,
+(𝑢,𝑣)
+𝑣 stays inactive;
+Note that 𝑢 has only one chance to activate its outgoing neighbors
+for campaign 𝑐 . After that, 𝑢 stays active and stops the activation
+1
+for campaign 𝑐 ;
+1
+iii. The diffusion instance terminates when no more nodes can be
+activated.
+Exposed Nodes: Given a seed set 𝑈, 𝑟(𝑈) is the vertices that are reached
+𝑖
+from 𝑈 using the aforementioned cascade process for campaign 𝑐 . Note
+𝑖
+that in one propagation, in addition to nodes that were successfully activated
+by 𝑈 , nodes that were once attempted to be activated but were not
+successfully activated by 𝑈 are also considered to be reached by 𝑈. Since
+the diffusion process is random, 𝑟(𝑈) is a random variable.
+𝑖
+2) Problem Formulation
+Given a social network 𝐺 = (𝑉,𝐸), two sets 𝐼 and 𝐼 of initial seeds of
+1 2
+the two campaigns, and a budget 𝑘. The IEM is to find two sets 𝑆 and 𝑆 ,
+1 2
+where |𝑆 |+|𝑆 | ≤ 𝑘, and maximize the expected number of vertices that
+1 2
+are either reached by both campaigns or remain oblivious to both campaigns,
+i.e.,
+maxΦ(𝑆 ,𝑆 ) = max𝔼[|𝑉∖(𝑟 (𝐼 ⋃𝑆 )△𝑟 (𝐼 ⋃𝑆 ))|]
+1 2 1 1 1 2 2 2
+s.t. |𝑆 |+|𝑆 | ≤ 𝑘
+1 2
+𝑆 ,𝑆 ⊆ 𝑉,
+1 2
+where △ means symmetric difference, 𝐴△𝐵 = (𝐴∖𝐵)∪(𝐵∖𝐴).
+3) An example of the IEM problem
+An example of the IEM problem is shown in Fig. 1. Given the social network
+𝐺 = (𝑉,𝐸) with two campaigns 𝑐 and 𝑐 . The diffusion probabilities of
+1 2
+the two campaigns are shown on the edges, where the red one is the edge
+weight associated with campaign 𝑐 and the blue one is the edge weight
+1
+associated with campaign 𝑐 . Assume that the initial seed sets of the two
+2
+campaigns are 𝐼 = {1}, 𝐼 = {9}, respectively, and the budget 𝑘 = 2, the
+1 2
+IEM aims at discovering two sets 𝑆 and 𝑆 with |𝑆 |+|𝑆 | ≤ 𝑘 and
+1 2 1 2
+with maximum Φ(𝑆 ,𝑆 ).
+1 2
+Fig. 1. An example of IEM problem
+The optimal solution of this IEM problem instance is 𝑆 = {8},𝑆 = {2}
+1 2
+and Φ(𝑆 ,𝑆 ) = 7.
+1 2
+3. Experimental Platform
+1) Programming Language
+Python version: 3.10
+2) Input and Output Format of Algorithm
+The executable evaluator must be named Evaluator.py, and the executable
+solver of two kinds of algorithms must be named IEMP_Heur.py and
+IEMP_Evol.py.
+i. Input:
+1. The format of the evaluator call should be as follows:
+python Evaluator.py –n < social network > -i < initial seed set >
+-b <balanced seed set> -k < budget > -o <object value output
+path>
+2. The format of the solver call should be as follows:
+python IEMP_ Heur.py –n < social network > -i < initial seed
+set > -b <balanced seed set> -k < budget >
+< social network > is the absolute path of the social network file, which
+is required to conform to the format of the social network specified
+below.
+< initial seed set > is the absolute path of the two campaigns' initial seed
+set, which is required to conform to the format of the seed set specified
+below.
+< balanced seed set > is the absolute path of the two campaigns'
+balanced seed set, which is required to conform to the format of the seed
+set specified below. Note that this is the input file path of the
+Evaluator.py and the output file path of the IEMP_Heur.py and
+IEMP_Evol.py.
+< budget > is a positive integer budget.
+<object value output path> is the output absolute path of the objective
+value.
+ii. Output:
+1. The output of the evaluator call should be the objective value
+written into the <object value output path>.
+2. The output of the solver call should be the balanced seed set of the
+two campaigns found by your algorithm written into the <
+balanced seed set >.
+iii. The format of the social network is as follows:
+1. The first line contains the number of nodes 𝑛 and edges 𝑚
+2. The following 𝑚 line is the edge of the social network:
+First column: ID of the source node, 𝑢 ∈ [0,𝑛−1];
+Second column: ID of the target node, 𝑣 ∈ [0,𝑛−1];
+Third column: the first campaign weight 𝑝1 of edge;
+(𝑢,𝑣)
+Fourth column: the second campaign weight 𝑝2 of edge;
+(𝑢,𝑣)
+iv. The format of the seed set (initial seed set and balanced seed set) is as
+follows:
+1. The first line contains the number of two seed sets 𝑘 and 𝑘 ;
+1 2
+2. The following 𝑘 line is the seed of campaign 𝑐 ;
+1 1
+3. The following 𝑘 line is the seed of campaign 𝑐 ;
+2 2
+3) Dataset
+Table 1 provides an overall description of the test datasets:
+1. Type Column: graph type, all datasets are directed graphs.
+2. Nodes Column: number of nodes in the graph.
+3. Edges Column: number of edges in the graph.
+Table 1 Summary of Datasets
+Dataset Type Nodes Edges
+Dataset 1 [Test 2] Directed 475 13,289
+Dataset 2 [Test 2] Directed 36,742 49,248
+Dataset 3 [Test 3] Directed about 10,000 about 100,000
+Dataset 4 [Test 3] Directed about 20,000 about 1000,000
+4. Grading Rules
+The scoring rules for this project comprise two components: the project report and
+code evaluation. The total value of this project is 15 points.
+1) Project Report
+A report about IEM (in pdf format) must be submitted, in which you should
+describe the core idea of your algorithm design, entail each component of
+your algorithm, illustrate the algorithm structure, and give the pseudo-code.
+Both the heuristic algorithm and the evolutionary algorithm that you designed
+must be included.
+Please note that your code will only be assessed and scored if you have
+submitted the project report.
+2) Code Evaluation
+In the programming aspects, there are three components: the objective
+evaluation (2 points), the heuristic algorithm (6.5 points), and the
+evolutionary algorithm or simulated annealing algorithm (6.5 points). After
+you submit your project, we will run some scripts to test your IEM solvers
+on different IEM problem instances. You will get the corresponding score
+once your solvers have passed a test.
+The scoring rule for the objective evaluation is as follows. ee will use two
+instances to test your evaluator, with each instance worth 1 point.
+i. Usability Test (0.2 points): In this test, we will check whether your
+evaluator meets the input and output requirements. Please keep in
+mind that only those estimators that have passed test i will be
+evaluated in test ii.
+ii. Accuracy Test (0.5 points): In this test, we will assess the estimation
+error of your estimator. To be specific, we will establish a common
+cutoff time and an acceptable range for estimation values. ee will then
+evaluate whether your estimated values fall within the specified range.
+Please keep in mind that only estimators that have successfully
+completed test ii will undergo evaluation in test iii.
+iii. Efficiency Test (0.3 points): In this test, we will focus on how fast
+your evaluator is. To be specific, we will set a common cutoff time and
+measure the running time of a baseline. Subsequently, we will assess
+whether your evaluator can complete its task in less time compared to
+the baseline.
+The score rules for the heuristic algorithm and the evolutionary algorithm (or
+simulated annealing algorithm) are consistent and outlined as follows, with
+each algorithm worth 6.5 points.
+i. Efficacy Test (3.9 points): In this test, we will focus on how good
+your solvers are on three instances, each worth 1.3 points.
+Specifically, we will first check whether your solvers can satisfy the
+input and the output requirements (test a, 0.1 points). Subsequently,
+we will establish a common cutoff time and the solution quality of a
+baseline. ee will then evaluate whether your solver can get a larger
+value of balanced information exposure within the given time (test b,
+0.9 points). If your solver can get significantly better solution quality
+within the given time or complete the task in significantly less time
+compared to the baseline, you can get the points for your advanced
+performance (test c, 0.3 points).
+Please keep in mind that only solvers that have successfully completed
+test a will undergo evaluation in test b, and only solvers that have
+successfully completed test b will undergo evaluation in test c.
+ii. Robustness Test (2.6 points): A robust solver is said to be applicable
+to a wide range of problem instances. Although your solvers may show
+good performance in the efficacy test, they may perform badly in
+unseen instances. In this test, for each participant solver, we will
+generate two new instances, each worth 1.3 points.
+On each instance, like the efficacy test, we will set a common cut-off
+time for all participant solvers and the balanced information exposure
+of a baseline. Subsequently, we will first check whether your solvers
+can satisfy the input and the output requirements (test a, 0.1 points)
+and evaluate whether your solver can get a larger value of balanced
+information exposure within the given time (test b, 0.9 points). If your
+solver can get significantly better solution quality within the given
+time or complete the task in significantly less time compared to the
+baseline, you can get the points for your advanced performance (test
+c, 0.3 points).
+Please keep in mind that only solvers that have successfully completed
+test a will undergo evaluation in test b, and only solvers that have
+successfully completed test b will undergo evaluation in test c.
+In summary, the total score of this project is 15 = 2×(0.2+0.5+0.3)+
+2×(3×(0.1+0.9+0.3)+2×(0.1+0.9+0.3)).
+2. Reference
+[1] K Garimella, A Gionis, N Parotsidis, N Tatti. Balancing information exposure in
+social networks. NeurIPS 2017: 4663-4671
+[2] S Cheng, H Shen, J Huang, e Chen, X Cheng. IMRank: influence maximization
+via finding self-consistent ranking. SIGIR 2014: 475-484
+[3] M Gong, J Yan, B Shen, L Ma, Q Cai. Influence maximization in social networks
+based on discrete particle swarm optimization. Inf. Sci. 367-368: 600-614 (2016)
+[4] Q Jiang, G Song, G Cong, Y eang, e Si, K Xie. Simulated Annealing Based
+Influence Maximization in Social Networks. AAAI 2011
