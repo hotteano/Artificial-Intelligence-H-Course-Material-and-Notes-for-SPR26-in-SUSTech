@@ -1,59 +1,62 @@
 """
-IEMP Advanced Evolutionary Algorithm
-=====================================
-Features:
-1. Hierarchical Search: Coarse (low MC) → Fine (high MC)
-2. Knowledge-Guided Crossover: Use fitness landscape information
-3. Adaptive Mutation: Dynamically select mutation operators
-4. Diversity Maintenance: Prevent premature convergence
+IEMP Evolutionary Algorithm - Binary Encoding with Penalty-based Constraint Handling
+====================================================================================
+
+This is a PURE evolutionary algorithm implementation WITHOUT any heuristic guidance.
+
+Key features:
+1. Binary encoding: x = [x_1, ..., x_n, x_{n+1}, ..., x_{2n}]
+   - First n bits: nodes in S1
+   - Last n bits: nodes in S2
+   - Only available nodes (not in I1 or I2) are considered
+   
+2. Constraint handling: Penalty-based fitness function
+   - If |S1| + |S2| <= k: fitness = MC_score
+   - Else: fitness = -(|S1| + |S2|)
+   
+3. Genetic operators:
+   - Crossover: Single-point or Uniform
+   - Mutation: Bit-flip
+   
+4. Selection: Tournament selection with elitism
+
+Reference: Standard GA for Influence Maximization (Particle Swarm Optimization paper)
 """
 
 import argparse
 import os
 import random
 import copy
-import math
 from typing import List, Tuple, Set, Dict
 from dataclasses import dataclass, field
-from collections import defaultdict
 
 
 @dataclass
 class Individual:
-    """个体：表示一个候选解 (S1, S2)"""
+    """
+    Binary encoding for IEM problem
+    
+    chromosome: List of 0/1 values, length = 2 * n_available
+    - indices [0, n-1]: represent nodes in S1
+    - indices [n, 2n-1]: represent nodes in S2
+    """
+    chromosome: List[int] = field(default_factory=list)
+    fitness: float = None
+    # Decoded solution (filled during evaluation)
     S1: Set[int] = field(default_factory=set)
     S2: Set[int] = field(default_factory=set)
-    fitness: float = None
-    last_n_sim: int = None  # 上次评估使用的MC次数
-    parent_fitness: float = None  # 父代适应度（用于变异统计）
-    mutation_type: str = None  # 变异类型
-    # 记录评估历史，用于自适应策略
-    eval_history: List[Tuple[str, float]] = field(default_factory=list)
     
     def copy(self) -> 'Individual':
         return Individual(
-            S1=set(self.S1),
-            S2=set(self.S2),
+            chromosome=self.chromosome.copy(),
             fitness=self.fitness,
-            last_n_sim=self.last_n_sim,
-            parent_fitness=self.parent_fitness,
-            mutation_type=self.mutation_type,
-            eval_history=list(self.eval_history)
+            S1=set(self.S1),
+            S2=set(self.S2)
         )
-    
-    def total_size(self) -> int:
-        return len(self.S1) + len(self.S2)
-    
-    def get_all_nodes(self) -> Set[int]:
-        return self.S1 | self.S2
-    
-    def hash_key(self) -> str:
-        """生成唯一标识，用于缓存"""
-        return f"{sorted(self.S1)}|{sorted(self.S2)}"
 
 
 class IEMData:
-    """数据类"""
+    """Data class for IEM problem"""
     
     def __init__(self):
         self.n_nodes = 0
@@ -61,9 +64,13 @@ class IEMData:
         self.graph = {}
         self.I1 = set()
         self.I2 = set()
+        self.available_nodes = []  # Nodes that can be selected (not in I1 or I2)
+        self.node_to_idx = {}  # Map node ID to index in chromosome
     
     def load_graph(self, filepath: str):
+        """Load graph from file"""
         self.graph = {}
+        
         with open(filepath, 'r') as f:
             line = f.readline().strip().split()
             self.n_nodes = int(line[0])
@@ -79,12 +86,19 @@ class IEMData:
                 self.graph[u].append((v, p1, p2))
     
     def load_initial_seeds(self, filepath: str):
+        """Load initial seed sets and identify available nodes"""
         with open(filepath, 'r') as f:
             n1, n2 = map(int, f.readline().strip().split())
             self.I1 = set(int(f.readline().strip()) for _ in range(n1))
             self.I2 = set(int(f.readline().strip()) for _ in range(n2))
+        
+        # Available nodes: not in I1 and not in I2
+        self.available_nodes = [n for n in range(self.n_nodes) 
+                                if n not in self.I1 and n not in self.I2]
+        self.node_to_idx = {node: idx for idx, node in enumerate(self.available_nodes)}
     
     def save_solution(self, S1: Set[int], S2: Set[int], filepath: str):
+        """Save solution to file"""
         with open(filepath, 'w') as f:
             f.write(f"{len(S1)} {len(S2)}\n")
             for node in sorted(S1):
@@ -94,44 +108,34 @@ class IEMData:
 
 
 class IEMPEvaluator:
-    """评估器：Monte Carlo Simulation"""
+    """Monte Carlo evaluator for fitness computation"""
     
     def __init__(self, data: IEMData):
         self.data = data
-        self.cache = {}  # 适应度缓存
-    
-    def clear_cache(self):
-        """清除缓存（当MC次数变化时）"""
         self.cache = {}
     
-    def evaluate(self, individual: Individual, n_simulations: int) -> float:
-        """评估个体"""
-        if individual.fitness is not None and n_simulations == individual.last_n_sim:
-            return individual.fitness
-        
-        # 检查缓存
-        cache_key = (individual.hash_key(), n_simulations)
+    def clear_cache(self):
+        self.cache = {}
+    
+    def evaluate(self, S1: Set[int], S2: Set[int], n_simulations: int) -> float:
+        """Evaluate solution using MC simulation"""
+        cache_key = (frozenset(S1), frozenset(S2), n_simulations)
         if cache_key in self.cache:
-            individual.fitness = self.cache[cache_key]
-            individual.last_n_sim = n_simulations
-            return individual.fitness
+            return self.cache[cache_key]
         
-        full_seeds_1 = self.data.I1 | individual.S1
-        full_seeds_2 = self.data.I2 | individual.S2
+        full_seeds_1 = self.data.I1 | S1
+        full_seeds_2 = self.data.I2 | S2
         
-        total_score = 0
+        total = 0
         for _ in range(n_simulations):
-            score = self._single_simulation(full_seeds_1, full_seeds_2)
-            total_score += score
+            total += self._single_simulation(full_seeds_1, full_seeds_2)
         
-        individual.fitness = total_score / n_simulations
-        individual.last_n_sim = n_simulations
-        self.cache[cache_key] = individual.fitness
-        
-        return individual.fitness
+        score = total / n_simulations
+        self.cache[cache_key] = score
+        return score
     
     def _single_simulation(self, seeds1: Set[int], seeds2: Set[int]) -> int:
-        """单次IC模拟"""
+        """Single IC simulation"""
         # Campaign 1
         active1 = set(seeds1)
         reached1 = set(seeds1)
@@ -168,548 +172,362 @@ class IEMPEvaluator:
         return self.data.n_nodes - len(symmetric_diff)
 
 
-class IEMPAdvancedEvolutionary:
+class IEMPEvolutionary:
     """
-    高级进化算法：分层搜索 + 改进交叉变异
-    """
+    Pure Evolutionary Algorithm with Binary Encoding
     
+    NO heuristic guidance (IMRank, LFA, etc.) is used.
+    This is a completely different approach from the heuristic algorithm.
+    """
+
     def __init__(self, data: IEMData, budget: int = 10,
-                 # 分层搜索参数
-                 coarse_generations: int = 100,
-                 coarse_mc: int = 30,
-                 fine_generations: int = 50,
-                 fine_mc: int = 300,
-                 n_elites: int = 10,
-                 # 种群参数
-                 population_size: int = 40,
-                 # 交叉变异参数
+                 population_size: int = 50,
+                 generations: int = 100,
                  crossover_rate: float = 0.8,
-                 mutation_rate: float = 0.3,
-                 # 多样性维持
-                 diversity_threshold: float = 0.3,
-                 # 模拟退火
-                 use_sa: bool = True,
-                 initial_temp: float = 100.0,
-                 cooling_rate: float = 0.95):
+                 mutation_rate: float = 0.05,
+                 elitism: int = 2,
+                 mc_coarse: int = 30,
+                 mc_fine: int = 200):
+        """
+        Initialize evolutionary algorithm
         
+        Args:
+            data: IEMData object
+            budget: Total budget k (|S1| + |S2| <= k)
+            population_size: Population size
+            generations: Number of generations
+            crossover_rate: Crossover probability
+            mutation_rate: Bit-flip mutation probability per bit
+            elitism: Number of elite individuals to preserve
+            mc_coarse: MC simulations for fitness evaluation during evolution
+            mc_fine: MC simulations for final evaluation
+        """
         self.data = data
         self.budget = budget
-        self.available_nodes = list(set(range(data.n_nodes)) - data.I1 - data.I2)
-        
-        # 分层参数
-        self.coarse_generations = coarse_generations
-        self.coarse_mc = coarse_mc
-        self.fine_generations = fine_generations
-        self.fine_mc = fine_mc
-        self.n_elites = n_elites
-        
-        # 种群参数
         self.population_size = population_size
+        self.generations = generations
         self.crossover_rate = crossover_rate
         self.mutation_rate = mutation_rate
+        self.elitism = elitism
+        self.mc_coarse = mc_coarse
+        self.mc_fine = mc_fine
         
-        # 多样性维持
-        self.diversity_threshold = diversity_threshold
+        # Chromosome length = 2 * number of available nodes
+        self.n_available = len(data.available_nodes)
+        self.chromosome_length = 2 * self.n_available
         
-        # 模拟退火
-        self.use_sa = use_sa
-        self.initial_temp = initial_temp
-        self.cooling_rate = cooling_rate
-        self.current_temp = initial_temp
-        
-        # 评估器
+        # Evaluator
         self.evaluator = IEMPEvaluator(data)
         
-        # 自适应变异统计
-        self.mutation_stats = {
-            'add': {'success': 0, 'total': 0},
-            'remove': {'success': 0, 'total': 0},
-            'swap': {'success': 0, 'total': 0},
-            'transfer': {'success': 0, 'total': 0},
-            'replace': {'success': 0, 'total': 0},
-        }
-        
-        # 种群
+        # Population
         self.population: List[Individual] = []
         self.best_individual: Individual = None
-        self.generation = 0
     
-    # ==================== 初始化 ====================
+    # ==================== Encoding & Decoding ====================
+    
+    def decode(self, individual: Individual) -> Tuple[Set[int], Set[int]]:
+        """
+        Decode chromosome to S1 and S2
+        
+        chromosome[0:n] -> S1
+        chromosome[n:2n] -> S2
+        """
+        S1 = set()
+        S2 = set()
+        
+        n = self.n_available
+        for i in range(n):
+            if individual.chromosome[i] == 1:
+                S1.add(self.data.available_nodes[i])
+            if individual.chromosome[n + i] == 1:
+                S2.add(self.data.available_nodes[i])
+        
+        individual.S1 = S1
+        individual.S2 = S2
+        return S1, S2
+    
+    def compute_fitness(self, individual: Individual, mc_simulations: int) -> float:
+        """
+        Compute fitness with penalty for constraint violation
+        
+        Fitness function:
+        - If |S1| + |S2| <= k: fitness = MC_score
+        - Else: fitness = -(|S1| + |S2|)
+        
+        This naturally guides the evolution toward feasible solutions.
+        """
+        S1, S2 = self.decode(individual)
+        total_size = len(S1) + len(S2)
+        
+        # Check constraint
+        if total_size > self.budget:
+            # Penalty for infeasible solution
+            individual.fitness = -total_size
+            return individual.fitness
+        
+        # Feasible solution: evaluate with MC
+        score = self.evaluator.evaluate(S1, S2, mc_simulations)
+        individual.fitness = score
+        return score
+    
+    # ==================== Initialization ====================
     
     def create_random_individual(self) -> Individual:
-        """创建随机个体"""
-        ind = Individual()
-        n_nodes = random.randint(1, self.budget)
+        """Create random individual with biased bit probability"""
+        # Each bit has low probability of being 1 (sparse solution)
+        # Target: expected budget/2 nodes in each of S1 and S2
+        # But we need to be very conservative to ensure feasibility
+        sparsity = (self.budget / 2) / self.n_available if self.n_available > 0 else 0.05
+        sparsity = min(sparsity * 0.5, 0.05)  # Very conservative: max 5%
         
-        if n_nodes > 0 and self.available_nodes:
-            selected = random.sample(self.available_nodes, 
-                                   min(n_nodes, len(self.available_nodes)))
-            for node in selected:
-                if random.random() < 0.5:
-                    ind.S1.add(node)
-                else:
-                    ind.S2.add(node)
-        return ind
+        chromosome = [1 if random.random() < sparsity else 0 
+                     for _ in range(self.chromosome_length)]
+        return Individual(chromosome=chromosome)
     
-    def initialize_population(self) -> None:
-        """初始化种群"""
-        print(f"Initializing population (size={self.population_size})...")
+    def create_degree_biased_individual(self) -> Individual:
+        """
+        Create individual biased by node degree (simple heuristic, not IMRank)
+        Higher degree nodes have higher probability of being selected
+        """
+        # Compute degrees
+        degrees = [len(self.data.graph[node]) for node in self.data.available_nodes]
+        max_degree = max(degrees) if degrees else 1
+        
+        n = self.n_available
+        chromosome = [0] * self.chromosome_length
+        
+        # Probability proportional to degree
+        for i in range(n):
+            prob = 0.3 * degrees[i] / max_degree  # Max 30% probability
+            if random.random() < prob:
+                chromosome[i] = 1  # S1
+            if random.random() < prob:
+                chromosome[n + i] = 1  # S2
+        
+        return Individual(chromosome=chromosome)
+    
+    def initialize_population(self):
+        """Initialize population with random and degree-biased individuals"""
+        print(f"\nInitializing population (size={self.population_size})...")
         self.population = []
         
-        # 50% 随机个体
+        # 50% degree-biased
         for _ in range(self.population_size // 2):
-            self.population.append(self.create_random_individual())
-        
-        # 50% 贪心初始（基于度数）
-        degrees = [(n, len(self.data.graph[n])) for n in self.available_nodes]
-        degrees.sort(key=lambda x: x[1], reverse=True)
-        top_nodes = [n for n, _ in degrees[:self.budget * 3]]
-        
-        for _ in range(self.population_size - len(self.population)):
-            ind = Individual()
-            n_select = random.randint(1, self.budget)
-            if top_nodes and n_select > 0:
-                selected = random.sample(top_nodes, min(n_select, len(top_nodes)))
-                for node in selected:
-                    if random.random() < 0.5:
-                        ind.S1.add(node)
-                    else:
-                        ind.S2.add(node)
+            ind = self.create_degree_biased_individual()
             self.population.append(ind)
         
-        # 评估初始种群
+        # 50% random
+        for _ in range(self.population_size - len(self.population)):
+            ind = self.create_random_individual()
+            self.population.append(ind)
+        
+        # Evaluate initial population
+        feasible_count = 0
         for i, ind in enumerate(self.population):
-            self.evaluator.evaluate(ind, self.coarse_mc)
+            self.compute_fitness(ind, self.mc_coarse)
+            total_size = len(ind.S1) + len(ind.S2)
+            if total_size <= self.budget:
+                feasible_count += 1
             print(f"  Individual {i+1}: fitness={ind.fitness:.2f}, "
-                  f"|S1|={len(ind.S1)}, |S2|={len(ind.S2)}")
+                  f"|S1|={len(ind.S1)}, |S2|={len(ind.S2)}, total={total_size}")
         
         self.best_individual = max(self.population, key=lambda x: x.fitness)
         print(f"  Best initial: {self.best_individual.fitness:.2f}")
+        print(f"  Feasible solutions: {feasible_count}/{self.population_size}")
     
-    def initialize_from_elites(self, elites: List[Individual]) -> None:
-        """从精英个体初始化"""
-        print(f"\nInitializing from {len(elites)} elites...")
-        self.population = [e.copy() for e in elites]
+    # ==================== Crossover Operators ====================
+    
+    def single_point_crossover(self, p1: Individual, p2: Individual) -> Tuple[Individual, Individual]:
+        """Single-point crossover"""
+        if len(p1.chromosome) <= 1:
+            return p1.copy(), p2.copy()
         
-        # 对精英进行变异产生新个体
-        while len(self.population) < self.population_size:
-            parent = random.choice(elites)
-            child = self.mutate(parent.copy(), force=True)
-            self.evaluator.evaluate(child, self.fine_mc)
-            self.population.append(child)
+        point = random.randint(1, len(p1.chromosome) - 1)
         
-        self.best_individual = max(self.population, key=lambda x: x.fitness)
-        print(f"  Best initial (fine): {self.best_individual.fitness:.2f}")
+        c1 = Individual(chromosome=p1.chromosome[:point] + p2.chromosome[point:])
+        c2 = Individual(chromosome=p2.chromosome[:point] + p1.chromosome[point:])
+        
+        return c1, c2
     
-    # ==================== 改进交叉 ====================
+    def uniform_crossover(self, p1: Individual, p2: Individual) -> Tuple[Individual, Individual]:
+        """Uniform crossover"""
+        c1_chrom = []
+        c2_chrom = []
+        
+        for bit1, bit2 in zip(p1.chromosome, p2.chromosome):
+            if random.random() < 0.5:
+                c1_chrom.append(bit1)
+                c2_chrom.append(bit2)
+            else:
+                c1_chrom.append(bit2)
+                c2_chrom.append(bit1)
+        
+        return Individual(chromosome=c1_chrom), Individual(chromosome=c2_chrom)
     
-    def knowledge_guided_crossover(self, parent1: Individual, parent2: Individual) -> Tuple[Individual, Individual]:
-        """
-        知识引导交叉：优先继承高适应度父代的节点
-        """
+    def crossover(self, parent1: Individual, parent2: Individual) -> Tuple[Individual, Individual]:
+        """Apply crossover"""
         if random.random() > self.crossover_rate:
             return parent1.copy(), parent2.copy()
         
-        child1, child2 = Individual(), Individual()
-        
-        # 确定哪个父代更好
-        if parent1.fitness > parent2.fitness:
-            better, worse = parent1, parent2
-            bias = 0.7  # 70%概率选更好的
-        else:
-            better, worse = parent2, parent1
-            bias = 0.7
-        
-        # 对 S1 进行交叉
-        all_s1 = list(parent1.S1 | parent2.S1)
-        for node in all_s1:
-            in_better = node in better.S1
-            in_worse = node in worse.S1
-            
-            if in_better and in_worse:
-                child1.S1.add(node)
-                child2.S1.add(node)
-            elif in_better:
-                if random.random() < bias:
-                    child1.S1.add(node)
-                else:
-                    child2.S1.add(node)
-            else:  # only in worse
-                if random.random() < (1 - bias):
-                    child1.S1.add(node)
-                else:
-                    child2.S1.add(node)
-        
-        # 对 S2 进行交叉
-        all_s2 = list(parent1.S2 | parent2.S2)
-        for node in all_s2:
-            in_better = node in better.S2
-            in_worse = node in worse.S2
-            
-            if in_better and in_worse:
-                child1.S2.add(node)
-                child2.S2.add(node)
-            elif in_better:
-                if random.random() < bias:
-                    child1.S2.add(node)
-                else:
-                    child2.S2.add(node)
-            else:
-                if random.random() < (1 - bias):
-                    child1.S2.add(node)
-                else:
-                    child2.S2.add(node)
-        
-        # 修复约束
-        self._enforce_constraints(child1)
-        self._enforce_constraints(child2)
-        
-        return child1, child2
+        # Use uniform crossover (generally better for binary encoding)
+        return self.uniform_crossover(parent1, parent2)
     
-    def _enforce_constraints(self, ind: Individual) -> None:
-        """确保约束满足"""
-        # S1 和 S2 不相交
-        intersection = ind.S1 & ind.S2
-        for node in intersection:
-            if random.random() < 0.5:
-                ind.S1.discard(node)
-            else:
-                ind.S2.discard(node)
-        
-        # 预算约束
-        while ind.total_size() > self.budget:
-            all_nodes = list(ind.get_all_nodes())
-            if all_nodes:
-                node = random.choice(all_nodes)
-                ind.S1.discard(node)
-                ind.S2.discard(node)
-        
-        ind.fitness = None
+    # ==================== Mutation Operator ====================
     
-    # ==================== 自适应变异 ====================
-    
-    def adaptive_mutation(self, individual: Individual) -> Individual:
+    def bit_flip_mutation(self, individual: Individual) -> Individual:
         """
-        自适应变异：根据历史成功率选择变异算子
+        Bit-flip mutation
+        Each bit has mutation_rate probability of being flipped
         """
-        if random.random() > self.mutation_rate:
-            return individual
-        
         mutant = individual.copy()
         
-        # 计算各算子的成功率
-        success_rates = {}
-        for op, stats in self.mutation_stats.items():
-            if stats['total'] > 0:
-                success_rates[op] = stats['success'] / stats['total']
-            else:
-                success_rates[op] = 0.2  # 默认值
-        
-        # 添加小概率探索新算子
-        if random.random() < 0.1:  # 10%随机选择
-            mutation_type = random.choice(list(self.mutation_stats.keys()))
-        else:
-            # 按成功率加权选择
-            total = sum(success_rates.values())
-            if total > 0:
-                probs = [success_rates[op]/total for op in self.mutation_stats.keys()]
-            else:
-                probs = [0.2] * 5
-            
-            mutation_type = random.choices(
-                list(self.mutation_stats.keys()),
-                weights=probs
-            )[0]
-        
-        # 执行变异
-        old_fitness = individual.fitness
-        
-        if mutation_type == 'add':
-            self._mutate_add(mutant)
-        elif mutation_type == 'remove':
-            self._mutate_remove(mutant)
-        elif mutation_type == 'swap':
-            self._mutate_swap(mutant)
-        elif mutation_type == 'transfer':
-            self._mutate_transfer(mutant)
-        elif mutation_type == 'replace':
-            self._mutate_replace(mutant)
-        
-        self._enforce_constraints(mutant)
-        
-        # 更新统计（稍后评估后更新）
-        mutant.mutation_type = mutation_type
-        mutant.parent_fitness = old_fitness
+        for i in range(len(mutant.chromosome)):
+            if random.random() < self.mutation_rate:
+                mutant.chromosome[i] = 1 - mutant.chromosome[i]
         
         return mutant
     
-    def mutate(self, individual: Individual, force: bool = False) -> Individual:
-        """标准变异接口"""
-        if not force and random.random() > self.mutation_rate:
-            return individual
-        
-        mutant = individual.copy()
-        mutation_type = random.choice(['add', 'remove', 'swap', 'transfer', 'replace'])
-        
-        if mutation_type == 'add':
-            self._mutate_add(mutant)
-        elif mutation_type == 'remove':
-            self._mutate_remove(mutant)
-        elif mutation_type == 'swap':
-            self._mutate_swap(mutant)
-        elif mutation_type == 'transfer':
-            self._mutate_transfer(mutant)
-        elif mutation_type == 'replace':
-            self._mutate_replace(mutant)
-        
-        self._enforce_constraints(mutant)
-        return mutant
+    def mutate(self, individual: Individual) -> Individual:
+        """Apply mutation"""
+        return self.bit_flip_mutation(individual)
     
-    def _mutate_add(self, ind: Individual) -> None:
-        if ind.total_size() >= self.budget:
-            return
-        available = set(self.available_nodes) - ind.get_all_nodes()
-        if available:
-            node = random.choice(list(available))
-            if random.random() < 0.5:
-                ind.S1.add(node)
-            else:
-                ind.S2.add(node)
-    
-    def _mutate_remove(self, ind: Individual) -> None:
-        all_nodes = list(ind.get_all_nodes())
-        if all_nodes:
-            node = random.choice(all_nodes)
-            ind.S1.discard(node)
-            ind.S2.discard(node)
-    
-    def _mutate_swap(self, ind: Individual) -> None:
-        if ind.S1 and ind.S2:
-            n1 = random.choice(list(ind.S1))
-            n2 = random.choice(list(ind.S2))
-            ind.S1.remove(n1)
-            ind.S1.add(n2)
-            ind.S2.remove(n2)
-            ind.S2.add(n1)
-    
-    def _mutate_transfer(self, ind: Individual) -> None:
-        if random.random() < 0.5 and ind.S1:
-            node = random.choice(list(ind.S1))
-            ind.S1.remove(node)
-            ind.S2.add(node)
-        elif ind.S2:
-            node = random.choice(list(ind.S2))
-            ind.S2.remove(node)
-            ind.S1.add(node)
-    
-    def _mutate_replace(self, ind: Individual) -> None:
-        all_nodes = list(ind.get_all_nodes())
-        available = set(self.available_nodes) - ind.get_all_nodes()
-        if all_nodes and available:
-            old_node = random.choice(all_nodes)
-            new_node = random.choice(list(available))
-            if old_node in ind.S1:
-                ind.S1.remove(old_node)
-                ind.S1.add(new_node)
-            else:
-                ind.S2.remove(old_node)
-                ind.S2.add(new_node)
-    
-    # ==================== 选择 ====================
+    # ==================== Selection ====================
     
     def tournament_selection(self, tournament_size: int = 3) -> Individual:
-        """锦标赛选择"""
-        candidates = random.sample(self.population, 
-                                 min(tournament_size, len(self.population)))
+        """Tournament selection"""
+        candidates = random.sample(self.population, min(tournament_size, len(self.population)))
         return max(candidates, key=lambda x: x.fitness)
     
-    def diversity_score(self, ind1: Individual, ind2: Individual) -> float:
-        """计算两个个体的差异度"""
-        nodes1 = ind1.get_all_nodes()
-        nodes2 = ind2.get_all_nodes()
-        if not nodes1 and not nodes2:
-            return 0.0
-        intersection = len(nodes1 & nodes2)
-        union = len(nodes1 | nodes2)
-        return 1.0 - (intersection / union if union > 0 else 0.0)
+    # ==================== Evolution Loop ====================
     
-    # ==================== 进化 ====================
-    
-    def evolve_one_generation(self, mc_simulations: int, track_stats: bool = False) -> None:
-        """执行一代进化"""
-        new_population = []
-        
-        # 精英保留
-        sorted_pop = sorted(self.population, key=lambda x: x.fitness, reverse=True)
-        elites = [ind.copy() for ind in sorted_pop[:3]]  # 保留Top 3
-        new_population.extend(elites)
-        
-        # 生成后代
-        while len(new_population) < self.population_size:
-            # 选择
-            parent1 = self.tournament_selection()
-            parent2 = self.tournament_selection()
-            
-            # 交叉
-            child1, child2 = self.knowledge_guided_crossover(parent1, parent2)
-            
-            # 变异
-            if track_stats:
-                child1 = self.adaptive_mutation(child1)
-                child2 = self.adaptive_mutation(child2)
-            else:
-                child1 = self.mutate(child1)
-                child2 = self.mutate(child2)
-            
-            # 评估
-            self.evaluator.evaluate(child1, mc_simulations)
-            self.evaluator.evaluate(child2, mc_simulations)
-            
-            # SA 接受
-            if self.simulated_annealing_accept(parent1.fitness, child1.fitness):
-                new_population.append(child1)
-            else:
-                new_population.append(parent1.copy())
-            
-            if len(new_population) < self.population_size:
-                if self.simulated_annealing_accept(parent2.fitness, child2.fitness):
-                    new_population.append(child2)
-                else:
-                    new_population.append(parent2.copy())
-        
-        self.population = new_population[:self.population_size]
-        
-        # 更新最优
-        current_best = max(self.population, key=lambda x: x.fitness)
-        if self.best_individual is None or current_best.fitness > self.best_individual.fitness:
-            self.best_individual = current_best.copy()
-        
-        # 降温
-        self.current_temp *= self.cooling_rate
-        
-        # 更新变异统计
-        if track_stats:
-            for ind in self.population:
-                op = ind.mutation_type
-                if op is not None and op in self.mutation_stats:
-                    self.mutation_stats[op]['total'] += 1
-                    if ind.parent_fitness is not None and ind.fitness > ind.parent_fitness:
-                        self.mutation_stats[op]['success'] += 1
-    
-    def simulated_annealing_accept(self, current: float, new: float) -> bool:
-        """SA 接受准则"""
-        if new >= current:
-            return True
-        if not self.use_sa or self.current_temp <= 0:
-            return False
-        prob = math.exp((new - current) / self.current_temp)
-        return random.random() < prob
-    
-    # ==================== 分层搜索主流程 ====================
-    
-    def run(self) -> Tuple[Set[int], Set[int]]:
-        """
-        分层搜索主流程
-        """
-        print("\n" + "="*70)
-        print("Advanced Evolutionary Algorithm with Hierarchical Search")
-        print("="*70)
+    def evolve(self):
+        """Main evolution loop"""
+        print("\n" + "=" * 60)
+        print("Binary Encoding Evolutionary Algorithm")
+        print("=" * 60)
         print(f"Parameters:")
-        print(f"  Budget k: {self.budget}")
-        print(f"  Coarse: {self.coarse_generations} gens, MC={self.coarse_mc}")
-        print(f"  Fine: {self.fine_generations} gens, MC={self.fine_mc}")
         print(f"  Population: {self.population_size}")
-        print(f"  Crossover: {self.crossover_rate}, Mutation: {self.mutation_rate}")
+        print(f"  Generations: {self.generations}")
+        print(f"  Budget: {self.budget}")
+        print(f"  Available nodes: {self.n_available}")
+        print(f"  Chromosome length: {self.chromosome_length}")
+        print(f"  Crossover rate: {self.crossover_rate}")
+        print(f"  Mutation rate: {self.mutation_rate}")
+        print(f"  MC (coarse): {self.mc_coarse}, MC (fine): {self.mc_fine}")
         
-        # ========== Phase 1: Coarse Evolution ==========
-        print("\n" + "="*70)
-        print("PHASE 1: Coarse Evolution (Exploration)")
-        print("="*70)
-        
-        self.evaluator.clear_cache()
+        # Initialize
         self.initialize_population()
         
-        for gen in range(self.coarse_generations):
-            self.evolve_one_generation(self.coarse_mc, track_stats=True)
+        # Statistics
+        best_fitness_history = [self.best_individual.fitness]
+        feasible_count_history = [sum(1 for ind in self.population 
+                                     if len(ind.S1) + len(ind.S2) <= self.budget)]
+        
+        # Evolution loop
+        no_improvement_count = 0
+        
+        for gen in range(self.generations):
+            new_population = []
             
+            # Elitism: preserve best individuals
+            sorted_pop = sorted(self.population, key=lambda x: x.fitness, reverse=True)
+            elites = [ind.copy() for ind in sorted_pop[:self.elitism]]
+            new_population.extend(elites)
+            
+            # Generate offspring
+            while len(new_population) < self.population_size:
+                # Selection
+                p1 = self.tournament_selection()
+                p2 = self.tournament_selection()
+                
+                # Crossover
+                c1, c2 = self.crossover(p1, p2)
+                
+                # Mutation
+                c1 = self.mutate(c1)
+                c2 = self.mutate(c2)
+                
+                # Evaluation
+                self.compute_fitness(c1, self.mc_coarse)
+                self.compute_fitness(c2, self.mc_coarse)
+                
+                new_population.extend([c1, c2])
+            
+            self.population = new_population[:self.population_size]
+            
+            # Statistics
+            current_best = max(self.population, key=lambda x: x.fitness)
+            feasible_count = sum(1 for ind in self.population 
+                               if len(ind.S1) + len(ind.S2) <= self.budget)
+            feasible_count_history.append(feasible_count)
+            
+            # Update best
+            if current_best.fitness > self.best_individual.fitness:
+                improvement = current_best.fitness - self.best_individual.fitness
+                self.best_individual = current_best.copy()
+                no_improvement_count = 0
+                if gen % 10 == 0 or improvement > 10:
+                    print(f"Gen {gen+1}: New best = {self.best_individual.fitness:.2f}, "
+                          f"feasible={feasible_count}/{self.population_size}")
+            else:
+                no_improvement_count += 1
+            
+            best_fitness_history.append(self.best_individual.fitness)
+            
+            # Progress report
             if (gen + 1) % 20 == 0:
-                print(f"Gen {gen+1}/{self.coarse_generations}: "
-                      f"best={self.best_individual.fitness:.2f}, "
-                      f"temp={self.current_temp:.2f}")
-        
-        # 选择精英
-        print("\nSelecting elites from coarse phase...")
-        sorted_pop = sorted(self.population, key=lambda x: x.fitness, reverse=True)
-        
-        # 用中等MC重新评估Top候选
-        candidates = sorted_pop[:self.n_elites * 2]
-        for ind in candidates:
-            ind.fitness = None
-            self.evaluator.evaluate(ind, 100)
-        
-        candidates.sort(key=lambda x: x.fitness, reverse=True)
-        elites = [ind.copy() for ind in candidates[:self.n_elites]]
-        
-        print(f"Top {len(elites)} elites selected:")
-        for i, e in enumerate(elites):
-            print(f"  Elite {i+1}: {e.fitness:.2f}, |S1|={len(e.S1)}, |S2|={len(e.S2)}")
-        
-        # ========== Phase 2: Fine Evolution ==========
-        print("\n" + "="*70)
-        print("PHASE 2: Fine Evolution (Exploitation)")
-        print("="*70)
-        
-        self.evaluator.clear_cache()
-        self.current_temp = self.initial_temp / 2  # 降低初始温度
-        self.initialize_from_elites(elites)
-        
-        for gen in range(self.fine_generations):
-            self.evolve_one_generation(self.fine_mc, track_stats=False)
+                avg_fitness = sum(ind.fitness for ind in self.population) / len(self.population)
+                print(f"Gen {gen+1}: Best={self.best_individual.fitness:.2f}, "
+                      f"Avg={avg_fitness:.2f}, Feasible={feasible_count}/{self.population_size}")
             
-            if (gen + 1) % 10 == 0:
-                print(f"Gen {gen+1}/{self.fine_generations}: "
-                      f"best={self.best_individual.fitness:.2f}, "
-                      f"temp={self.current_temp:.2f}")
+            # Early stopping
+            if no_improvement_count >= 40:
+                print(f"  Early stopping at generation {gen+1} (no improvement for 40 gens)")
+                break
         
-        # ========== Final Evaluation ==========
-        print("\n" + "="*70)
-        print("FINAL EVALUATION")
-        print("="*70)
+        # Final fine evaluation
+        print("\n" + "=" * 60)
+        print("Final Fine Evaluation")
+        print("=" * 60)
+        self.evaluator.clear_cache()
         
-        final_fitness = self.evaluator.evaluate(self.best_individual, 1000)
+        # Re-evaluate best with fine MC
+        final_fitness = self.compute_fitness(self.best_individual, self.mc_fine)
         
         print(f"Final Fitness: {final_fitness:.4f}")
         print(f"S1 ({len(self.best_individual.S1)} nodes): {sorted(self.best_individual.S1)}")
         print(f"S2 ({len(self.best_individual.S2)} nodes): {sorted(self.best_individual.S2)}")
-        print(f"Total: {self.best_individual.total_size()} / {self.budget}")
-        print("="*70)
+        print(f"Total: {len(self.best_individual.S1) + len(self.best_individual.S2)} / {self.budget}")
+        
+        # Check feasibility
+        if len(self.best_individual.S1) + len(self.best_individual.S2) <= self.budget:
+            print("Solution is FEASIBLE")
+        else:
+            print("Solution is INFEASIBLE (this shouldn't happen for best individual)")
+        
+        print("=" * 60)
         
         return self.best_individual.S1, self.best_individual.S2
 
 
 def main():
-    parser = argparse.ArgumentParser(description="IEMP Advanced Evolutionary Algorithm")
+    parser = argparse.ArgumentParser(description="IEM Evolutionary Algorithm (Binary Encoding)")
     parser.add_argument("-n", "--network", required=True, help="Path to social network file")
     parser.add_argument("-i", "--initial", required=True, help="Path to initial seed set file")
     parser.add_argument("-b", "--balanced", required=True, help="Path to output balanced seed set file")
     parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
     
-    # 分层搜索参数
-    parser.add_argument("--coarse-gens", type=int, default=100, help="Coarse phase generations (default: 100)")
-    parser.add_argument("--coarse-mc", type=int, default=30, help="Coarse phase MC simulations (default: 30)")
-    parser.add_argument("--fine-gens", type=int, default=50, help="Fine phase generations (default: 50)")
-    parser.add_argument("--fine-mc", type=int, default=300, help="Fine phase MC simulations (default: 300)")
-    parser.add_argument("--n-elites", type=int, default=10, help="Number of elites to keep (default: 10)")
-    
-    # 种群参数
-    parser.add_argument("--pop-size", type=int, default=40, help="Population size (default: 40)")
+    # EA parameters
+    parser.add_argument("--pop-size", type=int, default=50, help="Population size (default: 50)")
+    parser.add_argument("--generations", type=int, default=100, help="Number of generations (default: 100)")
     parser.add_argument("--crossover-rate", type=float, default=0.8, help="Crossover rate (default: 0.8)")
-    parser.add_argument("--mutation-rate", type=float, default=0.3, help="Mutation rate (default: 0.3)")
-    
-    # SA参数
-    parser.add_argument("--initial-temp", type=float, default=100.0, help="Initial temperature (default: 100)")
-    parser.add_argument("--cooling-rate", type=float, default=0.95, help="Cooling rate (default: 0.95)")
-    
+    parser.add_argument("--mutation-rate", type=float, default=0.05, 
+                       help="Bit-flip mutation rate (default: 0.05)")
+    parser.add_argument("--elitism", type=int, default=2, help="Number of elites (default: 2)")
+    parser.add_argument("--mc-coarse", type=int, default=30,
+                       help="MC simulations for evolution (default: 30)")
+    parser.add_argument("--mc-fine", type=int, default=200,
+                       help="MC simulations for final eval (default: 200)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     
     args = parser.parse_args()
@@ -717,33 +535,37 @@ def main():
     if args.seed is not None:
         random.seed(args.seed)
     
-    # 加载数据
+    if not os.path.exists(args.network):
+        raise FileNotFoundError(f"Network file not found: {args.network}")
+    if not os.path.exists(args.initial):
+        raise FileNotFoundError(f"Initial seed file not found: {args.initial}")
+    
+    # Load data
     data = IEMData()
     data.load_graph(args.network)
     data.load_initial_seeds(args.initial)
     
     print(f"Graph: {data.n_nodes} nodes, {data.n_edges} edges")
-    print(f"I1: {len(data.I1)}, I2: {len(data.I2)}")
+    print(f"Initial seeds: I1={len(data.I1)}, I2={len(data.I2)}")
+    print(f"Available nodes: {len(data.available_nodes)}")
+    print(f"Budget k: {args.budget}")
     
-    # 运行算法
-    ea = IEMPAdvancedEvolutionary(
+    # Run evolutionary algorithm
+    ea = IEMPEvolutionary(
         data=data,
         budget=args.budget,
-        coarse_generations=args.coarse_gens,
-        coarse_mc=args.coarse_mc,
-        fine_generations=args.fine_gens,
-        fine_mc=args.fine_mc,
-        n_elites=args.n_elites,
         population_size=args.pop_size,
+        generations=args.generations,
         crossover_rate=args.crossover_rate,
         mutation_rate=args.mutation_rate,
-        initial_temp=args.initial_temp,
-        cooling_rate=args.cooling_rate,
+        elitism=args.elitism,
+        mc_coarse=args.mc_coarse,
+        mc_fine=args.mc_fine,
     )
     
-    S1, S2 = ea.run()
+    S1, S2 = ea.evolve()
     
-    # 保存结果
+    # Save solution
     data.save_solution(S1, S2, args.balanced)
     print(f"\nSolution saved to: {args.balanced}")
 
