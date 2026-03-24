@@ -24,9 +24,6 @@ class Individual:
     S1: Set[int] = field(default_factory=set)
     S2: Set[int] = field(default_factory=set)
     fitness: float = None
-    last_n_sim: int = None  # 上次评估使用的MC次数
-    parent_fitness: float = None  # 父代适应度（用于变异统计）
-    mutation_type: str = None  # 变异类型
     # 记录评估历史，用于自适应策略
     eval_history: List[Tuple[str, float]] = field(default_factory=list)
     
@@ -35,9 +32,6 @@ class Individual:
             S1=set(self.S1),
             S2=set(self.S2),
             fitness=self.fitness,
-            last_n_sim=self.last_n_sim,
-            parent_fitness=self.parent_fitness,
-            mutation_type=self.mutation_type,
             eval_history=list(self.eval_history)
         )
     
@@ -590,10 +584,10 @@ class IEMPAdvancedEvolutionary:
         # 更新变异统计
         if track_stats:
             for ind in self.population:
-                op = ind.mutation_type
-                if op is not None and op in self.mutation_stats:
+                if hasattr(ind, 'mutation_type'):
+                    op = ind.mutation_type
                     self.mutation_stats[op]['total'] += 1
-                    if ind.parent_fitness is not None and ind.fitness > ind.parent_fitness:
+                    if ind.fitness > ind.parent_fitness:
                         self.mutation_stats[op]['success'] += 1
     
     def simulated_annealing_accept(self, current: float, new: float) -> bool:
