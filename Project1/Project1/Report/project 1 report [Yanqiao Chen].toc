@@ -1,9 +1,29 @@
-\contentsline {section}{\numberline {1}Introduction}{1}{section.1}%
-\contentsline {section}{\numberline {2}IEMP}{1}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Problem Formulation}{1}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Heuristic Approach}{2}{subsection.2.2}%
-\contentsline {paragraph}{Key Distinction: Reached vs. Active Nodes}{2}{section*.2}%
-\contentsline {paragraph}{Rationale}{2}{section*.3}%
-\contentsline {paragraph}{Algorithm Principle}{4}{section*.4}%
-\contentsline {paragraph}{Complexity Analysis}{4}{section*.5}%
-\contentsline {subsection}{\numberline {2.3}Genetic Approach}{5}{subsection.2.3}%
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
+\contentsline {section}{\numberline {2}IEMP}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Problem Formulation}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Heuristic Approach: MC-Guided Heuristic}{2}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Algorithm Overview}{3}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}IMRank Self-Consistent Ranking}{3}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}MC-guided Greedy Selection}{3}{subsubsection.2.2.3}%
+\contentsline {subsubsection}{\numberline {2.2.4}Key Advantages}{3}{subsubsection.2.2.4}%
+\contentsline {subsection}{\numberline {2.3}Genetic Algorithm Approach}{3}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}Binary Encoding}{4}{subsubsection.2.3.1}%
+\contentsline {subsubsection}{\numberline {2.3.2}Fitness Function with Penalty}{4}{subsubsection.2.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.3}Genetic Operators}{4}{subsubsection.2.3.3}%
+\contentsline {subsubsection}{\numberline {2.3.4}Selection and Elitism}{4}{subsubsection.2.3.4}%
+\contentsline {subsubsection}{\numberline {2.3.5}Two-Phase Monte Carlo Evaluation}{4}{subsubsection.2.3.5}%
+\contentsline {section}{\numberline {3}Experimental Results}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Experimental Setup}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Baseline Standards}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Heuristic Algorithm Results}{5}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Genetic Algorithm Results}{6}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Analysis and Discussion}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Performance Comparison}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Budget Utilization Analysis}{6}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Why Genetic Algorithm Scores Appear High}{7}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}S1/S2 Allocation Strategies}{7}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Conclusion}{8}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Achievements}{8}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Key Findings}{8}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Future Improvements}{8}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Final Remarks}{9}{subsection.5.4}%

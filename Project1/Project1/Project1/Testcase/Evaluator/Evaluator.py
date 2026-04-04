@@ -155,7 +155,7 @@ class IEMEvaluator:
         
         return reached
     
-    def evaluate(self, n_simulations: int = 1000) -> float:
+    def evaluate(self, n_simulations: int = 5000) -> float:
         """
         Evaluate the objective function (balanced information exposure)
         
@@ -202,7 +202,7 @@ def main():
     parser.add_argument('-b', '--balanced', required=True, help='Path to balanced seed set file')
     parser.add_argument('-k', '--budget', type=int, required=True, help='Budget k')
     parser.add_argument('-o', '--output', required=True, help='Path to output file for objective value')
-    parser.add_argument('--simulations', type=int, default=1000, help='Number of Monte Carlo simulations (default: 1000)')
+    parser.add_argument('--simulations', type=int, default=5000, help='Number of Monte Carlo simulations (default: 5000)')
     
     args = parser.parse_args()
     

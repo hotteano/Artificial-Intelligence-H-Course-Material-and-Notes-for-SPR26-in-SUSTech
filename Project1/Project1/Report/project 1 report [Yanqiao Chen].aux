@@ -3,18 +3,113 @@
 \providecommand*\HyPL@Entry[1]{}
 \HyPL@Entry{0<</S/D>>}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2}IEMP}{1}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Problem Formulation}{1}{subsection.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Heuristic Approach}{2}{subsection.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Key Distinction: Reached vs. Active Nodes}{2}{section*.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Rationale}{2}{section*.3}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces IMRank-based Heuristic for IEMP (implemented in \texttt  {IEMP\_heur.py})}}{3}{algorithm.1}\protected@file@percent }
-\newlabel{alg:imrank_heur}{{1}{3}{Heuristic Approach}{algorithm.1}{}}
-\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces IMRankSelfConsistent with LFA}}{3}{algorithm.2}\protected@file@percent }
-\newlabel{alg:imrank_self_consistent}{{2}{3}{Heuristic Approach}{algorithm.2}{}}
-\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces LFA for a fixed ranking}}{4}{algorithm.3}\protected@file@percent }
-\newlabel{alg:lfa_current}{{3}{4}{Heuristic Approach}{algorithm.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Algorithm Principle}{4}{section*.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Complexity Analysis}{4}{section*.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Genetic Approach}{5}{subsection.2.3}\protected@file@percent }
-\gdef \@abspage@last{5}
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Problem Formulation and Preliminaries}{2}{section.2}\protected@file@percent }
+\newlabel{sec:problem}{{2}{2}{Problem Formulation and Preliminaries}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Mathematical Definition of the IEMP}{2}{subsection.2.1}\protected@file@percent }
+\newlabel{eq:objective}{{1}{2}{Information Exposure Maximization Problem}{equation.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}The Independent Cascade Model with Dual Campaigns}{3}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Computational Complexity and Approximation Challenges}{3}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Monte Carlo-Guided Heuristic Algorithm}{3}{section.3}\protected@file@percent }
+\newlabel{sec:heuristic}{{3}{3}{Monte Carlo-Guided Heuristic Algorithm}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Algorithmic Overview and Design Philosophy}{3}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}IMRank-Based Candidate Pool Generation}{4}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Monte Carlo-Guided Greedy Selection}{4}{subsection.3.3}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces IMRank Self-Consistent Ranking}}{5}{algorithm.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{alg:imrank}{{1}{5}{IMRank Self-Consistent Ranking}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Theoretical Properties and Computational Complexity}{5}{subsection.3.4}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces Monte Carlo-Guided Greedy Selection}}{6}{algorithm.2}\protected@file@percent }
+\newlabel{alg:mc-greedy}{{2}{6}{Monte Carlo-Guided Greedy Selection}{algorithm.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Genetic Algorithm Approach}{6}{section.4}\protected@file@percent }
+\newlabel{sec:genetic}{{4}{6}{Genetic Algorithm Approach}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Evolutionary Computing Paradigm for IEMP}{6}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Binary Chromosome Encoding Scheme}{6}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Penalty-Based Fitness Function}{7}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Population Initialization and Genetic Operators}{7}{subsection.4.4}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces Fitness Evaluation with Penalty and Bonus}}{8}{algorithm.3}\protected@file@percent }
+\newlabel{alg:fitness}{{3}{8}{Fitness Evaluation with Penalty and Bonus}{algorithm.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Two-Phase Monte Carlo Evaluation}{8}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Experimental Evaluation}{8}{section.5}\protected@file@percent }
+\newlabel{sec:experiments}{{5}{8}{Experimental Evaluation}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Experimental Setup and Methodology}{8}{subsection.5.1}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {4}{\ignorespaces Genetic Algorithm for IEMP}}{9}{algorithm.4}\protected@file@percent }
+\newlabel{alg:genetic}{{4}{9}{Genetic Algorithm for IEMP}{algorithm.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Baseline Standards for Algorithm Evaluation}}{9}{table.caption.2}\protected@file@percent }
+\newlabel{tab:baselines}{{1}{9}{Baseline Standards for Algorithm Evaluation}{table.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Heuristic Algorithm Results}{9}{subsection.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces MC-Guided Heuristic Algorithm Results}}{10}{table.caption.3}\protected@file@percent }
+\newlabel{tab:heuristic-results}{{2}{10}{MC-Guided Heuristic Algorithm Results}{table.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Genetic Algorithm Results}{10}{subsection.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Genetic Algorithm Results}}{10}{table.caption.4}\protected@file@percent }
+\newlabel{tab:genetic-results}{{3}{10}{Genetic Algorithm Results}{table.caption.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Analysis and Discussion}{11}{section.6}\protected@file@percent }
+\newlabel{sec:analysis}{{6}{11}{Analysis and Discussion}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Comparative Performance Analysis}{11}{subsection.6.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Direct Performance Comparison}}{11}{table.caption.5}\protected@file@percent }
+\newlabel{tab:comparison}{{4}{11}{Direct Performance Comparison}{table.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Budget Utilization Analysis}{11}{subsection.6.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Budget Utilization Comparison}}{11}{table.caption.6}\protected@file@percent }
+\newlabel{tab:budget-util}{{5}{11}{Budget Utilization Comparison}{table.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}The Baseline Effect: Decomposing Solution Value}{11}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Allocation Strategy Analysis}{12}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Computational Efficiency Considerations}{12}{subsection.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{12}{section.7}\protected@file@percent }
+\newlabel{sec:conclusion}{{7}{12}{Conclusion}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Summary of Achievements}{12}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Key Findings and Insights}{12}{subsection.7.2}\protected@file@percent }
+\bibstyle{plain}
+\bibcite{kempe2003}{{1}{}{{}}{{}}}
+\bibcite{chen2010}{{2}{}{{}}{{}}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Directions for Future Research}{13}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Final Remarks}{13}{subsection.7.4}\protected@file@percent }
+\bibcite{chen2013}{{3}{}{{}}{{}}}
+\bibcite{tang2014}{{4}{}{{}}{{}}}
+\bibcite{tang2015}{{5}{}{{}}{{}}}
+\bibcite{borgs2014}{{6}{}{{}}{{}}}
+\bibcite{leskovec2007}{{7}{}{{}}{{}}}
+\bibcite{goldenberg2001}{{8}{}{{}}{{}}}
+\bibcite{granovetter1978}{{9}{}{{}}{{}}}
+\bibcite{richardson2002}{{10}{}{{}}{{}}}
+\bibcite{chen2016}{{11}{}{{}}{{}}}
+\bibcite{mi2019}{{12}{}{{}}{{}}}
+\bibcite{gong2016}{{13}{}{{}}{{}}}
+\bibcite{hollan1992}{{14}{}{{}}{{}}}
+\bibcite{deb2002}{{15}{}{{}}{{}}}
+\bibcite{eiben2015}{{16}{}{{}}{{}}}
+\bibcite{feo1995}{{17}{}{{}}{{}}}
+\bibcite{goemans1997}{{18}{}{{}}{{}}}
+\bibcite{nemhauser1978}{{19}{}{{}}{{}}}
+\bibcite{krause2014}{{20}{}{{}}{{}}}
+\bibcite{wang2017}{{21}{}{{}}{{}}}
+\bibcite{zhou2013}{{22}{}{{}}{{}}}
+\bibcite{banerjee2020}{{23}{}{{}}{{}}}
+\bibcite{galhotra2022}{{24}{}{{}}{{}}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Detailed Experimental Results}{16}{appendix.A}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}MC-Guided Heuristic Algorithm Results}{16}{subsection.A.1}\protected@file@percent }
+\newlabel{app:heuristic}{{A.1}{16}{MC-Guided Heuristic Algorithm Results}{subsection.A.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {A.1.1}Case 0: Small-Scale Network}{16}{subsubsection.A.1.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Case 0 Detailed Results (MC-Guided Heuristic)}}{16}{table.caption.8}\protected@file@percent }
+\newlabel{tab:heuristic-case0}{{6}{16}{Case 0 Detailed Results (MC-Guided Heuristic)}{table.caption.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {A.1.2}Case 1: Large-Scale Network (First Configuration)}{16}{subsubsection.A.1.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Case 1 Detailed Results (MC-Guided Heuristic)}}{16}{table.caption.9}\protected@file@percent }
+\newlabel{tab:heuristic-case1}{{7}{16}{Case 1 Detailed Results (MC-Guided Heuristic)}{table.caption.9}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {A.1.3}Case 2: Large-Scale Network (Second Configuration)}{17}{subsubsection.A.1.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Case 2 Detailed Results (MC-Guided Heuristic)}}{17}{table.caption.10}\protected@file@percent }
+\newlabel{tab:heuristic-case2}{{8}{17}{Case 2 Detailed Results (MC-Guided Heuristic)}{table.caption.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Genetic Algorithm Results}{17}{subsection.A.2}\protected@file@percent }
+\newlabel{app:genetic}{{A.2}{17}{Genetic Algorithm Results}{subsection.A.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {A.2.1}Case 0: Small-Scale Network}{17}{subsubsection.A.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Case 0 Detailed Results (Genetic Algorithm)}}{17}{table.caption.11}\protected@file@percent }
+\newlabel{tab:genetic-case0}{{9}{17}{Case 0 Detailed Results (Genetic Algorithm)}{table.caption.11}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {A.2.2}Case 1: Large-Scale Network (First Configuration)}{17}{subsubsection.A.2.2}\protected@file@percent }
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Case 1 Detailed Results (Genetic Algorithm)}}{18}{table.caption.12}\protected@file@percent }
+\newlabel{tab:genetic-case1}{{10}{18}{Case 1 Detailed Results (Genetic Algorithm)}{table.caption.12}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {A.2.3}Case 2: Large-Scale Network (Second Configuration)}{18}{subsubsection.A.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Case 2 Detailed Results (Genetic Algorithm)}}{18}{table.caption.13}\protected@file@percent }
+\newlabel{tab:genetic-case2}{{11}{18}{Case 2 Detailed Results (Genetic Algorithm)}{table.caption.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Summary of Solution Characteristics}{18}{subsection.A.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Solution Summary Comparison}}{18}{table.caption.14}\protected@file@percent }
+\newlabel{tab:solution-summary}{{12}{18}{Solution Summary Comparison}{table.caption.14}{}}
+\gdef \@abspage@last{18}

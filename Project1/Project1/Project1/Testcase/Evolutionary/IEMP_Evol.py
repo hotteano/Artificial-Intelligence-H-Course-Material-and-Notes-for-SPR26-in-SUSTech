@@ -251,10 +251,10 @@ class IEMPEvolutionary:
         Compute fitness with penalty for constraint violation
         
         Fitness function:
-        - If |S1| + |S2| <= k: fitness = MC_score
+        - If |S1| + |S2| <= k: fitness = MC_score + budget_usage_bonus
         - Else: fitness = -(|S1| + |S2|)
         
-        This naturally guides the evolution toward feasible solutions.
+        Budget usage bonus encourages using more of the budget.
         """
         S1, S2 = self.decode(individual)
         total_size = len(S1) + len(S2)
@@ -267,8 +267,13 @@ class IEMPEvolutionary:
         
         # Feasible solution: evaluate with MC
         score = self.evaluator.evaluate(S1, S2, mc_simulations)
-        individual.fitness = score
-        return score
+        
+        # Budget usage bonus: encourage using more budget (small reward)
+        budget_usage_ratio = total_size / self.budget if self.budget > 0 else 0
+        budget_bonus = 0.5 * budget_usage_ratio  # Small bonus for using budget
+        
+        individual.fitness = score + budget_bonus
+        return individual.fitness
     
     # ==================== Initialization ====================
     
