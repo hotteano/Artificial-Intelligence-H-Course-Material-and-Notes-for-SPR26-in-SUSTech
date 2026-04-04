@@ -268,9 +268,9 @@ class IEMPEvolutionary:
         # Feasible solution: evaluate with MC
         score = self.evaluator.evaluate(S1, S2, mc_simulations)
         
-        # Budget usage bonus: encourage using more budget (small reward)
+        # Budget usage bonus: encourage using more budget (large reward to prioritize budget usage)
         budget_usage_ratio = total_size / self.budget if self.budget > 0 else 0
-        budget_bonus = 0.5 * budget_usage_ratio  # Small bonus for using budget
+        budget_bonus = 200.0 * budget_usage_ratio  # Very large bonus to force full budget usage
         
         individual.fitness = score + budget_bonus
         return individual.fitness
@@ -312,33 +312,35 @@ class IEMPEvolutionary:
         return Individual(chromosome=chromosome)
     
     def initialize_population(self):
-        """Initialize population with random and degree-biased individuals"""
+        """Initialize population with random and degree-biased individuals, all repaired to use full budget"""
         print(f"\nInitializing population (size={self.population_size})...")
         self.population = []
         
-        # 50% degree-biased
+        # 50% degree-biased (repaired to full budget)
         for _ in range(self.population_size // 2):
             ind = self.create_degree_biased_individual()
+            ind = self.repair(ind)  # Repair to use full budget
             self.population.append(ind)
         
-        # 50% random
+        # 50% random (repaired to full budget)
         for _ in range(self.population_size - len(self.population)):
             ind = self.create_random_individual()
+            ind = self.repair(ind)  # Repair to use full budget
             self.population.append(ind)
         
         # Evaluate initial population
-        feasible_count = 0
+        budget_count = 0
         for i, ind in enumerate(self.population):
             self.compute_fitness(ind, self.mc_coarse)
             total_size = len(ind.S1) + len(ind.S2)
-            if total_size <= self.budget:
-                feasible_count += 1
+            if total_size == self.budget:
+                budget_count += 1
             print(f"  Individual {i+1}: fitness={ind.fitness:.2f}, "
                   f"|S1|={len(ind.S1)}, |S2|={len(ind.S2)}, total={total_size}")
         
         self.best_individual = max(self.population, key=lambda x: x.fitness)
         print(f"  Best initial: {self.best_individual.fitness:.2f}")
-        print(f"  Feasible solutions: {feasible_count}/{self.population_size}")
+        print(f"  Full budget solutions: {budget_count}/{self.population_size}")
     
     # ==================== Crossover Operators ====================
     
@@ -392,9 +394,67 @@ class IEMPEvolutionary:
         
         return mutant
     
+    def repair(self, individual: Individual) -> Individual:
+        """
+        Repair operator: ensure solution uses exactly budget nodes
+        - If over budget: randomly remove nodes
+        - If under budget: randomly add nodes from available set
+        """
+        S1, S2 = self.decode(individual)
+        total_size = len(S1) + len(S2)
+        
+        if total_size > self.budget:
+            # Over budget: randomly remove nodes
+            all_nodes = list(S1) + list(S2)
+            nodes_to_remove = random.sample(all_nodes, total_size - self.budget)
+            for node in nodes_to_remove:
+                idx = self.data.available_nodes.index(node)
+                if node in S1:
+                    individual.chromosome[idx] = 0
+                    S1.remove(node)
+                elif node in S2:
+                    individual.chromosome[self.n_available + idx] = 0
+                    S2.remove(node)
+        
+        elif total_size < self.budget:
+            # Under budget: randomly add nodes
+            available_for_S1 = [n for n in self.data.available_nodes if n not in S1 and n not in S2]
+            available_for_S2 = available_for_S1.copy()
+            
+            nodes_needed = self.budget - total_size
+            for _ in range(nodes_needed):
+                if random.random() < 0.5 and available_for_S1:
+                    # Add to S1
+                    node = random.choice(available_for_S1)
+                    idx = self.data.available_nodes.index(node)
+                    individual.chromosome[idx] = 1
+                    S1.add(node)
+                    available_for_S1.remove(node)
+                    if node in available_for_S2:
+                        available_for_S2.remove(node)
+                elif available_for_S2:
+                    # Add to S2
+                    node = random.choice(available_for_S2)
+                    idx = self.data.available_nodes.index(node)
+                    individual.chromosome[self.n_available + idx] = 1
+                    S2.add(node)
+                    available_for_S2.remove(node)
+                    if node in available_for_S1:
+                        available_for_S1.remove(node)
+                elif available_for_S1:
+                    # Fallback: add to S1 if S2 empty
+                    node = random.choice(available_for_S1)
+                    idx = self.data.available_nodes.index(node)
+                    individual.chromosome[idx] = 1
+                    S1.add(node)
+                    available_for_S1.remove(node)
+        
+        return individual
+    
     def mutate(self, individual: Individual) -> Individual:
-        """Apply mutation"""
-        return self.bit_flip_mutation(individual)
+        """Apply mutation and repair"""
+        mutant = self.bit_flip_mutation(individual)
+        return self.repair(mutant)
     
     # ==================== Selection ====================
     
@@ -413,6 +473,7 @@ class IEMPEvolutionary:
         print(f"Parameters:")
         print(f"  Population: {self.population_size}")
         print(f"  Generations: {self.generations}")
+        print(f"  Early stopping: DISABLED (will run all generations)")
         print(f"  Budget: {self.budget}")
         print(f"  Available nodes: {self.n_available}")
         print(f"  Chromosome length: {self.chromosome_length}")
@@ -425,8 +486,8 @@ class IEMPEvolutionary:
         
         # Statistics
         best_fitness_history = [self.best_individual.fitness]
-        feasible_count_history = [sum(1 for ind in self.population 
-                                     if len(ind.S1) + len(ind.S2) <= self.budget)]
+        full_budget_count_history = [sum(1 for ind in self.population 
+                                         if len(ind.S1) + len(ind.S2) == self.budget)]
         
         # Evolution loop
         no_improvement_count = 0
@@ -462,9 +523,9 @@ class IEMPEvolutionary:
             
             # Statistics
             current_best = max(self.population, key=lambda x: x.fitness)
-            feasible_count = sum(1 for ind in self.population 
-                               if len(ind.S1) + len(ind.S2) <= self.budget)
-            feasible_count_history.append(feasible_count)
+            full_budget_count = sum(1 for ind in self.population 
+                                   if len(ind.S1) + len(ind.S2) == self.budget)
+            full_budget_count_history.append(full_budget_count)
             
             # Update best
             if current_best.fitness > self.best_individual.fitness:
@@ -473,7 +534,7 @@ class IEMPEvolutionary:
                 no_improvement_count = 0
                 if gen % 10 == 0 or improvement > 10:
                     print(f"Gen {gen+1}: New best = {self.best_individual.fitness:.2f}, "
-                          f"feasible={feasible_count}/{self.population_size}")
+                          f"full_budget={full_budget_count}/{self.population_size}")
             else:
                 no_improvement_count += 1
             
@@ -483,12 +544,13 @@ class IEMPEvolutionary:
             if (gen + 1) % 20 == 0:
                 avg_fitness = sum(ind.fitness for ind in self.population) / len(self.population)
                 print(f"Gen {gen+1}: Best={self.best_individual.fitness:.2f}, "
-                      f"Avg={avg_fitness:.2f}, Feasible={feasible_count}/{self.population_size}")
+                      f"Avg={avg_fitness:.2f}, FullBudget={full_budget_count}/{self.population_size}, "
+                      f"NoImprove={no_improvement_count}")
             
-            # Early stopping
-            if no_improvement_count >= 40:
-                print(f"  Early stopping at generation {gen+1} (no improvement for 40 gens)")
-                break
+            # Early stopping - DISABLED to run full generations
+            # if no_improvement_count >= 40:
+            #     print(f"  Early stopping at generation {gen+1} (no improvement for 40 gens)")
+            #     break
         
         # Final fine evaluation
         print("\n" + "=" * 60)
@@ -524,7 +586,7 @@ def main():
     
     # EA parameters
     parser.add_argument("--pop-size", type=int, default=50, help="Population size (default: 50)")
-    parser.add_argument("--generations", type=int, default=100, help="Number of generations (default: 100)")
+    parser.add_argument("--generations", type=int, default=300, help="Number of generations (default: 300)")
     parser.add_argument("--crossover-rate", type=float, default=0.8, help="Crossover rate (default: 0.8)")
     parser.add_argument("--mutation-rate", type=float, default=0.05, 
                        help="Bit-flip mutation rate (default: 0.05)")

@@ -155,7 +155,7 @@ class IEMEvaluator:
         
         return reached
     
-    def evaluate(self, n_simulations: int = 5000) -> float:
+    def evaluate(self, n_simulations: int = 50000) -> float:
         """
         Evaluate the objective function (balanced information exposure)
         

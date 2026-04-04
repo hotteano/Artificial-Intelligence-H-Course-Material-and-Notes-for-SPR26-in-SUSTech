@@ -1,0 +1,8 @@
+FINAL RESULTS - 50000 MC
+============================================================
+
+[Heuristic Case 0]
+  Score: 449.9050
+  Baseline: 430
+  Status: PASS
+
