@@ -356,9 +356,9 @@ def main():
     parser.add_argument("-i", "--initial", required=True, help="Path to initial seed set file")
     parser.add_argument("-b", "--balanced", required=True, help="Path to output balanced seed set file")
     parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
-    parser.add_argument("--max-iter", type=int, default=20, help="IMRank max iterations (default: 20)")
-    parser.add_argument("--mc-sim", type=int, default=50, 
-                       help="MC simulations per evaluation (default: 50)")
+    parser.add_argument("--max-iter", type=int, default=250, help="IMRank max iterations (default: 20)")
+    parser.add_argument("--mc-sim", type=int, default=10, 
+                       help="MC simulations per evaluation (default: 100)")
     parser.add_argument("--candidate-size", type=int, default=100,
                        help="IMRank candidate pool size (default: 100)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
