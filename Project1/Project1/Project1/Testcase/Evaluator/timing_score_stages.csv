@@ -1,0 +1,9 @@
+case,simulations,budget,network,elapsed_seconds,elapsed_minutes,score,status,output_file
+map1,30000,10,map1/dataset1,16.934971,0.282250,423.514900,OK,map1\timed_result_30000.txt
+map2,30000,15,map2/dataset2,22.828371,0.380473,35560.460900,OK,map2\timed_result_30000.txt
+map1,40000,10,map1/dataset1,22.374635,0.372911,423.738200,OK,map1\timed_result_40000.txt
+map2,40000,15,map2/dataset2,31.885487,0.531425,35560.671800,OK,map2\timed_result_40000.txt
+map1,50000,10,map1/dataset1,28.706802,0.478447,423.766600,OK,map1\timed_result_50000.txt
+map2,50000,15,map2/dataset2,38.827997,0.647133,35560.935300,OK,map2\timed_result_50000.txt
+map1,60000,10,map1/dataset1,33.688724,0.561479,423.611200,OK,map1\timed_result_60000.txt
+map2,60000,15,map2/dataset2,46.301114,0.771685,35560.980400,OK,map2\timed_result_60000.txt

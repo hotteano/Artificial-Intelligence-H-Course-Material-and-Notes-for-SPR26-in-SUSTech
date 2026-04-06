@@ -1,71 +1,182 @@
 """
-IEMP Heuristic Algorithm - MC-Guided Heuristic
-===============================================
+IEMP Heuristic Algorithm - MC SAA Greedy
+=======================================
 
-This is the OPTIMAL heuristic algorithm that uses IMRank for candidate 
-screening + Monte Carlo for precise evaluation to solve the Information 
-Exposure Maximization Problem (IEMP).
+This implementation follows the requested algorithmic template:
 
-Key idea:
-1. IMRank generates high-quality candidate pool (fast screening)
-2. MC evaluation selects the best node at each step (precise guidance)
-3. This corrects the bias in LFA estimation while maintaining heuristic nature
+1. Keep two seed sets S1 and S2 (initially empty).
+2. In each budget step, generate N Monte Carlo scenarios based on current
+   (I1 U S1) and (I2 U S2).
+3. For every candidate vertex v, evaluate h1(v) and h2(v) under the same N
+   scenarios using incremental diffusion from the sampled base states.
+4. Use average h1/h2 to get v1* and v2*, then add the better option.
 
-Algorithm type: Constructive heuristic with MC-based evaluation
-
-Reference: IMRank (SIGIR 2014) + MC-guided greedy selection
+Objective is consistent with evaluator:
+Phi = |V - (r1 XOR r2)|, where r is the reached/exposed set under IC.
 """
 
 import argparse
 import os
-import random
-from typing import List, Tuple, Set, Dict
+from typing import Dict, List, Optional, Set, Tuple
+
+import numpy as np
+
+
+def simulate_ic_with_exposure(
+    seeds: Set[int],
+    neighbors_by_node: List[np.ndarray],
+    probs_by_node: List[np.ndarray],
+    n_nodes: int,
+    rng: np.random.Generator,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Run one IC simulation and return (active_set, reached_set)."""
+    active = np.zeros(n_nodes, dtype=bool)
+    reached = np.zeros(n_nodes, dtype=bool)
+
+    if not seeds:
+        return active, reached
+
+    seed_nodes = np.fromiter(seeds, dtype=np.int32, count=len(seeds))
+    active[seed_nodes] = True
+    reached[seed_nodes] = True
+    frontier = seed_nodes.tolist()
+
+    while frontier:
+        next_frontier: List[int] = []
+        for node in frontier:
+            neighbors = neighbors_by_node[node]
+            if neighbors.size == 0:
+                continue
+
+            inactive_mask = ~active[neighbors]
+            if not inactive_mask.any():
+                continue
+
+            attempted_nodes = neighbors[inactive_mask]
+            attempted_probs = probs_by_node[node][inactive_mask]
+
+            unseen_mask = ~reached[attempted_nodes]
+            if unseen_mask.any():
+                reached[attempted_nodes[unseen_mask]] = True
+
+            success_mask = rng.random(attempted_nodes.size) < attempted_probs
+            if not success_mask.any():
+                continue
+
+            for v in attempted_nodes[success_mask]:
+                if not active[v]:
+                    active[v] = True
+                    next_frontier.append(int(v))
+
+        frontier = next_frontier
+
+    return active, reached
+
+
+def simulate_incremental_ic(
+    start_node: int,
+    base_active: np.ndarray,
+    base_reached: np.ndarray,
+    neighbors_by_node: List[np.ndarray],
+    probs_by_node: List[np.ndarray],
+    rng: np.random.Generator,
+) -> List[int]:
+    """Run incremental IC from one added seed on top of sampled base state.
+
+    Returns newly reached node IDs compared with base_reached.
+    """
+    if base_active[start_node]:
+        return []
+
+    active = base_active.copy()
+    reached = base_reached.copy()
+    incremental_reached: List[int] = []
+
+    active[start_node] = True
+    frontier = [start_node]
+
+    if not reached[start_node]:
+        reached[start_node] = True
+        incremental_reached.append(start_node)
+
+    while frontier:
+        next_frontier: List[int] = []
+        for node in frontier:
+            neighbors = neighbors_by_node[node]
+            if neighbors.size == 0:
+                continue
+
+            inactive_mask = ~active[neighbors]
+            if not inactive_mask.any():
+                continue
+
+            attempted_nodes = neighbors[inactive_mask]
+            attempted_probs = probs_by_node[node][inactive_mask]
+
+            unseen_mask = ~reached[attempted_nodes]
+            if unseen_mask.any():
+                newly_seen = attempted_nodes[unseen_mask]
+                reached[newly_seen] = True
+                incremental_reached.extend(newly_seen.tolist())
+
+            success_mask = rng.random(attempted_nodes.size) < attempted_probs
+            if not success_mask.any():
+                continue
+
+            for v in attempted_nodes[success_mask]:
+                if not active[v]:
+                    active[v] = True
+                    next_frontier.append(int(v))
+
+        frontier = next_frontier
+
+    return incremental_reached
 
 
 class IEMData:
-    """Data class for IEM problem"""
-    
+    """Data class for IEM problem."""
+
     def __init__(self):
         self.n_nodes = 0
         self.n_edges = 0
-        self.graph = {}
-        self.reverse_graph = {}
-        self.I1 = set()
-        self.I2 = set()
-        self.S1 = set()
-        self.S2 = set()
-    
+        self.graph: Dict[int, List[Tuple[int, float, float]]] = {}
+        self.reverse_graph: Dict[int, List[Tuple[int, float, float]]] = {}
+        self.I1: Set[int] = set()
+        self.I2: Set[int] = set()
+        self.S1: Set[int] = set()
+        self.S2: Set[int] = set()
+
     def load_graph(self, filepath: str):
-        """Load graph from file"""
+        """Load graph from file."""
         self.graph = {}
         self.reverse_graph = {}
-        
-        with open(filepath, 'r') as f:
+
+        with open(filepath, "r") as f:
             line = f.readline().strip().split()
             self.n_nodes = int(line[0])
             self.n_edges = int(line[1])
-            
+
             for i in range(self.n_nodes):
                 self.graph[i] = []
                 self.reverse_graph[i] = []
-            
+
             for _ in range(self.n_edges):
                 u, v, p1, p2 = f.readline().strip().split()
                 u, v = int(u), int(v)
                 p1, p2 = float(p1), float(p2)
                 self.graph[u].append((v, p1, p2))
                 self.reverse_graph[v].append((u, p1, p2))
-    
+
     def load_initial_seeds(self, filepath: str):
-        """Load initial seed sets"""
-        with open(filepath, 'r') as f:
+        """Load initial seed sets."""
+        with open(filepath, "r") as f:
             n1, n2 = map(int, f.readline().strip().split())
             self.I1 = set(int(f.readline().strip()) for _ in range(n1))
             self.I2 = set(int(f.readline().strip()) for _ in range(n2))
-    
+
     def save_solution(self, filepath: str):
-        """Save solution to file"""
-        with open(filepath, 'w') as f:
+        """Save solution to file."""
+        with open(filepath, "w") as f:
             f.write(f"{len(self.S1)} {len(self.S2)}\n")
             for node in sorted(self.S1):
                 f.write(f"{node}\n")
@@ -74,66 +185,87 @@ class IEMData:
 
 
 class IEMPMCHeuristic:
-    """
-    MC-Guided Heuristic Algorithm
-    Uses IMRank for screening + MC for precise selection
-    
-    This is the optimal heuristic that achieves:
-    - Case 0: 445.42 (Baseline: 430, Higher: 450)
-    - Case 1: 35934.41 (Baseline: 35900, Higher: 36035)
-    - Case 2: 36037.76 (Baseline: 36000, Higher: 36200)
-    """
+    """Monte Carlo SAA greedy heuristic with optional IMRank screening."""
 
-    def __init__(self, data: IEMData, budget: int = 10,
-                 max_iter: int = 20,
-                 mc_simulations: int = 50,  # MC simulations per evaluation
-                 candidate_pool_size: int = 100):
-        """
-        Initialize MC-guided heuristic
-        
-        Args:
-            data: IEMData object
-            budget: Total budget k
-            max_iter: Maximum iterations for IMRank
-            mc_simulations: Number of MC simulations for evaluation
-            candidate_pool_size: Size of IMRank candidate pool
-        """
+    def __init__(
+        self,
+        data: IEMData,
+        budget: int = 10,
+        max_iter: int = 20,
+        mc_simulations: int = 100,
+        candidate_pool_size: int = 0,
+        seed: Optional[int] = None,
+        workers: int = 1,
+    ):
         self.data = data
         self.budget = budget
         self.max_iter = max_iter
         self.mc_simulations = mc_simulations
         self.candidate_pool_size = candidate_pool_size
-    
-    def compute_weighted_degree_ranking(self, campaign_idx: int) -> List[int]:
-        """Compute weighted out-degree ranking"""
-        weighted_degrees = []
+        self.workers = workers
+        self.rng = np.random.default_rng(seed)
+
+        # Cache adjacency as NumPy arrays for faster repeated simulation.
+        self._mc_neighbors: List[np.ndarray] = []
+        self._mc_prob1: List[np.ndarray] = []
+        self._mc_prob2: List[np.ndarray] = []
+
         for node in range(self.data.n_nodes):
-            score = sum(p1 if campaign_idx == 0 else p2 
-                       for _, p1, p2 in self.data.graph[node])
+            edges = self.data.graph[node]
+            if not edges:
+                self._mc_neighbors.append(np.empty(0, dtype=np.int32))
+                self._mc_prob1.append(np.empty(0, dtype=np.float64))
+                self._mc_prob2.append(np.empty(0, dtype=np.float64))
+                continue
+
+            self._mc_neighbors.append(
+                np.fromiter((v for v, _, _ in edges), dtype=np.int32, count=len(edges))
+            )
+            self._mc_prob1.append(
+                np.fromiter((p1 for _, p1, _ in edges), dtype=np.float64, count=len(edges))
+            )
+            self._mc_prob2.append(
+                np.fromiter((p2 for _, _, p2 in edges), dtype=np.float64, count=len(edges))
+            )
+
+    def compute_weighted_degree_ranking(self, campaign_idx: int) -> List[int]:
+        """Initialize ranking by weighted out-degree for one campaign."""
+        weighted_degrees: List[Tuple[int, float, int]] = []
+        for node in range(self.data.n_nodes):
+            score = sum(
+                p1 if campaign_idx == 0 else p2
+                for _, p1, p2 in self.data.graph[node]
+            )
             weighted_degrees.append((node, score, len(self.data.graph[node])))
-        
+
         weighted_degrees.sort(key=lambda x: (x[1], x[2], -x[0]), reverse=True)
         return [node for node, _, _ in weighted_degrees]
-    
-    def lfa_strategy(self, ranking: List[int], campaign_idx: int) -> Dict[int, float]:
-        """LFA (Last-to-First Allocating) strategy"""
-        pos = {node: i for i, node in enumerate(ranking)}
-        n = len(ranking)
-        M = {node: 1.0 for node in ranking}
-        
-        for i in range(n - 1, 0, -1):
+
+    def lfa_strategy(self, ranking: List[int], campaign_idx: int) -> np.ndarray:
+        """LFA pass for one ranking, used in IMRank self-consistency."""
+        if not ranking:
+            return np.zeros(self.data.n_nodes, dtype=np.float64)
+
+        n_nodes = self.data.n_nodes
+        pos = np.full(n_nodes, -1, dtype=np.int32)
+        pos[ranking] = np.arange(len(ranking), dtype=np.int32)
+
+        M = np.zeros(n_nodes, dtype=np.float64)
+        M[ranking] = 1.0
+
+        for i in range(len(ranking) - 1, 0, -1):
             v = ranking[i]
             remaining = M[v]
-            if remaining <= 0:
+            if remaining <= 1e-15:
                 continue
-            
-            higher_parents = []
+
+            higher_parents: List[Tuple[int, int, float]] = []
             for parent, p1, p2 in self.data.reverse_graph.get(v, []):
-                parent_pos = pos.get(parent)
-                if parent_pos is not None and parent_pos < i:
+                parent_pos = pos[parent]
+                if parent_pos != -1 and parent_pos < i:
                     p = p1 if campaign_idx == 0 else p2
                     higher_parents.append((parent_pos, parent, p))
-            
+
             higher_parents.sort(key=lambda x: x[0])
             for _, parent, p in higher_parents:
                 influence = remaining * p
@@ -143,255 +275,320 @@ class IEMPMCHeuristic:
                 remaining *= (1 - p)
                 if remaining <= 1e-12:
                     break
-        
+
         return M
-    
-    def imrank_self_consistent(self, campaign_idx: int) -> Tuple[Dict[int, float], List[int]]:
-        """Compute self-consistent ranking"""
+
+    def imrank_self_consistent(self, campaign_idx: int) -> List[int]:
+        """Compute IMRank self-consistent ranking for one campaign."""
         ranking = self.compute_weighted_degree_ranking(campaign_idx)
-        
         if not ranking:
-            return {}, []
-        
-        last_ranking = None
-        final_M = None
-        
+            return []
+
+        last_ranking: Optional[List[int]] = None
         for _ in range(self.max_iter):
             M = self.lfa_strategy(ranking, campaign_idx)
             new_ranking = sorted(
                 ranking,
-                key=lambda node: (M.get(node, 0.0), len(self.data.graph[node]), -node),
+                key=lambda node: (M[node], len(self.data.graph[node]), -node),
                 reverse=True,
             )
-            final_M = M
             if new_ranking == ranking or new_ranking == last_ranking:
                 ranking = new_ranking
                 break
             last_ranking = ranking
             ranking = new_ranking
-        
-        if final_M is None:
-            final_M = self.lfa_strategy(ranking, campaign_idx)
-        
-        return final_M, ranking
-    
-    def mc_simulation(self, seeds1: Set[int], seeds2: Set[int]) -> int:
-        """Single IC simulation"""
-        full_seeds_1 = self.data.I1 | seeds1
-        full_seeds_2 = self.data.I2 | seeds2
-        
-        # Campaign 1
-        active1 = set(full_seeds_1)
-        reached1 = set(full_seeds_1)
-        newly_active1 = set(full_seeds_1)
-        
-        while newly_active1:
-            current_new = set()
-            for node in newly_active1:
-                for neighbor, p1, p2 in self.data.graph.get(node, []):
-                    if neighbor not in active1:
-                        reached1.add(neighbor)
-                        if random.random() < p1:
-                            current_new.add(neighbor)
-            newly_active1 = current_new - active1
-            active1.update(newly_active1)
-        
-        # Campaign 2
-        active2 = set(full_seeds_2)
-        reached2 = set(full_seeds_2)
-        newly_active2 = set(full_seeds_2)
-        
-        while newly_active2:
-            current_new = set()
-            for node in newly_active2:
-                for neighbor, p1, p2 in self.data.graph.get(node, []):
-                    if neighbor not in active2:
-                        reached2.add(neighbor)
-                        if random.random() < p2:
-                            current_new.add(neighbor)
-            newly_active2 = current_new - active2
-            active2.update(newly_active2)
-        
-        symmetric_diff = reached1.symmetric_difference(reached2)
-        return self.data.n_nodes - len(symmetric_diff)
-    
-    def mc_evaluate(self, seeds1: Set[int], seeds2: Set[int]) -> float:
-        """Evaluate using Monte Carlo simulation"""
-        total = sum(self.mc_simulation(seeds1, seeds2) for _ in range(self.mc_simulations))
-        return total / self.mc_simulations
-    
-    def build_candidate_pool(self, available: Set[int]) -> List[int]:
-        """
-        Build candidate pool using IMRank
-        Returns top candidates from both campaigns
-        """
-        print("  Building IMRank candidate pool...")
-        
-        M1, rank1 = self.imrank_self_consistent(campaign_idx=0)
-        M2, rank2 = self.imrank_self_consistent(campaign_idx=1)
-        
-        available_set = set(available)
-        pool = []
-        seen = set()
-        
-        # Take top from both rankings
-        limit_each = max(1, self.candidate_pool_size // 2)
-        
-        for node in rank1[:limit_each * 2]:
-            if node in available_set and node not in seen:
+
+        return ranking
+
+    def build_candidate_pool(
+        self,
+        available: Set[int],
+        rank1: List[int],
+        rank2: List[int],
+    ) -> List[int]:
+        """Build candidate pool from top IMRank nodes of two campaigns."""
+        if self.candidate_pool_size <= 0 or self.candidate_pool_size >= len(available):
+            return sorted(available)
+
+        limit_total = min(self.candidate_pool_size, len(available))
+        limit_each = max(1, limit_total // 2)
+
+        pool: List[int] = []
+        seen: Set[int] = set()
+
+        for node in rank1:
+            if node in available and node not in seen:
                 pool.append(node)
                 seen.add(node)
             if len(pool) >= limit_each:
                 break
-        
-        for node in rank2[:limit_each * 2]:
-            if node in available_set and node not in seen:
+
+        for node in rank2:
+            if node in available and node not in seen:
                 pool.append(node)
                 seen.add(node)
-            if len(pool) >= self.candidate_pool_size:
+            if len(pool) >= limit_total:
                 break
-        
-        # Fill with remaining available nodes if needed
-        if len(pool) < min(self.candidate_pool_size, len(available_set)):
-            for node in available_set - seen:
-                pool.append(node)
-                if len(pool) >= min(self.candidate_pool_size, len(available_set)):
-                    break
-        
-        print(f"    Candidate pool size: {len(pool)}")
+
+        if len(pool) < limit_total:
+            for node in sorted(available):
+                if node not in seen:
+                    pool.append(node)
+                    if len(pool) >= limit_total:
+                        break
+
         return pool
-    
+
+    @staticmethod
+    def _delta_from_increment(
+        incremental_reached: List[int],
+        opposite_reached: np.ndarray,
+    ) -> int:
+        """Compute Phi gain from newly reached nodes on one side."""
+        if not incremental_reached:
+            return 0
+
+        nodes = np.asarray(incremental_reached, dtype=np.int32)
+        overlap = int(np.count_nonzero(opposite_reached[nodes]))
+        return (2 * overlap) - int(nodes.size)
+
+    def mc_simulation(self, full_seeds_1: Set[int], full_seeds_2: Set[int]) -> int:
+        """Single IC simulation scored by balanced exposure objective."""
+        _, reached1 = simulate_ic_with_exposure(
+            full_seeds_1,
+            self._mc_neighbors,
+            self._mc_prob1,
+            self.data.n_nodes,
+            self.rng,
+        )
+        _, reached2 = simulate_ic_with_exposure(
+            full_seeds_2,
+            self._mc_neighbors,
+            self._mc_prob2,
+            self.data.n_nodes,
+            self.rng,
+        )
+        symmetric_diff_size = int(np.count_nonzero(np.logical_xor(reached1, reached2)))
+        return self.data.n_nodes - symmetric_diff_size
+
+    def mc_evaluate(self, seeds1: Set[int], seeds2: Set[int]) -> float:
+        """Evaluate final solution by Monte Carlo."""
+        full_seeds_1 = self.data.I1 | seeds1
+        full_seeds_2 = self.data.I2 | seeds2
+
+        total = 0
+        for _ in range(self.mc_simulations):
+            total += self.mc_simulation(full_seeds_1, full_seeds_2)
+        return total / self.mc_simulations
+
     def run(self) -> Tuple[Set[int], Set[int]]:
-        """Main MC-guided heuristic algorithm"""
+        """Main algorithm: MC SAA greedy with IMRank candidate screening."""
         available = set(range(self.data.n_nodes)) - self.data.I1 - self.data.I2
-        S1, S2 = set(), set()
-        
+        S1: Set[int] = set()
+        S2: Set[int] = set()
+
         if not available or self.budget <= 0:
             self.data.S1, self.data.S2 = S1, S2
             return S1, S2
-        
+
         print("=" * 70)
-        print("MC-Guided Heuristic Algorithm")
+        print("MC SAA Greedy Heuristic")
         print("=" * 70)
-        print(f"Parameters: budget={self.budget}, MC={self.mc_simulations}, "
-              f"candidates={self.candidate_pool_size}")
-        
-        # Step 1: Build candidate pool using IMRank
-        print("\n[Step 1] IMRank candidate pool generation")
-        candidate_pool = self.build_candidate_pool(available)
-        
-        # Step 2: MC-guided greedy selection
-        print(f"\n[Step 2] MC-guided greedy selection")
-        print(f"  At each step, evaluate adding to S1 and S2 using MC simulation")
-        
+        use_imrank = 0 < self.candidate_pool_size < len(available)
+        rank1: List[int] = []
+        rank2: List[int] = []
+
+        if use_imrank:
+            print("Preparing IMRank rankings for candidate screening...")
+            rank1 = self.imrank_self_consistent(campaign_idx=0)
+            rank2 = self.imrank_self_consistent(campaign_idx=1)
+
+        print(
+            f"Parameters: budget={self.budget}, MC scenarios={self.mc_simulations}, "
+            f"candidate_mode={'imrank_pool' if use_imrank else 'all_vertices'}, "
+            f"candidate_size={self.candidate_pool_size if use_imrank else len(available)}"
+        )
+
         steps = min(self.budget, len(available))
-        
+
         for step in range(steps):
-            print(f"\n  Step {step + 1}/{steps}:")
-            
-            best_score = -float('inf')
-            best_node = None
-            best_for_s1 = True
-            
-            # Evaluate each candidate
-            for node in candidate_pool:
-                if node not in available or node in S1 or node in S2:
-                    continue
-                
-                # Evaluate adding to S1
-                score_s1 = self.mc_evaluate(S1 | {node}, S2)
-                if score_s1 > best_score:
-                    best_score = score_s1
-                    best_node = node
-                    best_for_s1 = True
-                    print(f"    Candidate {node} -> S1: MC={score_s1:.2f} [BEST]")
-                else:
-                    print(f"    Candidate {node} -> S1: MC={score_s1:.2f}")
-                
-                # Evaluate adding to S2
-                score_s2 = self.mc_evaluate(S1, S2 | {node})
-                if score_s2 > best_score:
-                    best_score = score_s2
-                    best_node = node
-                    best_for_s1 = False
-                    print(f"    Candidate {node} -> S2: MC={score_s2:.2f} [BEST]")
-                else:
-                    print(f"    Candidate {node} -> S2: MC={score_s2:.2f}")
-            
-            if best_node is None:
-                print("    No valid candidate found, stopping.")
-                break
-            
-            # Add best node
-            if best_for_s1:
-                S1.add(best_node)
-                print(f"  -> Selected: {best_node} to S1 (MC={best_score:.2f})")
+            if use_imrank:
+                valid_candidates = self.build_candidate_pool(available, rank1, rank2)
             else:
-                S2.add(best_node)
-                print(f"  -> Selected: {best_node} to S2 (MC={best_score:.2f})")
-            
-            available.remove(best_node)
-        
-        # Final result
+                valid_candidates = sorted(available)
+
+            if not valid_candidates:
+                break
+
+            base_a1_list: List[np.ndarray] = []
+            base_r1_list: List[np.ndarray] = []
+            base_a2_list: List[np.ndarray] = []
+            base_r2_list: List[np.ndarray] = []
+
+            seeds_1 = self.data.I1 | S1
+            seeds_2 = self.data.I2 | S2
+
+            for _ in range(self.mc_simulations):
+                a1, r1 = simulate_ic_with_exposure(
+                    seeds_1,
+                    self._mc_neighbors,
+                    self._mc_prob1,
+                    self.data.n_nodes,
+                    self.rng,
+                )
+                a2, r2 = simulate_ic_with_exposure(
+                    seeds_2,
+                    self._mc_neighbors,
+                    self._mc_prob2,
+                    self.data.n_nodes,
+                    self.rng,
+                )
+                base_a1_list.append(a1)
+                base_r1_list.append(r1)
+                base_a2_list.append(a2)
+                base_r2_list.append(r2)
+
+            best_h1 = -float("inf")
+            best_h2 = -float("inf")
+            best_v1: Optional[int] = None
+            best_v2: Optional[int] = None
+
+            for node in valid_candidates:
+                h1_total = 0.0
+                h2_total = 0.0
+
+                for j in range(self.mc_simulations):
+                    inc_r1 = simulate_incremental_ic(
+                        node,
+                        base_a1_list[j],
+                        base_r1_list[j],
+                        self._mc_neighbors,
+                        self._mc_prob1,
+                        self.rng,
+                    )
+                    h1_total += self._delta_from_increment(inc_r1, base_r2_list[j])
+
+                    inc_r2 = simulate_incremental_ic(
+                        node,
+                        base_a2_list[j],
+                        base_r2_list[j],
+                        self._mc_neighbors,
+                        self._mc_prob2,
+                        self.rng,
+                    )
+                    h2_total += self._delta_from_increment(inc_r2, base_r1_list[j])
+
+                h1_avg = h1_total / self.mc_simulations
+                h2_avg = h2_total / self.mc_simulations
+
+                if h1_avg > best_h1 or (h1_avg == best_h1 and (best_v1 is None or node < best_v1)):
+                    best_h1 = h1_avg
+                    best_v1 = node
+
+                if h2_avg > best_h2 or (h2_avg == best_h2 and (best_v2 is None or node < best_v2)):
+                    best_h2 = h2_avg
+                    best_v2 = node
+
+            if best_v1 is None and best_v2 is None:
+                break
+
+            choose_s1 = False
+            if best_v2 is None:
+                choose_s1 = True
+            elif best_v1 is None:
+                choose_s1 = False
+            elif best_h1 > best_h2:
+                choose_s1 = True
+            elif best_h2 > best_h1:
+                choose_s1 = False
+            else:
+                if len(S1) < len(S2):
+                    choose_s1 = True
+                elif len(S2) < len(S1):
+                    choose_s1 = False
+                else:
+                    choose_s1 = best_v1 < best_v2
+
+            if choose_s1:
+                assert best_v1 is not None
+                S1.add(best_v1)
+                available.remove(best_v1)
+            else:
+                assert best_v2 is not None
+                S2.add(best_v2)
+                available.remove(best_v2)
+
         print("\n" + "=" * 70)
         print("Final Result")
         print("=" * 70)
         print(f"  S1 ({len(S1)} nodes): {sorted(S1)}")
         print(f"  S2 ({len(S2)} nodes): {sorted(S2)}")
         print(f"  Total: {len(S1) + len(S2)} / {self.budget}")
-        
-        # Final MC evaluation
+
         print("\n  Final MC evaluation...")
         final_score = self.mc_evaluate(S1, S2)
         print(f"  Final MC Score: {final_score:.4f}")
         print("=" * 70)
-        
+
         self.data.S1, self.data.S2 = S1, S2
         return S1, S2
 
 
 def main():
-    parser = argparse.ArgumentParser(description="IEMP MC-Guided Heuristic Algorithm")
+    parser = argparse.ArgumentParser(description="IEMP MC SAA Greedy Heuristic")
     parser.add_argument("-n", "--network", required=True, help="Path to social network file")
     parser.add_argument("-i", "--initial", required=True, help="Path to initial seed set file")
     parser.add_argument("-b", "--balanced", required=True, help="Path to output balanced seed set file")
     parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
-    parser.add_argument("--max-iter", type=int, default=250, help="IMRank max iterations (default: 20)")
-    parser.add_argument("--mc-sim", type=int, default=10, 
-                       help="MC simulations per evaluation (default: 100)")
-    parser.add_argument("--candidate-size", type=int, default=100,
-                       help="IMRank candidate pool size (default: 100)")
+    parser.add_argument(
+        "--mc-sim",
+        type=int,
+        default=200,
+        help="MC scenarios per step and final evaluation (default: 100)",
+    )
+    parser.add_argument(
+        "--max-iter",
+        type=int,
+        default=380,
+        help="Maximum IMRank self-consistency iterations (default: 20)",
+    )
+    parser.add_argument(
+        "--candidate-size",
+        type=int,
+        default=1000,
+        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 600)",
+    )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
-    
+
     args = parser.parse_args()
-    
-    if args.seed:
-        random.seed(args.seed)
-    
+
     if args.budget <= 0:
         raise ValueError("Budget k must be a positive integer.")
+    if args.mc_sim <= 0:
+        raise ValueError("MC simulations must be a positive integer.")
     if not os.path.exists(args.network):
         raise FileNotFoundError(f"Network file not found: {args.network}")
     if not os.path.exists(args.initial):
         raise FileNotFoundError(f"Initial seed file not found: {args.initial}")
-    
+
     data = IEMData()
     data.load_graph(args.network)
     data.load_initial_seeds(args.initial)
-    
+
     print(f"Graph: {data.n_nodes} nodes, {data.n_edges} edges")
     print(f"Initial seeds: I1={len(data.I1)}, I2={len(data.I2)}")
     print(f"Budget k: {args.budget}")
-    
+
     heuristic = IEMPMCHeuristic(
         data,
         budget=args.budget,
         max_iter=args.max_iter,
         mc_simulations=args.mc_sim,
         candidate_pool_size=args.candidate_size,
+        seed=args.seed,
     )
     heuristic.run()
-    
+
     data.save_solution(args.balanced)
     print(f"\nSolution saved to: {args.balanced}")
 

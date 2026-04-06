@@ -1,5 +1,5 @@
 \documentclass[a4paper]{article}
-\usepackage{neurips_2025}
+\usepackage{ieeetrans}
 \usepackage[UTF8]{ctex}
 \usepackage{setspace}
 \usepackage{amsmath, amssymb}
@@ -41,1332 +41,315 @@
 
 \maketitle
 
-\begin{abstract}
-The Information Exposure Maximization Problem (IEMP) in social networks presents significant computational challenges due to its NP-hard nature and the stochastic characteristics of information propagation. This report presents a comprehensive comparative analysis of two distinct algorithmic approaches for solving the IEMP: a Monte Carlo-guided heuristic algorithm that combines IMRank-based candidate screening with precise Monte Carlo evaluation, and a pure evolutionary algorithm employing binary encoding with penalty-based constraint handling. Through extensive experimentation on three test cases of varying scales, we demonstrate that the MC-guided heuristic consistently achieves superior performance with full budget utilization, while the genetic algorithm, despite passing all baseline requirements, exhibits substantial inefficiencies in budget exploitation. Our analysis reveals that the combination of fast heuristic screening and accurate Monte Carlo evaluation provides an effective paradigm for addressing complex influence maximization problems in large-scale social networks.
-\end{abstract}
 
-\section{Introduction}\label{sec:intro}
+\section{Introduction}
+Information Exposure Maximization (IEM) studies how to reduce information disparity between two competing campaigns over a directed social network. Given initial seed sets $I_1$ and $I_2$, we select additional seed sets $S_1$ and $S_2$ under a total budget constraint to maximize balanced exposure under Independent Cascade (IC) propagation.
 
-The proliferation of social media platforms has fundamentally transformed how information propagates through society, creating unprecedented opportunities for targeted information dissemination and influence maximization. In this context, the Information Exposure Maximization Problem (IEMP) emerges as a critical computational challenge that seeks to optimize the distribution of information across networked populations. Unlike traditional influence maximization problems that focus solely on maximizing the spread of a single campaign, the IEMP addresses the more nuanced scenario of managing two competing or complementary information campaigns simultaneously, with the objective of maximizing the expected number of network nodes that achieve balanced exposure---defined as being exposed to either both campaigns or neither campaign.
-
-The mathematical formulation of the IEMP presents several significant computational challenges that render exact solution approaches infeasible for practical network sizes. First, the problem inherits the NP-hard complexity characteristics of traditional influence maximization problems, meaning that finding the optimal seed set requires evaluating an exponentially large search space. Second, the stochastic nature of information propagation under the Independent Cascade (IC) model introduces additional complexity, as the objective function must be estimated through computationally expensive Monte Carlo simulations. Third, the balanced exposure objective introduces an additional layer of complexity beyond simple coverage maximization, as it requires considering the symmetric difference between the reach sets of two campaigns rather than merely maximizing the union of their influences.
-
-Given these computational challenges, the development of efficient approximation algorithms becomes essential for addressing real-world instances of the IEMP. This report presents a comprehensive comparative analysis of two distinct algorithmic paradigms for solving the IEMP. The first approach, which we term the Monte Carlo-guided heuristic algorithm, combines the computational efficiency of heuristic screening methods with the accuracy of Monte Carlo simulation for candidate evaluation. Specifically, this approach employs the IMRank algorithm for generating high-quality candidate pools and uses Monte Carlo simulation to guide a greedy selection process, thereby correcting the estimation biases inherent in purely heuristic approaches while maintaining computational tractability.
-
-The second approach implements a pure evolutionary algorithm based on genetic algorithm principles. This method employs binary chromosome encoding to represent candidate solutions, with each chromosome encoding membership in the two seed sets $S_1$ and $S_2$. The algorithm utilizes penalty-based constraint handling to manage the budget constraint and employs standard genetic operators including uniform crossover and bit-flip mutation. By maintaining a population of candidate solutions and iteratively evolving this population through selection, crossover, and mutation operations, the genetic algorithm seeks to discover high-quality solutions through global search.
-
-The remainder of this report is organized as follows. Section \ref{sec:problem} provides a formal mathematical formulation of the IEMP and establishes the necessary theoretical foundations. Section \ref{sec:heuristic} presents a detailed exposition of the MC-guided heuristic algorithm, including its theoretical underpinnings and algorithmic implementation. Section \ref{sec:genetic} describes the genetic algorithm approach, detailing its encoding scheme, fitness function, and evolutionary operators. Section \ref{sec:experiments} presents comprehensive experimental results comparing the performance of both algorithms across three test cases of varying scales. Section \ref{sec:analysis} provides an in-depth analysis of the results, examining factors such as budget utilization, solution quality, and algorithmic efficiency. Finally, Section \ref{sec:conclusion} summarizes our findings and discusses directions for future research.
-
-\section{Problem Formulation and Preliminaries}\label{sec:problem}
-
-\subsection{Mathematical Definition of the IEMP}
-
-The Information Exposure Maximization Problem can be formally defined within the framework of graph theory and probabilistic propagation models. Consider a social network represented as a directed graph $G = (V, E)$, where the vertex set $V = \{v_1, v_2, \ldots, v_n\}$ represents the individuals in the network and the edge set $E \subseteq V \times V$ represents the social connections between them. Each directed edge $(u, v) \in E$ is associated with two propagation probabilities $p_1(u, v)$ and $p_2(u, v)$, representing the probabilities that information from campaign 1 and campaign 2, respectively, propagates from node $u$ to node $v$.
-
-\begin{definition}[Information Exposure Maximization Problem]
-Given the social network graph $G = (V, E)$ with propagation probabilities, two initial seed sets $I_1, I_2 \subseteq V$ for campaigns 1 and 2 respectively, and a budget constraint $k \in \mathbb{Z}^+$, the Information Exposure Maximization Problem seeks to find two additional seed sets $S_1, S_2 \subseteq V \setminus (I_1 \cup I_2)$ satisfying $|S_1| + |S_2| \leq k$ that maximize the expected balanced information exposure:
-\begin{equation}\label{eq:objective}
-\sigma(S_1, S_2) = \mathbb{E}\left[|V \setminus (r(S_1 \cup I_1) \Delta r(S_2 \cup I_2))|\right]
+Let $R_1$ and $R_2$ denote the reached node sets of campaign 1 and campaign 2 in one diffusion realization. The optimization target is
+\begin{equation}
+\Phi = \left|V - (R_1 \oplus R_2)\right| = |V| - |R_1 \oplus R_2|,
 \end{equation}
-where $r(S)$ denotes the set of nodes reached by a campaign with seed set $S$ under the Independent Cascade model, and $\Delta$ denotes the symmetric difference between two sets.
-\end{definition}
+where $\oplus$ is symmetric difference. The expected objective is
+\begin{equation}
+\max_{S_1,S_2} \; \mathbb{E}[\Phi],
+\quad \text{s.t. } |S_1|+|S_2|\le k,\; S_1\cap S_2=\varnothing,
+\end{equation}
+with full seeds $I_1\cup S_1$ and $I_2\cup S_2$.
 
-The objective function $\sigma(S_1, S_2)$ counts the expected number of nodes that are either exposed to both campaigns (in the intersection of the reach sets) or exposed to neither campaign (in the complement of the union of reach sets). This formulation captures the essence of balanced exposure by penalizing nodes that are exposed to exactly one campaign, which corresponds to the symmetric difference $r(S_1 \cup I_1) \Delta r(S_2 \cup I_2)$.
+This report implements and compares three core algorithmic components:
+\begin{itemize}
+        \item Monte Carlo IC Evaluator for unbiased objective estimation.
+        \item MC-SAA Greedy Heuristic with IMRank candidate screening.
+        \item Binary Evolutionary Optimization using pymoo with feasibility repair.
+\end{itemize}
 
-\subsection{The Independent Cascade Model with Dual Campaigns}
+\section{Method}
 
-The propagation dynamics in the IEMP are governed by a dual-campaign variant of the Independent Cascade (IC) model. Under this model, information propagation proceeds in discrete time steps, with each campaign evolving independently according to its own propagation probabilities. At time $t = 0$, all nodes in the seed sets $I_1 \cup S_1$ (for campaign 1) and $I_2 \cup S_2$ (for campaign 2) become active for their respective campaigns.
+\subsection{Algorithm A: Monte Carlo IC Evaluator}
+For each simulation, both campaigns diffuse independently under IC. A node is considered reached if it is activated or attempted. The score of one simulation is $|V|-|R_1\oplus R_2|$, and the final estimate is the sample mean over $T$ runs:
+\begin{equation}
+\hat{\Phi}(S_1,S_2)=\frac{1}{T}\sum_{t=1}^{T}\left(|V|-|R_1^{(t)}\oplus R_2^{(t)}|\right).
+\end{equation}
 
-At each subsequent time step $t > 0$, each node $u$ that became active in the previous time step $t-1$ attempts to activate each of its inactive neighbors $v$ with the corresponding campaign's propagation probability. Specifically, for campaign $c \in \{1, 2\}$, node $u$ attempts to activate neighbor $v$ with probability $p_c(u, v)$. If the activation is successful, $v$ becomes active for campaign $c$ at time $t$ and will attempt to propagate the campaign further in subsequent steps. Each activation attempt is independent, and each node has only one chance to activate each neighbor per campaign.
-
-The propagation process terminates when no new activations occur in a time step. At this point, we define the reach set $r_c$ for each campaign $c$ as the set of all nodes that were either seed nodes for that campaign or were successfully activated during the propagation process.
-
-\subsection{Computational Complexity and Approximation Challenges}
-
-The IEMP inherits the computational complexity characteristics of traditional influence maximization problems, which have been extensively studied in the literature. Specifically, the problem of maximizing influence spread under the IC model has been proven to be NP-hard, and the objective function is submodular but not necessarily monotone. These complexity results extend to the IEMP, as the traditional influence maximization problem can be reduced to a special case of the IEMP by setting one campaign's seed set to empty.
-
-The computational challenges are further exacerbated by the need to estimate the expected value in Equation \eqref{eq:objective}. Unlike deterministic optimization problems where the objective function can be evaluated exactly, the stochastic nature of the IC model requires Monte Carlo simulation to estimate the expected reach sets. Each simulation involves running the propagation process multiple times and averaging the results, which is computationally expensive, particularly for large networks where each simulation may require simulating propagation through thousands of nodes and edges.
-
-Given these computational challenges, exact solution approaches are infeasible for all but the smallest network instances. Consequently, the development of efficient approximation algorithms that can discover high-quality solutions within reasonable computational time becomes essential. The approximation algorithms presented in this report--- the MC-guided heuristic and the genetic algorithm--- represent two distinct paradigms for addressing these computational challenges.
-
-\section{Monte Carlo-Guided Heuristic Algorithm}\label{sec:heuristic}
-
-\subsection{Algorithmic Overview and Design Philosophy}
-
-The Monte Carlo-guided heuristic algorithm represents a hybrid approach that combines the computational efficiency of heuristic screening with the accuracy of Monte Carlo simulation for precise evaluation. The fundamental insight underlying this approach is that purely heuristic methods, while computationally efficient, often suffer from estimation biases when approximating influence spread, particularly in large networks where the propagation dynamics are complex. Conversely, pure Monte Carlo methods, while accurate, are computationally prohibitive when evaluating a large number of candidate solutions.
-
-Our approach bridges this gap by employing a two-stage process. In the first stage, we utilize the IMRank algorithm to rapidly generate a high-quality candidate pool of limited size, thereby reducing the search space from potentially thousands of nodes to a manageable number (typically 100-150 candidates). In the second stage, we employ Monte Carlo simulation to precisely evaluate the marginal contribution of each candidate node, thereby guiding a greedy selection process that constructs the solution incrementally.
-
-The design philosophy behind this approach draws upon the rich literature on influence maximization heuristics, particularly the IMRank algorithm which has demonstrated effectiveness in identifying influential nodes through self-consistent ranking. By combining IMRank's screening capability with Monte Carlo's evaluation accuracy, we achieve a balance between solution quality and computational efficiency that is essential for addressing large-scale instances of the IEMP.
-
-\subsection{IMRank-Based Candidate Pool Generation}
-
-The IMRank algorithm forms the foundation of our candidate generation process. IMRank operates on the principle of self-consistent ranking, wherein nodes are iteratively ranked based on their estimated influence, with the ranking itself informing the influence estimation. This self-referential approach captures the recursive nature of influence propagation in social networks, where a node's influence depends not only on its direct connections but also on the influence of its neighbors.
-
-The algorithm begins by computing an initial ranking based on weighted out-degree. For each campaign $c \in \{1, 2\}$, the weighted degree of node $v$ is computed as $d_c(v) = \sum_{(v, u) \in E} p_c(v, u)$. Nodes are then ranked in descending order of their weighted degrees, with ties broken by total out-degree and node identifier.
-
-Following initialization, the algorithm enters an iterative refinement phase. In each iteration, the algorithm applies the Last-to-First Allocating (LFA) strategy to compute influence scores for all nodes based on the current ranking. The LFA strategy processes nodes in reverse order of their current ranking (from lowest to highest), propagating influence estimates from lower-ranked nodes to their higher-ranked neighbors. This propagation follows the intuition that influence flows from less influential nodes to more influential nodes in the ranking.
-
-Specifically, for each node $v$ processed in reverse order, the algorithm distributes its current influence mass $M[v]$ to its parents (nodes with edges pointing to $v$) that have higher rankings. For each such parent $u$ with ranking position $r(u) < r(v)$, the influence contribution is computed as $M[u] \mathrel{+}= M[v] \cdot p_c(v, u)$, and the remaining mass at $v$ is updated as $M[v] \mathrel{*}= (1 - p_c(v, u))$. This process continues until all higher-ranked parents have been considered or the remaining mass falls below a threshold.
-
-After applying the LFA strategy, nodes are re-ranked based on their computed influence scores $M[v]$. The algorithm iterates this process of LFA computation and re-ranking until convergence, defined as the ranking remaining unchanged between consecutive iterations, or until a maximum iteration count is reached. The converged ranking provides a self-consistent ordering of nodes by influence, which is then used to select the top candidates for the Monte Carlo evaluation stage.
-
-\begin{algorithm}[htbp]
-\caption{IMRank Self-Consistent Ranking}
-\label{alg:imrank}
+\begin{algorithm}[h]
+\caption{Monte Carlo IC Evaluation}
 \begin{algorithmic}[1]
-\Require Graph $G = (V, E)$, propagation probabilities $\{p_c(u,v)\}$, campaign $c$, max iterations $T$
-\Ensure Self-consistent ranking $\pi$ and influence scores $M$
-\State Initialize ranking $\pi_0$ by weighted out-degree: $\pi_0(v) \leftarrow \sum_{(v,u) \in E} p_c(v,u)$
-\For{$t = 1$ to $T$}
-    \State Initialize $M[v] \leftarrow 1$ for all $v \in V$
-    \For{$v$ in reverse order of $\pi_{t-1}$}
-        \State $\text{remaining} \leftarrow M[v]$
-        \For{each parent $u$ of $v$ with $\pi_{t-1}(u) < \pi_{t-1}(v)$}
-            \State $p \leftarrow p_c(u, v)$
-            \State $M[u] \leftarrow M[u] + \text{remaining} \cdot p$
-            \State $\text{remaining} \leftarrow \text{remaining} \cdot (1 - p)$
-            \If{$\text{remaining} < \epsilon$}
-                \State \textbf{break}
-            \EndIf
-        \EndFor
-    \EndFor
-    \State Create new ranking $\pi_t$ by sorting $V$ descending by $M[v]$
-    \If{$\pi_t = \pi_{t-1}$}
-        \State \textbf{return} $\pi_t, M$
-    \EndIf
+\Require Graph $G$, probabilities $(p_1,p_2)$, initial seeds $(I_1,I_2)$, additional seeds $(S_1,S_2)$, simulations $T$
+\State $\text{sum}\gets 0$
+\For{$t=1$ to $T$}
+                \State Simulate IC for campaign 1 from $I_1\cup S_1$, get $R_1^{(t)}$
+                \State Simulate IC for campaign 2 from $I_2\cup S_2$, get $R_2^{(t)}$
+                \State $\text{sum}\gets \text{sum} + \big(|V|-|R_1^{(t)}\oplus R_2^{(t)}|\big)$
 \EndFor
-\State \textbf{return} $\pi_T, M$
+\State \Return $\text{sum}/T$
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Monte Carlo-Guided Greedy Selection}
-
-With the candidate pool generated by IMRank, the algorithm proceeds to the Monte Carlo-guided greedy selection phase. This phase constructs the solution sets $S_1$ and $S_2$ incrementally over $k$ iterations, where $k$ is the budget constraint. At each iteration, the algorithm evaluates the marginal contribution of adding each candidate node to either $S_1$ or $S_2$, using Monte Carlo simulation to obtain precise estimates of the objective function improvement.
-
-The greedy selection process operates as follows. Let $V_{\text{avail}}$ denote the set of available nodes not in the initial seed sets $I_1 \cup I_2$, and let $C \subseteq V_{\text{avail}}$ denote the candidate pool of size $N$ generated by IMRank. Starting with empty sets $S_1 = S_2 = \emptyset$, the algorithm iterates for $i = 1$ to $k$:
-
-For each candidate node $v \in C \setminus (S_1 \cup S_2)$, the algorithm evaluates two potential moves: (1) adding $v$ to $S_1$, and (2) adding $v$ to $S_2$. For each move, the algorithm runs $M$ Monte Carlo simulations of the IC propagation process, where $M$ is a parameter controlling the trade-off between evaluation accuracy and computational cost. Each simulation computes the objective function value $\sigma(S_1 \cup \{v\}, S_2)$ or $\sigma(S_1, S_2 \cup \{v\})$ by simulating the propagation of both campaigns and computing the size of the complement of the symmetric difference of the reach sets.
-
-The marginal gain for adding $v$ to $S_1$ is computed as $\Delta_1(v) = \sigma(S_1 \cup \{v\}, S_2) - \sigma(S_1, S_2)$, and similarly for adding to $S_2$ as $\Delta_2(v) = \sigma(S_1, S_2 \cup \{v\}) - \sigma(S_1, S_2)$. The algorithm selects the candidate $v^*$ and campaign $c^* \in \{1, 2\}$ that maximize the marginal gain, and updates the corresponding solution set $S_{c^*} \leftarrow S_{c^*} \cup \{v^*\}$.
-
-\begin{algorithm}[htbp]
-\caption{Monte Carlo-Guided Greedy Selection}
-\label{alg:mc-greedy}
-\begin{algorithmic}[1]
-\Require Candidate pool $C$, initial sets $I_1, I_2$, budget $k$, MC simulations $M$
-\Ensure Solution sets $S_1, S_2$
-\State $S_1 \leftarrow \emptyset$, $S_2 \leftarrow \emptyset$
-\For{$i = 1$ to $k$}
-    \State $\text{best\_gain} \leftarrow -\infty$, $\text{best\_node} \leftarrow \text{null}$, $\text{best\_campaign} \leftarrow 1$
-    \For{each $v \in C \setminus (S_1 \cup S_2)$}
-        \State $\sigma_1 \leftarrow \text{MonteCarloEvaluate}(S_1 \cup \{v\}, S_2, I_1, I_2, M)$
-        \State $\Delta_1 \leftarrow \sigma_1 - \sigma(S_1, S_2)$
-        \If{$\Delta_1 > \text{best\_gain}$}
-            \State $\text{best\_gain} \leftarrow \Delta_1$, $\text{best\_node} \leftarrow v$, $\text{best\_campaign} \leftarrow 1$
-        \EndIf
-        \State $\sigma_2 \leftarrow \text{MonteCarloEvaluate}(S_1, S_2 \cup \{v\}, I_1, I_2, M)$
-        \State $\Delta_2 \leftarrow \sigma_2 - \sigma(S_1, S_2)$
-        \If{$\Delta_2 > \text{best\_gain}$}
-            \State $\text{best\_gain} \leftarrow \Delta_2$, $\text{best\_node} \leftarrow v$, $\text{best\_campaign} \leftarrow 2$
-        \EndIf
-    \EndFor
-    \If{$\text{best\_campaign} = 1$}
-        \State $S_1 \leftarrow S_1 \cup \{\text{best\_node}\}$
-    \Else
-        \State $S_2 \leftarrow S_2 \cup \{\text{best\_node}\}$
-    \EndIf
-\EndFor
-\State \textbf{return} $S_1, S_2$
-\end{algorithmic}
-\end{algorithm}
-
-The Monte Carlo evaluation function operates by running $M$ independent simulations of the IC propagation process. In each simulation, the algorithm initializes the active sets for both campaigns as the union of their respective initial and selected seed sets, then iteratively propagates activation through the network according to the propagation probabilities until no new activations occur. The reach set for each campaign is recorded as the set of all nodes that were either seeds or were successfully activated. The objective function value for that simulation is computed as the total number of nodes minus the size of the symmetric difference of the two reach sets. The final estimate is the average of these values across all $M$ simulations.
-
-\subsection{Theoretical Properties and Computational Complexity}
-
-The MC-guided heuristic algorithm combines the submodularity properties of the influence maximization objective with the variance reduction benefits of Monte Carlo estimation. While the greedy selection process does not provide the theoretical $(1 - 1/e)$ approximation guarantee of the standard greedy algorithm for submodular maximization (due to the use of Monte Carlo estimates rather than exact function evaluations), empirical results demonstrate that the algorithm achieves high-quality solutions in practice.
-
-The computational complexity of the algorithm is dominated by the Monte Carlo evaluation phase. Each Monte Carlo simulation requires $O(|E|)$ time in the worst case, as each edge may be traversed during the propagation process. With $M = 150$ simulations per evaluation for achieving Higher requirements within the 540-second time limit, and evaluating $O(|C|)$ candidates for $k$ iterations, the total complexity is $O(k \cdot |C| \cdot M \cdot |E|)$. By limiting the candidate pool $|C|$ to a constant (e.g., 100 nodes) through IMRank screening, the algorithm achieves practical runtime (approximately 530 seconds for Case 1 with $M=150$) while maintaining high solution quality.
-
-\section{Genetic Algorithm Approach}\label{sec:genetic}
-
-\subsection{Evolutionary Computing Paradigm for IEMP}
-
-The genetic algorithm approach to the IEMP represents a fundamentally different paradigm from the heuristic method, employing principles of evolutionary computing to search the solution space through population-based optimization. Rather than constructing a solution incrementally through greedy selection, the genetic algorithm maintains a population of candidate solutions that evolves over generations through the application of selection, crossover, and mutation operators. This population-based approach offers the potential for global exploration of the search space, potentially discovering solutions that might be missed by local search heuristics.
-
-The design of our genetic algorithm follows the canonical structure of evolutionary algorithms while incorporating problem-specific adaptations for the IEMP. Key design decisions include the choice of binary chromosome encoding to represent membership in the two seed sets, the development of a penalty-based fitness function with a \textbf{Repair Operator} to enforce budget constraints, and the implementation of two-phase Monte Carlo evaluation to balance accuracy and computational efficiency during the evolutionary process.
-
-\textbf{Critical Improvement: Repair Operator.} Empirical analysis revealed that the penalty-based constraint handling alone was insufficient to ensure full budget utilization. To address this critical deficiency, we implemented a \textbf{Repair Operator} that explicitly enforces the budget constraint by modifying chromosomes to use exactly $k$ nodes. The repair mechanism operates as follows: (1) if the solution is under budget ($b < k$), randomly add available nodes until the budget is met; (2) if over budget ($b > k$), randomly remove selected nodes until the constraint is satisfied. This operator is applied during initialization, after crossover, and after mutation to ensure all individuals in the population maintain full budget utilization.
-
-\subsection{Binary Chromosome Encoding Scheme}
-
-The representation of candidate solutions in the genetic algorithm employs a binary chromosome encoding scheme that directly captures membership in the two seed sets $S_1$ and $S_2$. Given the set of available nodes $V_{\text{avail}} = V \setminus (I_1 \cup I_2)$, we assign an index to each available node, creating a mapping from indices $\{0, 1, \ldots, n_{\text{avail}} - 1\}$ to nodes in $V_{\text{avail}}$. The chromosome is then defined as a binary string of length $2 \times n_{\text{avail}}$, where the first $n_{\text{avail}}$ bits encode membership in $S_1$ and the remaining $n_{\text{avail}}$ bits encode membership in $S_2$.
-
-Specifically, for a chromosome $\mathbf{x} = (x_0, x_1, \ldots, x_{2n_{\text{avail}}-1})$, the decoding function extracts the seed sets as follows:
+\subsection{Algorithm B: MC-SAA Greedy with IMRank Screening}
+The heuristic iteratively allocates one budget unit to either campaign 1 or campaign 2. In each step, it samples $N$ Monte Carlo base scenarios from current seeds. For each candidate node $v$, it estimates two marginal gains by incremental diffusion:
 \begin{align}
-S_1(\mathbf{x}) &= \{v_i \in V_{\text{avail}} : x_i = 1, 0 \leq i < n_{\text{avail}}\} \\
-S_2(\mathbf{x}) &= \{v_{i-n_{\text{avail}}} \in V_{\text{avail}} : x_i = 1, n_{\text{avail}} \leq i < 2n_{\text{avail}}\}
+h_1(v) &= \mathbb{E}\left[2\,|\Delta R_1(v)\cap R_2| - |\Delta R_1(v)|\right],\\
+h_2(v) &= \mathbb{E}\left[2\,|\Delta R_2(v)\cap R_1| - |\Delta R_2(v)|\right].
 \end{align}
+Here $\Delta R_i(v)$ is the newly reached set when adding $v$ to campaign $i$ on top of a sampled base state. The better of $\max_v h_1(v)$ and $\max_v h_2(v)$ is selected.
 
-This encoding scheme has several advantages for the IEMP. First, it naturally handles the constraint that nodes cannot be selected from the initial seed sets, as these nodes are excluded from the encoding. Second, it allows for arbitrary combinations of $S_1$ and $S_2$ memberships, subject to the budget constraint. Third, the binary representation is amenable to standard genetic operators such as crossover and mutation.
+To reduce candidate evaluation cost, IMRank provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step.
 
-However, the encoding also allows for invalid solutions where a node is selected for both $S_1$ and $S_2$ simultaneously (corresponding to both $x_i = 1$ and $x_{i+n_{\text{avail}}} = 1$ for some $i$), or where the total number of selected nodes exceeds the budget $k$. These violations are handled through the fitness function's penalty mechanism, as described in the following section.
-
-\subsection{Penalty-Based Fitness Function}
-
-The fitness function in our genetic algorithm serves the dual purpose of evaluating solution quality and enforcing constraints. Unlike the heuristic algorithm, which maintains feasibility by construction, the genetic algorithm allows infeasible solutions to exist in the population but penalizes them to reduce their reproductive success.
-
-The fitness function is defined as follows. Let $\mathbf{x}$ be a chromosome decoding to sets $(S_1, S_2)$, and let $b = |S_1| + |S_2|$ be the total number of selected nodes. If $b \leq k$ (feasible solution), the fitness is computed as the Monte Carlo estimate of the objective function:
-\begin{equation}
-f(\mathbf{x}) = \text{MonteCarlo}(S_1, S_2, M_{\text{coarse}})
-\end{equation}
-
-If $b > k$ (infeasible solution), the fitness is assigned a penalty value proportional to the constraint violation:
-\begin{equation}
-f(\mathbf{x}) = -b
-\end{equation}
-
-This penalty scheme ensures that infeasible solutions have negative fitness values, making them unlikely to be selected for reproduction. The magnitude of the penalty increases with the severity of the violation, providing stronger discouragement for solutions that greatly exceed the budget.
-
-Additionally, we incorporate a budget usage bonus to encourage fuller utilization of the available budget within feasible solutions. The modified fitness function for feasible solutions becomes:
-\begin{equation}
-f(\mathbf{x}) = \text{MonteCarlo}(S_1, S_2, M_{\text{coarse}}) + \lambda \cdot \frac{b}{k}
-\end{equation}
-where $\lambda$ is a large constant (e.g., 200) controlling the strength of the bonus. \textbf{Note:} Empirical testing revealed that small values of $\lambda$ (e.g., 0.5) were insufficient to drive full budget utilization. We increased $\lambda$ to 200 to provide strong positive pressure for using the entire budget. This bonus term, combined with the Repair Operator, ensures that solutions fully leverage available resources.
-
-\begin{algorithm}[htbp]
-\caption{Fitness Evaluation with Penalty and Bonus}
-\label{alg:fitness}
+\begin{algorithm}[h]
+\caption{MC-SAA Greedy with IMRank Candidate Pool}
 \begin{algorithmic}[1]
-\Require Chromosome $\mathbf{x}$, decoded sets $S_1, S_2$, budget $k$, MC simulations $M$, bonus weight $\lambda$
-\Ensure Fitness value $f$
-\State $b \leftarrow |S_1| + |S_2|$
-\If{$b > k$}
-    \State $f \leftarrow -b$ \Comment{Penalty for infeasibility}
-\Else
-    \State $\sigma \leftarrow \text{MonteCarlo}(S_1, S_2, M)$
-    \State $f \leftarrow \sigma + \lambda \cdot (b / k)$ \Comment{Score plus budget bonus ($\lambda = 200$)}
-\EndIf
-\State \textbf{return} $f$
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[htbp]
-\caption{Repair Operator}
-\label{alg:repair}
-\begin{algorithmic}[1]
-\Require Chromosome $\mathbf{x}$, decoded sets $S_1, S_2$, available nodes $V_{\text{avail}}$, budget $k$
-\Ensure Repaired chromosome $\mathbf{x}'$ with $|S_1'| + |S_2'| = k$
-\State $b \leftarrow |S_1| + |S_2|$
-\If{$b < k$} \Comment{Under budget: add random nodes}
-    \State $needed \leftarrow k - b$
-    \State $available \leftarrow V_{\text{avail}} \setminus (S_1 \cup S_2)$
-    \State $to\_add \leftarrow \text{RandomSample}(available, needed)$
-    \For{each node $v \in to\_add$}
-        \State Add $v$ to $S_1$ or $S_2$ with equal probability
-    \EndFor
-\ElsIf{$b > k$} \Comment{Over budget: remove random nodes}
-    \State $excess \leftarrow b - k$
-    \State $all\_selected \leftarrow S_1 \cup S_2$
-    \State $to\_remove \leftarrow \text{RandomSample}(all\_selected, excess)$
-    \State Remove $to\_remove$ from $S_1$ and $S_2$
-\EndIf
-\State Update chromosome $\mathbf{x}'$ to encode modified $S_1, S_2$
-\State \textbf{return} $\mathbf{x}'$
-\end{algorithmic}
-\end{algorithm}
-
-\subsection{Population Initialization and Genetic Operators}
-
-The initial population is generated through a combination of random initialization and degree-biased initialization. For random initialization, each bit in each chromosome is set to 1 with probability proportional to the target sparsity, typically chosen such that the expected number of selected nodes is $k/2$ to ensure initial feasibility. For degree-biased initialization, nodes with higher out-degrees have increased probability of being selected, providing a heuristic boost to the initial population quality.
-
-The genetic operators employed in our algorithm include uniform crossover and bit-flip mutation. Uniform crossover operates by independently selecting each bit of the offspring from one of the two parents with equal probability. Given parent chromosomes $\mathbf{x}$ and $\mathbf{y}$, the offspring $\mathbf{z}$ is generated as:
-\begin{equation}
-z_i = \begin{cases}
-x_i & \text{with probability } 0.5 \\
-y_i & \text{with probability } 0.5
-\end{cases}
-\end{equation}
-
-Bit-flip mutation operates by flipping each bit in the chromosome with a small probability $p_m$ (typically 0.05). For each bit $x_i$:
-\begin{equation}
-x_i \leftarrow \begin{cases}
-1 - x_i & \text{with probability } p_m \\
-x_i & \text{with probability } 1 - p_m
-\end{cases}
-\end{equation}
-
-Selection is performed using tournament selection with tournament size 3. In each selection operation, 3 individuals are randomly sampled from the population, and the individual with the highest fitness is selected as a parent. This selection mechanism provides selection pressure while maintaining population diversity.
-
-Elitism is employed to preserve the best individuals across generations. The top $E$ individuals (typically 2) from the current generation are directly copied to the next generation without modification, ensuring that high-quality solutions are not lost due to the stochastic nature of crossover and mutation.
-
-\subsection{Two-Phase Monte Carlo Evaluation}
-
-To balance the trade-off between evaluation accuracy and computational efficiency during evolution, our genetic algorithm employs a two-phase Monte Carlo evaluation strategy. During the evolutionary process, when evaluating the fitness of individuals in the population, we use a coarse evaluation with $M_{\text{coarse}} = 100$ Monte Carlo simulations. This increased simulation count (compared to typical values of 30) provides more accurate fitness estimates that better correlate with the final 50,000-simulation evaluation, at the cost of increased computational time per generation.
-
-After the evolutionary process terminates, we perform a fine evaluation of the best individual using $M_{\text{fine}} = 300$ simulations. This provides a more accurate estimate of the solution quality for final reporting.
-
-\textbf{Termination Criterion:} The evolutionary process runs for a fixed number of generations ($G = 150$) without early stopping. Empirical testing showed that early stopping (e.g., after 40 generations without improvement) often terminated the search prematurely before the algorithm could discover high-quality solutions. By running the full 150 generations within the 780-second time limit, the algorithm achieves sufficient exploration of the search space while respecting computational constraints.
-
-\begin{algorithm}[htbp]
-\caption{Genetic Algorithm with Repair Operator for IEMP}
-\label{alg:genetic}
-\begin{algorithmic}[1]
-\Require Available nodes $V_{\text{avail}}$, budget $k$, population size $P$, generations $G$, elite count $E$
-\Ensure Best solution $(S_1^*, S_2^*)$
-\State Initialize population $\mathcal{P}$ with $P$ individuals
-\State \textbf{Apply Repair Operator} to all individuals in $\mathcal{P}$ \Comment{Enforce budget constraint}
-\State Evaluate fitness of all individuals using $M_{\text{coarse}}$
-\For{$g = 1$ to $G$} \Comment{Run all generations without early stopping}
-    \State Sort $\mathcal{P}$ by fitness descending
-    \State $\mathcal{P}_{\text{new}} \leftarrow \text{top } E \text{ individuals from } \mathcal{P}$ \Comment{Elitism}
-    \While{$|\mathcal{P}_{\text{new}}| < P$}
-        \State Select parents $p_1, p_2$ using tournament selection
-        \State Generate offspring $c_1, c_2$ via uniform crossover
-        \State Apply bit-flip mutation to $c_1, c_2$
-        \State \textbf{Apply Repair Operator} to $c_1, c_2$ \Comment{Ensure budget constraint}
-        \State Evaluate fitness of $c_1, c_2$ using $M_{\text{coarse}}$
-        \State Add $c_1, c_2$ to $\mathcal{P}_{\text{new}}$
-    \EndWhile
-    \State $\mathcal{P} \leftarrow \mathcal{P}_{\text{new}}$
+\Require Budget $k$, scenarios per step $N$, candidate pool size $C$
+\State $S_1\gets\varnothing$, $S_2\gets\varnothing$, $U\gets V\setminus(I_1\cup I_2)$
+\State Compute IMRank lists $L_1,L_2$ (optional if $C>0$)
+\For{$t=1$ to $\min(k,|U|)$}
+                \State Build candidate pool $P\subseteq U$ from top nodes of $L_1,L_2$ (or $P=U$)
+                \State Sample $N$ base IC states for current $(I_1\cup S_1, I_2\cup S_2)$
+                \ForAll{$v\in P$}
+                                \State Estimate $h_1(v)$ and $h_2(v)$ using incremental diffusion on same $N$ states
+                \EndFor
+                \State Let $v_1^*=\arg\max_{v\in P} h_1(v)$, $v_2^*=\arg\max_{v\in P} h_2(v)$
+                \If{$h_1(v_1^*) \ge h_2(v_2^*)$} add $v_1^*$ to $S_1$ \Else add $v_2^*$ to $S_2$ \EndIf
+                \State Remove selected node from $U$
 \EndFor
-\State $\mathbf{x}^* \leftarrow \text{individual with highest fitness in } \mathcal{P}$
-\State Fine evaluation of $\mathbf{x}^*$ using $M_{\text{fine}}$
-\State \textbf{return} decoded $(S_1^*, S_2^*)$ from $\mathbf{x}^*$
+\State \Return $(S_1,S_2)$
 \end{algorithmic}
 \end{algorithm}
 
-\section{Experimental Evaluation}\label{sec:experiments}
-
-\subsection{Experimental Setup and Methodology}
-
-Our experimental evaluation was designed to provide a comprehensive comparison of the two algorithmic approaches across diverse problem instances. All experiments were conducted with the constraint that the original dataset and seed files remain unmodified, ensuring reproducibility and fair comparison. Additionally, all algorithms must adhere to strict time limits as specified in the problem requirements.
-
-\textbf{Evaluation Configuration}: We employ a high-precision evaluation protocol using \textbf{50,000 Monte Carlo simulations} for the final assessment of all solutions. This large number of simulations, as validated in Section \ref{sec:evaluator-accuracy}, achieves full convergence with a coefficient of variation below 0.001\%, ensuring that the estimated scores effectively represent the asymptotic true values under the IC model. All final results are reported with four decimal places of precision to capture subtle differences between algorithms.
-
-\textbf{Algorithm-Specific Configurations}:
-\begin{itemize}
-    \item \textbf{MC-Guided Heuristic}: $M = 150$ simulations per evaluation for achieving Higher requirements within 540 seconds. Candidate pool size $|C| = 100$.
-    \item \textbf{Genetic Algorithm}: $M_{\text{coarse}} = 100$ (evolution), $M_{\text{fine}} = 300$ (final), population $P = 50$, generations $G = 150$, budget bonus $\lambda = 200$, with Repair Operator enabled.
-\end{itemize}
-
-\textbf{Time Limit Constraints}: Each algorithm must complete execution within specified time limits based on the dataset size and target performance level. As shown in Table \ref{tab:time-limits}, Dataset 1 (475 nodes) and Dataset 2 (36,742 nodes) have different time constraints. The Usability TL (60s) represents the maximum time allowed for a valid solution, while Baseline TL (60s) and Higher TL (48s) specify time limits for achieving corresponding performance targets.
-
-\begin{table}[htbp]
-\centering
-\caption{Time Limit Requirements by Dataset}
-\label{tab:time-limits}
-\begin{tabular}{lrrrrr}
-\toprule
-\textbf{Dataset} & \textbf{Nodes} & \textbf{Edges} & \textbf{Usability TL} & \textbf{Baseline TL} & \textbf{Higher TL} \\
-\midrule
-Dataset 1 & 475 & 13,289 & 60s & 60s & 48s \\
-Dataset 2 & 36,742 & 49,248 & 60s & 60s & 48s \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Test Cases}: Our experimental suite comprises three test cases representing different scales and characteristics:
-
-\begin{itemize}
-    \item \textbf{Case 0}: A small-scale network with 475 nodes and 13,289 edges, with budget $k = 10$. This case serves as a sanity check and allows for rapid algorithm validation.
-    
-    \item \textbf{Case 1}: A large-scale network with 36,742 nodes and 49,248 edges, with budget $k = 15$. Initial seeds are $I_1$ (14 nodes) and $I_2$ (10 nodes).
-    
-    \item \textbf{Case 2}: The same large-scale network as Case 1 (36,742 nodes, 49,248 edges) with budget $k = 15$, but with different initial seeds: $I_1$ (8 nodes) and $I_2$ (6 nodes). This case tests algorithm robustness to variations in initial conditions.
-\end{itemize}
-
-\textbf{Baseline Standards}: Each algorithm has independent baseline standards, reflecting their different design objectives and evaluation contexts:
-
-\begin{table}[htbp]
-\centering
-\caption{Baseline Standards for Algorithm Evaluation}
-\label{tab:baselines}
-\begin{tabular}{llrrr}
-\toprule
-\textbf{Algorithm} & \textbf{Case} & \textbf{Baseline} & \textbf{Higher} & \textbf{Budget }$k$ \\
-\midrule
-MC-Guided Heuristic & Case 0 & 430 & 450 & 10 \\
-MC-Guided Heuristic & Case 1 & 35,900 & 36,035 & 15 \\
-MC-Guided Heuristic & Case 2 & 36,000 & 36,200 & 15 \\
-\midrule
-Genetic Algorithm & Case 0 & 415 & 440 & 10 \\
-Genetic Algorithm & Case 1 & 13,580 & 13,680 & 14 \\
-Genetic Algorithm & Case 2 & 13,350 & 13,600 & 14 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Heuristic Algorithm Results}
-
-The MC-guided heuristic algorithm demonstrates strong performance across all test cases, successfully exceeding the baseline requirements in every instance while maintaining full budget utilization. Detailed experimental results including complete seed set configurations are provided in Appendix \ref{app:heuristic}.
-
-\begin{table}[htbp]
-\centering
-\caption{MC-Guided Heuristic Algorithm Results}
-\label{tab:heuristic-results}
-\begin{tabular}{lrrr}
-\toprule
-\textbf{Metric} & \textbf{Case 0} & \textbf{Case 1} & \textbf{Case 2} \\
-\midrule
-Score (50000 MC) & 449.9145 & 35,930.8294 & 36,022.6374 \\
-Baseline & 430 & 35,900 & 36,000 \\
-Excess over Baseline & +19.9145 & +30.8294 & +22.6374 \\
-Budget Utilization & 10/10 (100\%) & 15/15 (100\%) & 15/15 (100\%) \\
-Status & $\checkmark$ Pass & $\checkmark$ Pass & $\checkmark$ Pass \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Case 0 Results}: The algorithm achieves a score of 448.0228, substantially exceeding the baseline of 430. The solution allocates 3 nodes to $S_1$ and 7 nodes to $S_2$, demonstrating a balanced distribution strategy for this small-scale instance. Complete seed sets are detailed in Appendix \ref{app:heuristic}.
-
-\textbf{Case 1 Results}: The algorithm achieves a score of 35,969.8652, exceeding the baseline of 35,900 by nearly 70 points. Notably, the solution concentrates all 15 selected nodes in $S_1$, with $S_2$ remaining empty. This suggests that the MC-guided heuristic identified campaign 1 as having significantly higher marginal gain potential for this specific initial seed configuration.
-
-\textbf{Case 2 Results}: The algorithm achieves a score of 36,066.6194, exceeding the baseline of 36,000. The solution allocates 12 nodes to $S_1$ and 3 nodes to $S_2$, showing a preference for campaign 1 but maintaining some presence in campaign 2.
-
-\subsection{Genetic Algorithm Results}
-
-The genetic algorithm also passes all baseline requirements, though with notable differences in solution characteristics compared to the heuristic approach. Detailed experimental results including complete seed set configurations are provided in Appendix \ref{app:genetic}.
-
-\subsection{Evaluator Accuracy Assessment}\label{sec:evaluator-accuracy}
-
-To validate the reliability of our Monte Carlo-based evaluation methodology, we conducted a systematic assessment of the Evaluator's accuracy and stability. This experiment is crucial because the stochastic nature of the IC model means that evaluation results inherently contain random variation. Understanding this variation allows us to determine appropriate simulation counts for reliable performance comparisons between algorithms.
-
-\subsubsection{Experimental Design}
-
-The accuracy assessment protocol evaluates how the number of Monte Carlo simulations affects the precision of the objective function estimates. For each test case, we selected a fixed balanced seed set (generated by the heuristic algorithm) and ran the Evaluator multiple times with varying simulation counts: 100, 500, 1000, and 5000 simulations. For each simulation count, we performed 5 independent runs to compute statistical measures including mean, standard deviation, and 95\% confidence intervals.
-
-The coefficient of variation (CV), defined as the ratio of standard deviation to mean, serves as our primary metric for relative accuracy. Lower CV values indicate more stable estimates with less relative variance.
-
-\subsubsection{Results and Analysis}
-
-\textbf{Case 0 (Small Network)}: Table \ref{tab:eval-accuracy-case0} presents the accuracy assessment results for the 475-node network. The results demonstrate a clear relationship between simulation count and estimate precision.
-
-\begin{table}[htbp]
-\centering
-\caption{Evaluator Accuracy Assessment: Case 0 (Small Network)}
-\label{tab:eval-accuracy-case0}
-\begin{tabular}{rrrrrrr}
-\toprule
-\textbf{Simulations} & \textbf{Mean} & \textbf{Std Dev} & \textbf{95\% CI Width} & \textbf{CV (\%)} & \textbf{Time (s)} \\
-\midrule
-100 & 420.0500 & 2.8635 & 5.0199 & 0.68 & 0.05 \\
-500 & 418.9404 & 2.3563 & 4.1307 & 0.56 & 0.24 \\
-1000 & 419.6784 & 0.4593 & 0.8052 & 0.11 & 0.50 \\
-5000 & 419.7626 & 0.3554 & 0.6230 & 0.08 & 2.45 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-With 100 simulations, the coefficient of variation is 0.68\%, corresponding to a 95\% confidence interval width of approximately 5.02 points around a mean of 420.05. As the simulation count increases to 5000, the CV drops dramatically to 0.08\% with a CI width of only 0.62 points. This represents an order-of-magnitude improvement in precision.
-
-\textbf{Case 1 (Large Network)}: Table \ref{tab:eval-accuracy-case1} presents results for the 36,742-node network. Interestingly, the large network exhibits even better relative accuracy than the small network.
-
-\begin{table}[htbp]
-\centering
-\caption{Evaluator Accuracy Assessment: Case 1 (Large Network)}
-\label{tab:eval-accuracy-case1}
-\begin{tabular}{rrrrrrr}
-\toprule
-\textbf{Simulations} & \textbf{Mean} & \textbf{Std Dev} & \textbf{95\% CI Width} & \textbf{CV (\%)} & \textbf{Time (s)} \\
-\midrule
-100 & 35426.1860 & 10.9506 & 19.1972 & 0.03 & 0.07 \\
-500 & 35421.2288 & 4.5839 & 8.0359 & 0.01 & 0.33 \\
-1000 & 35421.2030 & 2.1843 & 3.8293 & 0.01 & 0.67 \\
-5000 & 35422.8638 & 1.7862 & 3.1314 & 0.01 & 3.40 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The large network achieves remarkably low coefficient of variation---only 0.03\% even with just 100 simulations. This counterintuitive result can be attributed to the law of large numbers: with 36,742 nodes, the sample mean across all nodes has lower relative variance compared to the smaller network. At 5000 simulations, the CV remains at 0.01\% with a confidence interval width of merely 3.13 points around a mean of approximately 35,423.
-
-\subsubsection{High Simulation Counts within 48s Time Limit}
-
-Given the 48-second Higher TL constraint, we investigated whether significantly higher simulation counts could be employed to further improve evaluation accuracy. Based on the empirical observation that 5000 simulations require approximately 3.40 seconds for Case 1, the theoretical maximum simulation count within 48 seconds would be approximately 70,000 simulations.
-
-Table \ref{tab:eval-accuracy-high-sim} presents results for elevated simulation counts (10,000, 30,000, and 50,000) that remain comfortably within the 48-second limit.
-
-\begin{table}[htbp]
-\centering
-\caption{Evaluator Accuracy Assessment: High Simulation Counts (Case 1)}
-\label{tab:eval-accuracy-high-sim}
-\begin{tabular}{rrrrrrr}
-\toprule
-\textbf{Simulations} & \textbf{Mean} & \textbf{Std Dev} & \textbf{95\% CI Width} & \textbf{CV (\%)} & \textbf{Time (s)} \\
-\midrule
-5000 & 35422.8638 & 1.7862 & 3.1314 & 0.0100 & 3.40 \\
-10000 & 35422.6518 & 0.8219 & 1.4392 & 0.0023 & 8.87 \\
-30000 & 35422.2860 & 0.2560 & 0.4483 & 0.0007 & 21.06 \\
-50000 & 35422.3208 & N/A & N/A & $\approx$0.0004 & 34.35 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The results demonstrate substantial improvements in precision:
-
-\begin{itemize}
-    \item \textbf{10,000 simulations}: CV drops to 0.0023\% (approximately 4$\times$ improvement over 5000 simulations), with execution time of only 8.87 seconds---well within the 48-second limit.
-    \item \textbf{30,000 simulations}: CV further decreases to 0.0007\% (approximately 14$\times$ improvement over 5000 simulations), requiring only 21.06 seconds---utilizing 44\% of the time budget.
-    \item \textbf{50,000 simulations}: Estimated CV of approximately 0.0004\% (extrapolating from the square-root law), with execution time of 34.35 seconds---utilizing 71.6\% of the time budget while leaving a substantial 13.65-second safety margin.
-\end{itemize}
-
-The relationship between simulation count and coefficient of variation approximately follows the theoretical prediction from the Central Limit Theorem ($\text{CV} \propto 1/\sqrt{n}$). Increasing simulations from 5000 to 50,000 (a factor of 10) theoretically reduces CV by a factor of $\sqrt{10} \approx 3.16$, yielding an estimated CV of approximately 0.0003\% for 50,000 simulations.
-
-\textbf{Convergence Verification}: To verify that 50,000 simulations have converged to the asymptotic true value, we analyzed the sequence of estimates at increasing simulation counts. Table \ref{tab:convergence-analysis} presents the convergence trajectory.
-
-\begin{table}[htbp]
-\centering
-\caption{Convergence Trajectory of Monte Carlo Estimates}
-\label{tab:convergence-analysis}
-\begin{tabular}{rrrr}
-\toprule
-\textbf{Simulations} & \textbf{Mean Estimate} & \textbf{Diff from Previous} & \textbf{Abs Diff} \\
-\midrule
-5,000 & 35,422.8638 & --- & --- \\
-10,000 & 35,422.6518 & $-$0.2120 & 0.2120 \\
-30,000 & 35,422.2860 & $-$0.3658 & 0.3658 \\
-50,000 & 35,422.3208 & +0.0348 & \textbf{0.0348} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The convergence pattern reveals several important characteristics:
-
-\begin{enumerate}
-    \item \textbf{Decreasing step sizes}: The differences between consecutive estimates decrease as simulation count increases: 0.21 $\rightarrow$ 0.37 $\rightarrow$ \textbf{0.03}. The dramatic reduction to 0.0348 points at the final step indicates the estimate has stabilized.
-    
-    \item \textbf{Oscillation damping}: The changes alternate in direction ($-$, $-$, $+$), which is characteristic of random fluctuations around a stable mean rather than systematic drift.
-    
-    \item \textbf{Magnitude assessment}: The final difference of 0.0348 points represents only $9.8 \times 10^{-7}$\% relative to the estimate magnitude---essentially negligible for all practical purposes.
-\end{enumerate}
-
-\textbf{Practical Sufficiency}: The signal-to-noise ratio provides a quantitative measure of convergence sufficiency. Typical algorithm performance differences in our experiments range from 23 to 544 points. With an estimated standard deviation of approximately 0.36 at 50,000 simulations (based on the CV extrapolation), the signal-to-noise ratio exceeds \textbf{1,500:1}. This indicates that 50,000 simulations provide more than 1,500 times the precision needed to distinguish between algorithm performance differences.
-
-\textbf{Final Recommendation}: The convergence analysis confirms that \textbf{50,000 simulations achieve full convergence} within the 48-second Higher TL. The estimate at this configuration (35,422.3208) is effectively indistinguishable from the asymptotic true value for all practical algorithm comparison purposes. We therefore recommend adopting \textbf{50,000 simulations} as the standard evaluation configuration to maximize precision while respecting time constraints.
-
-\subsubsection{Implications for Algorithm Evaluation}
-
-The accuracy assessment yields several important implications for our experimental methodology:
-
-\begin{enumerate}
-    \item \textbf{50,000 simulations achieve full convergence}: The convergence trajectory shows that estimates stabilize at 50,000 simulations, with the difference from 30,000 simulations being only 0.0348 points. This indicates that 50,000 simulations yield estimates effectively indistinguishable from the asymptotic true value.
-    
-    \item \textbf{Convergence verified within 48s Higher TL}: The 48-second time limit permits simulation counts that achieve statistical convergence. At 50,000 simulations (34.35s), the estimate differs from the 30,000-simulation estimate by less than 0.05 points, confirming stability.
-    
-    \item \textbf{Score differences are statistically robust}: In our main experiments, algorithm performance differences range from 23 to 544 points. These margins substantially exceed the evaluation uncertainty at 50,000 simulations (estimated $<$0.5 points), with signal-to-noise ratios exceeding 1,500:1.
-    
-    \item \textbf{Computational cost scales linearly}: Evaluation time increases linearly with simulation count, enabling predictable time budgeting. The linear relationship (5000 sims = 3.4s, 50000 sims = 34.4s) permits accurate estimation of evaluation time requirements.
-    
-    \item \textbf{Variance reduction follows theoretical predictions}: The coefficient of variation decreases approximately with the square root of simulation count, as predicted by the Central Limit Theorem. Observed improvements align with theoretical expectations, validating the statistical reliability of the evaluation methodology.
-\end{enumerate}
-
-Detailed experimental data and visualizations are provided in Appendix \ref{app:evaluator-accuracy}.
-
-\begin{table}[htbp]
-\centering
-\caption{Genetic Algorithm Results (with Repair Operator)}
-\label{tab:genetic-results}
-\begin{tabular}{lrrr}
-\toprule
-\textbf{Metric} & \textbf{Case 0} & \textbf{Case 1} & \textbf{Case 2} \\
-\midrule
-Score (50000 MC) & 416.7310 & 13,686.3330 & 13,661.7736 \\
-Baseline & 415 & 13,580 & 13,350 \\
-Higher Target & 440 & 13,680 & 13,600 \\
-Excess over Baseline & +1.7310 & +106.3330 & +311.7736 \\
-Budget Utilization & 7/10 (70\%) & 14/14 (100\%) & 14/14 (100\%) \\
-Status & $\checkmark$ Pass & $\checkmark$ Higher & $\checkmark$ Higher \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Case 0 Results}: The genetic algorithm achieves a score of 416.7310, exceeding the baseline of 415. The solution uses 7 of 10 available budget units (70\%), with 4 nodes in $S_1$ and 3 nodes in $S_2$.
-
-\textbf{Case 1 Results}: The genetic algorithm with repair operator achieves a score of 13,686.3330, exceeding the Higher requirement of 13,680. The solution uses all 14 available budget units (100\%), with 3 nodes in $S_1$ and 11 nodes in $S_2$. The repair operator successfully enforced full budget utilization, transforming the original solution that only used 50\% of the budget.
-
-\textbf{Case 2 Results}: The genetic algorithm with repair operator achieves a score of 13,661.7736, exceeding the Higher requirement of 13,600. The solution uses all 14 available budget units (100\%), with 6 nodes in $S_1$ and 8 nodes in $S_2$. The balanced allocation across both campaigns contributes to the improved performance.
-
-\section{Analysis and Discussion}\label{sec:analysis}
-
-\subsection{Comparative Performance Analysis}
-
-A comprehensive comparison of the two algorithms reveals distinct performance profiles across the three test cases. The MC-guided heuristic consistently achieves higher scores in Cases 0 and 1, while the genetic algorithm surprisingly achieves the highest score in Case 2. However, a deeper analysis reveals that raw score comparisons may be misleading without considering budget utilization and the baseline effects of initial seeds.
-
-\begin{table}[htbp]
-\centering
-\caption{Final Performance Summary}
-\label{tab:comparison}
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Case} & \textbf{Heuristic} & \textbf{Genetic} & \textbf{Winner} & \textbf{Note} \\
-\midrule
-Case 0 & 449.9145 & 416.7310 & Heuristic & Different networks \\
-Case 1 & 35,930.8294 & 13,686.3330 & Heuristic & Different networks \\
-Case 2 & 36,022.6374 & 13,661.7736 & Heuristic & Different networks \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The performance differential in Case 1 is particularly striking: the heuristic algorithm outperforms the genetic algorithm by over 544 points. This substantial margin can be attributed primarily to the heuristic's full budget utilization (15/15 nodes) compared to the genetic algorithm's severe underutilization (3/14 nodes). Note that Heuristic and Genetic algorithms use different network configurations and budgets (15 vs 14). The genetic algorithm's failure to exploit the available budget represents a critical deficiency that severely limits its effectiveness.
-
-\subsection{Budget Utilization Analysis}
-
-Budget utilization emerges as a crucial factor differentiating the two algorithms. The MC-guided heuristic maintains 100\% budget utilization across all test cases, effectively leveraging all available resources to maximize the objective function. In contrast, the genetic algorithm exhibits highly variable and often poor budget utilization:
-
-\begin{table}[htbp]
-\centering
-\caption{Budget Utilization Comparison}
-\label{tab:budget-util}
-\begin{tabular}{lrrr}
-\toprule
-\textbf{Algorithm} & \textbf{Case 0} & \textbf{Case 1} & \textbf{Case 2} \\
-\midrule
-MC-Guided Heuristic & 100\% (10/10) & 100\% (15/15) & 100\% (15/15) \\
-Genetic Algorithm (pre-repair) & 90\% (9/10) & 50\% (7/14) & 79\% (11/14) \\
-\midrule
-Genetic Algorithm (with repair) & 70\% (7/10) & 100\% (14/14) & 100\% (14/14) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The genetic algorithm's poor budget utilization in Cases 1 and 2 (50\% and 79\% respectively, prior to implementing the repair operator) indicates a fundamental flaw in its design. The penalty-based constraint handling, while preventing solutions from exceeding the budget, fails to provide positive incentives for utilizing the budget fully. The small budget usage bonus ($\lambda = 0.5$) proves insufficient to counteract the evolutionary pressure toward sparser solutions.
-
-\textbf{The Repair Operator Solution.} The implemented Repair Operator (Algorithm \ref{alg:repair}) addresses this fundamental limitation by explicitly enforcing the budget constraint. Rather than relying solely on fitness penalties and bonuses to guide evolution, the repair operator modifies chromosomes to ensure exactly $k$ nodes are selected. This approach has several theoretical advantages:
-
-\begin{enumerate}
-    \item \textbf{Elimination of infeasible solutions}: By repairing all individuals to meet the budget constraint, the algorithm eliminates infeasible solutions from the population entirely, removing the ``cliff'' in the fitness landscape.
-    \item \textbf{Focus on quality}: With the budget constraint satisfied by construction, the evolutionary process can focus exclusively on optimizing the objective function value rather than balancing constraint satisfaction against solution quality.
-    \item \textbf{Improved convergence}: Empirical results demonstrate that the repair operator increases scores by over 100 points in Cases 1 and 2, transforming a severely underperforming algorithm into one that exceeds Higher requirements.
-\end{enumerate}
-
-The effectiveness of the repair operator suggests that for constrained optimization problems like the IEMP, explicit constraint handling through repair mechanisms may be more effective than pure penalty-based approaches, particularly when the constraint is a simple cardinality requirement.
-
-\subsection{The Baseline Effect: Decomposing Solution Value}
-
-To properly assess algorithm performance, it is essential to decompose the final scores into the contribution from initial seeds and the marginal contribution from algorithm-selected seeds. Analysis reveals that both algorithms build upon substantial baseline coverage provided by the initial seed sets.
-
-For Case 1, running the propagation process with no additional seeds ($S_1 = S_2 = \emptyset$) yields an approximate score of 35,324. This baseline represents the coverage achieved by the initial seeds $I_1$ and $I_2$ alone. Against this baseline:
-
-\begin{itemize}
-    \item The MC-guided heuristic adds $\sim$646 points (35,970 - 35,324), representing a 1.83\% improvement over the baseline.
-    \item The genetic algorithm adds only $\sim$101 points (35,425 - 35,324), representing a 0.29\% improvement.
-\end{itemize}
-
-This decomposition reveals that while the genetic algorithm's raw score of 35,425 appears competitive, its actual contribution to the objective is minimal. The algorithm effectively fails to leverage the available budget to expand beyond the initial seed coverage.
-
-\subsection{Allocation Strategy Analysis}
-
-The two algorithms exhibit distinct strategies in allocating nodes between $S_1$ and $S_2$:
-
-\textbf{MC-Guided Heuristic}: The heuristic demonstrates adaptive allocation based on campaign potential. In Case 1, it concentrates all resources in $S_1$, suggesting that its MC-based evaluation identified campaign 1 as having higher marginal gain. In Cases 0 and 2, it distributes nodes across both campaigns, reflecting a balanced optimization strategy.
-
-\textbf{Genetic Algorithm}: The genetic algorithm's allocation appears more erratic. In Case 1, it allocates all selected nodes to $S_2$ (the opposite of the heuristic), potentially due to random initialization and insufficient evolutionary pressure to explore the full solution space. The lack of heuristic guidance in the genetic algorithm leads to less systematic exploration of the allocation trade-offs.
-
-\subsection{Computational Efficiency and Time Limit Compliance}
-
-While both algorithms successfully solve the IEMP within reasonable timeframes, their computational characteristics differ significantly, and both must operate within the strict time limits specified in Table \ref{tab:time-limits}.
-
-\textbf{Algorithm Runtime Characteristics}: The MC-guided heuristic's runtime is dominated by the Monte Carlo evaluation phase, with complexity $O(k \cdot |C| \cdot M \cdot |E|)$. By limiting the candidate pool $|C|$ to 100-150 nodes, the algorithm achieves practical runtimes well within the 60-second Usability TL, even for large networks. Empirical measurements show typical execution times of 15-30 seconds for Case 0 and 30-45 seconds for Cases 1-2.
-
-The genetic algorithm's runtime scales with population size, number of generations, and fitness evaluation cost. The two-phase MC evaluation (coarse during evolution with 30 simulations, fine for final solution with 200-500 simulations) provides a balance between accuracy and efficiency. The algorithm typically requires 50-100 generations with early stopping after 40 generations without improvement. Total execution time ranges from 20-40 seconds for Case 0 and 40-55 seconds for Cases 1-2, remaining within the 60-second limit.
-
-\textbf{Time Limit Implications}: The 48-second Higher TL requirement presents a more stringent constraint for achieving top-tier performance. This time pressure influences several design decisions:
-\begin{itemize}
-    \item The MC-guided heuristic limits the IMRank candidate pool to 100-150 nodes, trading off some solution quality for guaranteed time compliance.
-    \item The genetic algorithm employs coarse MC evaluation (30 simulations) during evolution, reserving finer evaluation (200-500 simulations) only for the final selected solution.
-    \item Both algorithms sacrifice some optimization thoroughness to ensure reliable completion within the time window.
-\end{itemize}
-
-Despite these constraints, both algorithms successfully exceed their respective baselines, demonstrating that the time limits, while challenging, permit effective algorithm design.
-
-\section{Conclusion}\label{sec:conclusion}
-
-\subsection{Summary of Achievements}
-
-This report has presented a comprehensive comparative study of two algorithmic approaches for the Information Exposure Maximization Problem in social networks. Our experimental evaluation demonstrates that both algorithms successfully pass all baseline requirements across three test cases of varying scales, validating their effectiveness for practical IEMP instances.
-
-The MC-guided heuristic algorithm achieves superior performance with consistent full budget utilization, exceeding baseline requirements by 20-30 points across all test cases. Its combination of IMRank-based candidate screening and Monte Carlo-guided greedy selection provides an effective paradigm for balancing computational efficiency with solution quality.
-
-The genetic algorithm, after implementing a \textbf{Repair Operator} to enforce full budget utilization, achieves significant improvements. Originally suffering from severe budget underutilization (as low as 20\%), the repaired version achieves 100\% budget utilization and exceeds Higher requirements in Cases 1 and 2. The repair operator ensures that solutions use exactly $k$ nodes by randomly adding nodes when under budget and removing when over budget.
-
-\subsection{Key Findings and Insights}
-
-Our analysis reveals several important insights for solving the IEMP:
-
-\begin{enumerate}
-    \item \textbf{Budget utilization is critical}: Full budget utilization is essential for achieving high-quality solutions. Algorithms that fail to leverage available resources cannot compete regardless of their theoretical properties. The genetic algorithm's performance improved dramatically from 13,568 (50\% budget) to 13,686 (100\% budget) after implementing the repair operator.
-    
-    \item \textbf{Heuristic screening + MC evaluation is effective}: The combination of fast heuristic screening (IMRank) with accurate Monte Carlo evaluation provides a practical and effective approach for large-scale IEMP instances.
-    
-    \item \textbf{Penalty-based constraint handling has limitations}: Pure penalty approaches without positive incentives for budget usage can lead to severely suboptimal solutions. The repair operator provides a more direct solution by explicitly enforcing budget constraints.
-    
-    \item \textbf{Repair Operator effectiveness}: The implemented repair operator ensures 100\% budget utilization with minimal computational overhead. It adjusts solutions by randomly adding nodes when under budget and removing when over budget, achieving an improvement of over 100 points in some cases.
-    
-    \item \textbf{Initial seeds dominate baseline}: Both algorithms build upon substantial baseline coverage from initial seeds. Proper attribution of marginal contribution is essential for fair algorithm comparison.
-\end{enumerate}
-
-\subsection{Directions for Future Research}
-
-Several avenues for future investigation emerge from this study:
-
-\textbf{For the MC-guided heuristic}:
-\begin{itemize}
-    \item Integration of local search procedures (2-opt, simulated annealing) for post-optimization within time constraints
-    \item Adaptive MC evaluation that adjusts simulation count based on candidate quality and remaining time budget
-    \item Investigation of alternative heuristic screening methods beyond IMRank that offer better time-quality trade-offs
-    \item Time-aware early termination criteria that halt evaluation when diminishing returns are detected
-\end{itemize}
-
-\textbf{For evolutionary approaches}:
-\begin{itemize}
-    \item \textbf{Intelligent repair operators}: Current random repair could be enhanced with influence-aware node selection, prioritizing high-degree or high-centrality nodes when adding to meet budget constraints.
-    \item Heuristic initialization strategies using IMRank or other influence measures to accelerate convergence
-    \item Multi-objective formulations that explicitly optimize both objective value and budget usage
-    \item Adaptive fitness landscapes that dynamically adjust penalty and bonus terms based on evolutionary progress
-    \item Anytime algorithms that provide progressively better solutions and can be interrupted when time limits are reached
-    \item Investigation of alternative encoding schemes (e.g., integer encoding for node counts) that naturally satisfy budget constraints without repair
-\end{itemize}
-
-\textbf{General methodological improvements}:
-\begin{itemize}
-    \item Variance reduction techniques for Monte Carlo evaluation (e.g., importance sampling, control variates) to improve accuracy without increasing simulation count
-    \item Hybrid algorithms that combine the global exploration of evolutionary methods with the local refinement of greedy heuristics
-    \item Theoretical analysis of approximation guarantees for MC-guided heuristics
-    \item Time-bounded optimization frameworks that explicitly model the trade-off between solution quality and computational time
-\end{itemize}
-
-\subsection{Final Remarks}
-
-The Information Exposure Maximization Problem presents significant computational challenges due to its NP-hard nature and stochastic objective function. Our comparative study demonstrates that carefully designed heuristic approaches, combining fast screening with accurate evaluation, can achieve high-quality solutions that fully leverage available resources.
-
-The key breakthrough in this study is the development and validation of the \textbf{Repair Operator} for the genetic algorithm. By explicitly enforcing full budget utilization, the repair operator transforms a severely underperforming algorithm (achieving only 50\% budget utilization) into a competitive solution that exceeds Higher requirements in multiple test cases. This finding has important implications for evolutionary approaches to constrained optimization problems.
-
-The MC-guided heuristic algorithm remains the superior approach for the IEMP, achieving consistent performance with 100\% budget utilization across all test cases. However, the repaired genetic algorithm offers a viable alternative, particularly for problems where global exploration is beneficial.
-
-Future work should focus on:
-\begin{itemize}
-    \item Developing adaptive repair operators that consider node influence rather than random selection
-    \item Exploring hybrid methods that combine heuristic initialization with evolutionary refinement
-    \item Investigating time-aware repair strategies that balance solution quality with computational cost
-    \item Extending the repair operator concept to other constrained optimization domains
-\end{itemize}
-
-\bibliographystyle{plain}
-\begin{thebibliography}{99}
-
-\bibitem{kempe2003}
-David Kempe, Jon Kleinberg, and \'{E}va Tardos.
-Maximizing the spread of influence through a social network.
-In \textit{Proceedings of the Ninth ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}, pages 137--146, 2003.
-
-\bibitem{chen2010}
-Wei Chen, Yajun Wang, and Siyu Yang.
-Efficient influence maximization in social networks.
-In \textit{Proceedings of the 15th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}, pages 199--208, 2009.
-
-\bibitem{chen2013}
-Wei Chen, Chi Wang, and Yajun Wang.
-Scalable influence maximization for prevalent viral marketing in large-scale social networks.
-In \textit{Proceedings of the 16th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}, pages 1029--1038, 2010.
-
-\bibitem{tang2014}
-Jie Tang, Jing Zhang, Limin Yao, Juanzi Li, Li Zhang, and Zhong Su.
-ArnetMiner: Extraction and mining of academic social networks.
-In \textit{Proceedings of the 14th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}, pages 990--998, 2008.
-
-\bibitem{tang2015}
-Youze Tang, Yanchen Shi, and Xiaokui Xiao.
-Influence maximization in near-linear time: A martingale approach.
-In \textit{Proceedings of the 2015 ACM SIGMOD International Conference on Management of Data}, pages 1539--1554, 2015.
-
-\bibitem{borgs2014}
-Christian Borgs, Michael Brautbar, Jennifer Chayes, and Brendan Lucier.
-Maximizing social influence in nearly optimal time.
-In \textit{Proceedings of the Twenty-Fifth Annual ACM-SIAM Symposium on Discrete Algorithms}, pages 946--957, 2014.
-
-\bibitem{leskovec2007}
-Jure Leskovec, Andreas Krause, Carlos Guestrin, Christos Faloutsos, Jeanne VanBriesen, and Natalie Glance.
-Cost-effective outbreak detection in networks.
-In \textit{Proceedings of the 13th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}, pages 420--429, 2007.
-
-\bibitem{goldenberg2001}
-Jacob Goldenberg, Barak Libai, and Eitan Muller.
-Talk of the network: A complex systems look at the underlying process of word-of-mouth.
-\textit{Marketing Letters}, 12(3):211--223, 2001.
-
-\bibitem{granovetter1978}
-Mark Granovetter.
-Threshold models of collective behavior.
-\textit{American Journal of Sociology}, 83(6):1420--1443, 1978.
-
-\bibitem{richardson2002}
-Matthew Richardson and Pedro Domingos.
-Mining knowledge-sharing sites for viral marketing.
-In \textit{Proceedings of the Eighth ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}, pages 61--70, 2002.
-
-\bibitem{chen2016}
-Wei Chen, Laks V.S. Lakshmanan, and Carlos Castillo.
-Influence Maximization in Social Networks: A Data-Based Perspective.
-\textit{Synthesis Lectures on Data Management}, Morgan \& Claypool Publishers, 2016.
-
-\bibitem{mi2019}
-Shaowei Mi, Jiayin Qi, and Weiran Wang.
-Information Exposure Maximization in Social Networks.
-\textit{IEEE Transactions on Knowledge and Data Engineering}, 31(10):1972--1985, 2019.
-
-\bibitem{gong2016}
-Neil Zhenqiang Gong, Ameet Talwalkar, Lester Mackey, Ling Huang, Eui Chul Richard Shin, Emil Stefanov, Elaine Runting Shi, and Dawn Song.
-Joint link prediction and attribute inference using a social-attribute network.
-\textit{ACM Transactions on Intelligent Systems and Technology}, 5(2):27, 2014.
-
-\bibitem{hollan1992}
-John H. Holland.
-\textit{Adaptation in Natural and Artificial Systems: An Introductory Analysis with Applications to Biology, Control and Artificial Intelligence}.
-MIT Press, Cambridge, MA, USA, 1992.
-
-\bibitem{deb2002}
-Kalyanmoy Deb, Amrit Pratap, Sameer Agarwal, and T. Meyarivan.
-A fast and elitist multiobjective genetic algorithm: NSGA-II.
-\textit{IEEE Transactions on Evolutionary Computation}, 6(2):182--197, 2002.
-
-\bibitem{eiben2015}
-Agoston E. Eiben and James E. Smith.
-\textit{Introduction to Evolutionary Computing}, 2nd Edition.
-Springer, Berlin, Heidelberg, 2015.
-
-\bibitem{feo1995}
-T.A. Feo and M.G.C. Resende.
-Greedy randomized adaptive search procedures.
-\textit{Journal of Global Optimization}, 6(2):109--133, 1995.
-
-\bibitem{goemans1997}
-Michel X. Goemans and David P. Williamson.
-The primal-dual method for approximation algorithms and its application to network design problems.
-In \textit{Approximation Algorithms for NP-hard Problems}, pages 144--191, PWS Publishing Company, 1997.
-
-\bibitem{nemhauser1978}
-George L. Nemhauser, Laurence A. Wolsey, and Marshall L. Fisher.
-An analysis of approximations for maximizing submodular set functions---I.
-\textit{Mathematical Programming}, 14(1):265--294, 1978.
-
-\bibitem{krause2014}
-Andreas Krause and Daniel Golovin.
-Submodular function maximization.
-In \textit{Tractability: Practical Approaches to Hard Problems}, Cambridge University Press, 2014.
-
-\bibitem{wang2017}
-Yu Wang, Gao Cong, Guojie Song, and Kunqing Xie.
-Community-based greedy algorithm for mining top-$k$ influential nodes in mobile social networks.
-In \textit{Proceedings of the 16th ACM Conference on Information and Knowledge Management}, pages 1089--1098, 2010.
-
-\bibitem{zhou2013}
-Caijun Zhou, Guanjie Zheng, Yang Cao, and Bo Li.
- Influence maximization in social networks: A genetic algorithm approach.
-In \textit{Proceedings of the 2013 IEEE Congress on Evolutionary Computation}, pages 1737--1744, 2013.
-
-\bibitem{banerjee2020}
-Manaswita Banerjee, Ding-Zhu Du, and Weili Wu.
-Social influence maximization: A survey.
-\textit{SN Computer Science}, 1:186, 2020.
-
-\bibitem{galhotra2022}
-Amit G. Galhotra and George Michelogiannakis.
-Influence maximization in social networks: A systematic literature review.
-\textit{ACM Computing Surveys}, 55(14s):1--39, 2023.
-
-\end{thebibliography}
-
-\newpage
-\appendix
-\section{Detailed Experimental Results}
-
-This appendix provides comprehensive experimental data for both algorithms across all test cases, including complete seed set configurations and detailed solution characteristics. All final scores reported in this appendix are based on \textbf{50,000 Monte Carlo simulations} for maximum accuracy, as established in the Evaluator accuracy assessment (Section \ref{sec:evaluator-accuracy}).
-
-\subsection{MC-Guided Heuristic Algorithm Results}\label{app:heuristic}
-
-\subsubsection{Case 0: Small-Scale Network}
-\begin{table}[htbp]
-\centering
-\caption{Case 0 Detailed Results (MC-Guided Heuristic)}
-\label{tab:heuristic-case0}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 475 nodes, 13,289 edges \\
-Budget & 10 \\
-Baseline & 430 \\
-Higher Target & 450 \\
-\midrule
-\textbf{Score (50000 MC)} & \textbf{449.9145} \\
-Status & $\checkmark$ Pass \\
-Budget Used & 10/10 (100\%) \\
-$S_1$ Size & 2 \\
-$S_2$ Size & 8 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \{169, 322\} \\
-S_2 &= \{27, 66, 105, 197, 280, 316, 404, 436\}
-\end{align*}
-
-The solution demonstrates balanced allocation across both campaigns, with 80\% of the budget allocated to $S_2$ and 20\% to $S_1$. This distribution suggests that the MC-guided evaluation identified higher marginal gains for campaign 2 in this small-scale network configuration.
-
-\subsubsection{Case 1: Large-Scale Network (First Configuration)}
-\begin{table}[htbp]
-\centering
-\caption{Case 1 Detailed Results (MC-Guided Heuristic)}
-\label{tab:heuristic-case1}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 36,742 nodes, 49,248 edges \\
-Initial Seeds $I_1$ & 14 nodes \\
-Initial Seeds $I_2$ & 10 nodes \\
-Budget & 15 \\
-Baseline & 35,900 \\
-Higher Target & 36,035 \\
-\midrule
-\textbf{Score (50000 MC)} & \textbf{35,930.8294} \\
-Status & $\checkmark$ Pass \\
-Budget Used & 15/15 (100\%) \\
-$S_1$ Size & 13 \\
-$S_2$ Size & 2 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \{124, 2529, 3187, 5137, 6633, 12802, 14290, \\ &\quad 18986, 20098, 21545, 22206, 27138, 28420, 28966, 36528\} \\
-S_2 &= \emptyset
-\end{align*}
-
-Notably, the solution concentrated the entire budget in $S_1$ (as observed in the original 5000 MC evaluation), but the 50000 MC evaluation shows a slightly different distribution with most nodes in $S_1$., showing a preference for campaign 1 but maintaining presence in campaign 2.
-
-\subsubsection{Case 2: Large-Scale Network (Second Configuration)}
-\begin{table}[htbp]
-\centering
-\caption{Case 2 Detailed Results (MC-Guided Heuristic)}
-\label{tab:heuristic-case2}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 36,742 nodes, 49,248 edges \\
-Initial Seeds $I_1$ & 8 nodes \\
-Initial Seeds $I_2$ & 6 nodes \\
-Budget & 15 \\
-Baseline & 36,000 \\
-Higher Target & 36,200 \\
-\midrule
-\textbf{Score (50000 MC)} & \textbf{36,022.6374} \\
-Status & $\checkmark$ Pass \\
-Budget Used & 15/15 (100\%) \\
-$S_1$ Size & 13 \\
-$S_2$ Size & 2 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \{124, 2529, 3187, 5137, 6633, 12802, 14290, \\ &\quad 18986, 20098, 21545, 22206, 27138, 36528\} \\
-S_2 &= \{28420, 28966\}
-\end{align*}
-
-The solution demonstrates similar allocation patterns to Case 1, with the majority of budget allocated to $S_1$.
-
-\subsection{Genetic Algorithm Results}\label{app:genetic}
-
-\subsubsection{Case 0: Small-Scale Network (Original)}
-\begin{table}[htbp]
-\centering
-\caption{Case 0 Detailed Results (Genetic Algorithm, Original)}
-\label{tab:genetic-case0}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 475 nodes, 13,289 edges \\
-Budget & 10 \\
-Baseline & 415 \\
-Higher Target & 440 \\
-\midrule
-\textbf{Score (5000 MC)} & \textbf{424.8130} \\
-Status & $\checkmark$ Pass \\
-Budget Used & 9/10 (90\%) \\
-$S_1$ Size & 5 \\
-$S_2$ Size & 4 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \{185, 236, 239, 241, 436\} \\
-S_2 &= \{57, 200, 280, 362\}
-\end{align*}
-
-The original genetic algorithm achieves 90\% budget utilization in this case. Note: The repair operator was primarily tested on medium-scale networks (Cases 1 and 2) where budget underutilization was most severe.
-
-\subsubsection{Case 1: Medium-Scale Network (Original, Pre-Repair)}
-\begin{table}[htbp]
-\centering
-\caption{Case 1 Detailed Results (Genetic Algorithm, Original)}
-\label{tab:genetic-case1}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 13,984 nodes, 17,319 edges \\
-Initial Seeds $I_1$ & 5 nodes \\
-Initial Seeds $I_2$ & 7 nodes \\
-Budget & 14 \\
-Baseline & 13,580 \\
-Higher Target & 13,680 \\
-\midrule
-\textbf{Score (5000 MC)} & \textbf{13,568.45} \\
-Status & $\checkmark$ Pass (Baseline only) \\
-Budget Used & 7/14 (50\%) \\
-$S_1$ Size & 2 \\
-$S_2$ Size & 5 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \emptyset \\
-S_2 &= \{6745, 8017, 10884\}
-\end{align*}
-
-\textbf{Critical Observation}: The genetic algorithm exhibits budget underutilization (only 50\%), with most selected nodes in $S_2$. This represents a fundamental limitation in the algorithm's constraint handling mechanism, as discussed in Section \ref{sec:analysis}. The repair operator (Appendix \ref{app:genetic-repair}) addresses this by enforcing 100\% budget utilization.
-
-\subsubsection{Case 2: Medium-Scale Network (Original, Pre-Repair)}
-\begin{table}[htbp]
-\centering
-\caption{Case 2 Detailed Results (Genetic Algorithm, Original)}
-\label{tab:genetic-case2}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 13,984 nodes, 17,319 edges \\
-Initial Seeds $I_1$ & 5 nodes \\
-Initial Seeds $I_2$ & 5 nodes \\
-Budget & 14 \\
-Baseline & 13,350 \\
-Higher Target & 13,600 \\
-\midrule
-\textbf{Score (5000 MC)} & \textbf{13,532.93} \\
-Status & $\checkmark$ Pass \\
-Budget Used & 11/14 (79\%) \\
-$S_1$ Size & 7 \\
-$S_2$ Size & 4 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Genetic Algorithm with Repair Operator}\label{app:genetic-repair}
-
-\subsubsection{Overview of Repair Operator}
-
-To address the severe budget underutilization issue observed in the original genetic algorithm, we implemented a \textbf{Repair Operator} that explicitly enforces full budget utilization. The repair operator works as follows:
-
-\begin{enumerate}
-    \item \textbf{Initialization}: All individuals in the initial population are repaired to use exactly $k$ nodes.
-    \item \textbf{Mutation}: After bit-flip mutation, offspring are repaired to ensure exactly $k$ nodes.
-    \item \textbf{Crossover}: Offspring from crossover are also repaired before evaluation.
-\end{enumerate}
-
-The repair mechanism:
-\begin{itemize}
-    \item \textbf{Under budget}: Randomly add nodes from available candidates until budget is met.
-    \item \textbf{Over budget}: Randomly remove selected nodes until budget constraint is satisfied.
-\end{itemize}
-
-\subsubsection{Case 1: Medium-Scale Network (with Repair)}
-\begin{table}[htbp]
-\centering
-\caption{Case 1 Detailed Results (Genetic Algorithm with Repair)}
-\label{tab:genetic-repair-case1}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 13,984 nodes, 17,319 edges \\
-Initial Seeds $I_1$ & 5 nodes \\
-Initial Seeds $I_2$ & 7 nodes \\
-Budget & 14 \\
-Baseline & 13,580 \\
-Higher Target & 13,680 \\
-\midrule
-\textbf{Score (50000 MC)} & \textbf{13,686.3330} \\
-Status & $\checkmark$ \textbf{Higher} \\
-Budget Used & 14/14 (100\%) \\
-$S_1$ Size & 3 \\
-$S_2$ Size & 11 \\
-Algorithm Time & 620.68s ($<$ 780s $\checkmark$) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \{1736, 6365, 7144\} \\
-S_2 &= \{540, 900, 1472, 3263, 6931, 7807, 8603, \\ &\quad 10883, 11065, 11530, 13771\}
-\end{align*}
-
-\textbf{Key Improvement}: The repair operator increased the score from 13,568 (50\% budget) to 13,686 (100\% budget), an improvement of \textbf{+118 points}.
-
-\subsubsection{Case 2: Medium-Scale Network (with Repair)}
-\begin{table}[htbp]
-\centering
-\caption{Case 2 Detailed Results (Genetic Algorithm with Repair)}
-\label{tab:genetic-repair-case2}
-\begin{tabular}{ll}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Network Size & 13,984 nodes, 17,319 edges \\
-Initial Seeds $I_1$ & 5 nodes \\
-Initial Seeds $I_2$ & 5 nodes \\
-Budget & 14 \\
-Baseline & 13,350 \\
-Higher Target & 13,600 \\
-\midrule
-\textbf{Score (50000 MC)} & \textbf{13,661.7736} \\
-Status & $\checkmark$ \textbf{Higher} \\
-Budget Used & 14/14 (100\%) \\
-$S_1$ Size & 6 \\
-$S_2$ Size & 8 \\
-Algorithm Time & 725.98s ($<$ 780s $\checkmark$) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \{160, 4885, 7591, 9582, 10379, 12481\} \\
-S_2 &= \{2490, 2649, 3841, 3906, 3986, 4238, 7457, 11900\}
-\end{align*}
-
-\textbf{Key Improvement}: The repair operator increased the score from 13,533 (79\% budget) to 13,662 (100\% budget), an improvement of \textbf{+129 points}.
-
-\textbf{Solution Sets:}
-\begin{align*}
-S_1 &= \{2805, 4592, 5492, 13939\} \\
-S_2 &= \{1332, 5439, 13421\}
-\end{align*}
-
-This case represents the only instance where the genetic algorithm outperforms the MC-guided heuristic, achieving a score of 36,708 compared to the heuristic's 36,066. However, budget utilization remains suboptimal at 46.7\%.
-
-\subsection{Summary of Solution Characteristics}
-
-\begin{table}[htbp]
-\centering
-\caption{Solution Summary Comparison}
-\label{tab:solution-summary}
-\begin{tabular}{lcccccc}
-\toprule
-& \multicolumn{3}{c}{\textbf{MC-Guided Heuristic}} & \multicolumn{3}{c}{\textbf{Genetic Algorithm}} \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7}
-\textbf{Case} & $|S_1|$ & $|S_2|$ & Budget\% & $|S_1|$ & $|S_2|$ & Budget\% \\
-\midrule
-Case 0 & 3 & 7 & 100\% & 5 & 4 & 90\% \\
-Case 1 & 15 & 0 & 100\% & 0 & 3 & 20\% \\
-Case 2 & 12 & 3 & 100\% & 4 & 3 & 46.7\% \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\section{Evaluator Accuracy Assessment Details}\label{app:evaluator-accuracy}
-
-This appendix provides comprehensive data from the Evaluator accuracy assessment experiment described in Section \ref{sec:evaluator-accuracy}.
-
-\subsection{Experimental Methodology}
-
-The accuracy assessment was conducted by fixing a balanced seed set (generated by the MC-guided heuristic algorithm) and running the Evaluator multiple times with varying numbers of Monte Carlo simulations. For each simulation count (100, 500, 1000, 5000), we performed 5 independent runs to assess the variance and stability of the estimates.
-
-\subsection{Complete Results for Case 0 (Small Network)}
-
-\begin{table}[htbp]
-\centering
-\caption{Case 0: Detailed Accuracy Assessment Results}
-\label{tab:eval-accuracy-case0-detailed}
-\begin{tabular}{rrrrrrrr}
-\toprule
-\textbf{Sim} & \textbf{Mean} & \textbf{Std} & \textbf{SE} & \textbf{Min} & \textbf{Max} & \textbf{Range} & \textbf{CV\%} \\
-\midrule
-100 & 420.0500 & 2.8635 & 1.2806 & 416.2700 & 423.6200 & 7.3500 & 0.68 \\
-500 & 418.9404 & 2.3563 & 1.0538 & 416.5660 & 422.0260 & 5.4600 & 0.56 \\
-1000 & 419.6784 & 0.4593 & 0.2054 & 419.2750 & 420.4720 & 1.1970 & 0.11 \\
-5000 & 419.7626 & 0.3554 & 0.1589 & 419.4056 & 420.3352 & 0.9296 & 0.08 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Individual Run Results (100 simulations)}: 416.27, 420.28, 418.35, 423.62, 421.73
-
-\textbf{Individual Run Results (500 simulations)}: 422.03, 417.81, 416.57, 417.47, 420.84
-
-\textbf{Individual Run Results (1000 simulations)}: 419.56, 420.47, 419.53, 419.56, 419.28
-
-\textbf{Individual Run Results (5000 simulations)}: 419.62, 419.41, 420.34, 419.61, 419.84
-
-\subsection{Complete Results for Case 1 (Large Network)}
-
-\begin{table}[htbp]
-\centering
-\caption{Case 1: Detailed Accuracy Assessment Results}
-\label{tab:eval-accuracy-case1-detailed}
-\begin{tabular}{rrrrrrrr}
-\toprule
-\textbf{Sim} & \textbf{Mean} & \textbf{Std} & \textbf{SE} & \textbf{Min} & \textbf{Max} & \textbf{Range} & \textbf{CV\%} \\
-\midrule
-100 & 35426.1860 & 10.9506 & 4.8973 & 35410.9100 & 35441.0500 & 30.1400 & 0.03 \\
-500 & 35421.2288 & 4.5839 & 2.0500 & 35417.9040 & 35429.1100 & 11.2060 & 0.01 \\
-1000 & 35421.2030 & 2.1843 & 0.9769 & 35419.3640 & 35424.7090 & 5.3450 & 0.01 \\
-5000 & 35422.8638 & 1.7862 & 0.7988 & 35420.6606 & 35424.8778 & 4.2172 & 0.01 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Individual Run Results (100 simulations)}: 35428.54, 35422.22, 35410.91, 35428.21, 35441.05
-
-\textbf{Individual Run Results (500 simulations)}: 35418.57, 35417.90, 35429.11, 35419.27, 35421.28
-
-\textbf{Individual Run Results (1000 simulations)}: 35419.52, 35419.36, 35424.71, 35421.75, 35420.67
-
-\textbf{Individual Run Results (5000 simulations)}: 35420.66, 35423.36, 35424.88, 35421.38, 35424.05
-
-\subsection{Statistical Interpretation}
-
-The experimental results confirm that the Monte Carlo evaluator produces statistically stable estimates. The relationship between simulation count $n$ and standard deviation $\sigma$ follows the theoretical prediction from the Central Limit Theorem: $\sigma \propto 1/\sqrt{n}$.
-
-For the small network (Case 0):
-\begin{itemize}
-    \item Increasing simulations from 100 to 500 (5$\times$) reduces standard deviation from 2.86 to 2.36 (factor of 1.21, compared to theoretical $\sqrt{5} \approx 2.24$). The sub-linear reduction suggests that 100 simulations may be insufficient for stable variance estimation.
-    \item Increasing from 1000 to 5000 (5$\times$) reduces standard deviation from 0.46 to 0.36 (factor of 1.28), closer to theoretical expectation.
-\end{itemize}
-
-For the large network (Case 1):
-\begin{itemize}
-    \item The remarkably low CV (0.03\% at 100 simulations) indicates that the large sample size (36,742 nodes) effectively averages out individual node-level variance.
-    \item The standard deviation at 5000 simulations (1.79) represents relative error of only 0.005\%---essentially negligible for practical algorithm comparison purposes.
-\end{itemize}
-
-\subsection{High Simulation Count Results within 48s Time Limit}
-
-To determine the maximum feasible simulation count within the 48-second Higher TL constraint, we conducted additional experiments with elevated simulation counts (10,000, 30,000, and 50,000). The results demonstrate that significantly higher precision is achievable within the time budget.
-
-\begin{table}[htbp]
-\centering
-\caption{Case 1: High Simulation Count Results (Time Limit Compliance)}
-\label{tab:eval-accuracy-high-sim-detailed}
-\begin{tabular}{rrrrrrrrr}
-\toprule
-\textbf{Sim} & \textbf{Mean} & \textbf{Std} & \textbf{SE} & \textbf{Min} & \textbf{Max} & \textbf{CV\%} & \textbf{Time} & \textbf{Status} \\
-\midrule
-10000 & 35422.6518 & 0.8219 & 0.5812 & 35422.0707 & 35423.2330 & 0.0023 & 8.87s & PASS \\
-30000 & 35422.2860 & 0.2560 & 0.1810 & 35422.1050 & 35422.4670 & 0.0007 & 21.06s & PASS \\
-50000 & 35422.3208 & N/A & N/A & N/A & N/A & $\approx$0.0004 & 34.35s & PASS \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Individual Run Results (10,000 simulations)}: 35422.0707, 35423.2330
-
-\textbf{Individual Run Results (30,000 simulations)}: 35422.1050, 35422.4670
-
-\textbf{Individual Run Results (50,000 simulations)}: 35422.3208 (single run: 34.35s)
-
-\subsubsection{Time Budget Analysis}
-
-Based on the empirical timing data, we can estimate the maximum simulation count that fits within the 48-second Higher TL:
-
-\begin{itemize}
-    \item \textbf{Observed}: 5000 simulations $\approx$ 3.40s, 50,000 simulations $\approx$ 34.35s
-    \item \textbf{Linear extrapolation}: 48 seconds would permit approximately 68,000 simulations
-    \item \textbf{Optimal recommendation}: \textbf{50,000 simulations} requires 34.35 seconds, utilizing 71.6\% of the budget with 28.4\% (13.65s) safety margin
-\end{itemize}
-
-\subsubsection{Precision Improvement Analysis}
-
-The improvement in coefficient of variation follows the theoretical square-root law:
-
-\begin{align}
-\text{CV}_{10000} &= \frac{0.8219}{35422.65} \times 100 = 0.0023\% \\
-\text{CV}_{30000} &= \frac{0.2560}{35422.29} \times 100 = 0.0007\% \\
-\text{CV}_{50000} &\approx \frac{0.01}{\sqrt{10}} \approx 0.001\% \text{ (extrapolated)}
-\end{align}
-
-The improvement factor from 5000 to 30,000 simulations:
+\subsection{Algorithm C: Binary Evolutionary Optimization (pymoo GA)}
+The evolutionary solver encodes solution as a binary chromosome
 \begin{equation}
-\frac{\text{CV}_{5000}}{\text{CV}_{30000}} = \frac{0.01}{0.0007} \approx 14.3
+x=[x^{(1)}\,|\,x^{(2)}] \in \{0,1\}^{2n_a},
 \end{equation}
+where $n_a$ is the number of available nodes, and bits in each half indicate inclusion in $S_1$ or $S_2$. Fitness is coarse Monte Carlo score with a tiny budget-usage tie-break bonus; pymoo minimizes $F(x)=-\text{fitness}(x)$.
 
-Extrapolating to 50,000 simulations (factor of 10 increase from 5000):
-\begin{equation}
-\frac{\text{CV}_{5000}}{\text{CV}_{50000}} \approx \sqrt{10} \approx 3.16 \quad \Rightarrow \quad \text{CV}_{50000} \approx 0.003\%
-\end{equation}
+Feasibility is enforced by repair:
+\begin{itemize}
+        \item remove dual assignments ($x_i^{(1)}=x_i^{(2)}=1$),
+        \item if selected count exceeds budget, randomly drop extras,
+        \item if below budget, randomly fill free nodes to reach target.
+\end{itemize}
 
-This represents a substantial improvement in relative precision over the baseline 5000 simulations.
+\begin{algorithm}[h]
+\caption{Binary GA with Repair for IEM}
+\begin{algorithmic}[1]
+\Require Population size $P$, generations $G$, budget $k$
+\State Initialize binary population $\mathcal{X}$
+\For{$g=1$ to $G$}
+                \State Repair each chromosome to satisfy disjointness and budget
+                \State Evaluate coarse MC fitness for each chromosome
+                \State Selection + two-point crossover + bit-flip mutation
+                \State Repair offspring and form next generation
+\EndFor
+\State Take best repaired chromosome $x^*$
+\State Decode to $(S_1,S_2)$ and run fine MC evaluation
+\State \Return $(S_1,S_2)$
+\end{algorithmic}
+\end{algorithm}
 
-\subsubsection{Convergence Verification}
+\section{Experiment}
 
-To verify that 50,000 simulations have converged to the asymptotic true value, we analyze the convergence trajectory across increasing simulation counts:
+\subsection{Environment and Settings}
+\textbf{Interpreter and libraries.}
+\begin{itemize}
+        \item Python interpreter: 3.12.4
+        \item NumPy: used by both heuristic and evolutionary implementations
+        \item pymoo: 0.6.0.1 (required by evolutionary solver)
+\end{itemize}
 
-\begin{table}[htbp]
+\textbf{Hardware.}
+\begin{itemize}
+        \item CPU: \underline{\hspace{6cm}}
+        \item RAM: \underline{\hspace{6cm}}
+        \item OS: \underline{\hspace{6cm}}
+\end{itemize}
+
+\textbf{Algorithmic settings (default in scripts).}
+\begin{itemize}
+        \item Heuristic: MC scenarios per step $N=200$, IMRank iterations $=20$, candidate pool size $=1000$.
+        \item Evolutionary: population $=50$, generations $=200$, crossover $=0.8$, mutation $=0.05$, MC-coarse $=30$, MC-fine $=200$.
+        \item Evaluator: Monte Carlo simulations $=60000$.
+\end{itemize}
+
+\subsection{Data Sources and Case Parameters}
+Provided cases are from course materials (small/medium graphs). Generated cases are additional large-scale test inputs used for stress and scalability checks.
+
+\textbf{Heuristic pipeline case configuration.}
+\begin{table}[h]
 \centering
-\caption{Convergence Trajectory (Case 1 Large Network)}
-\label{tab:convergence-trajectory}
-\begin{tabular}{rrrrr}
+\caption{Heuristic cases used by batch script}
+\begin{tabular}{lrrrrrl}
 \toprule
-\textbf{Sim} & \textbf{Mean} & \textbf{Diff} & \textbf{Abs Diff} & \textbf{Rel Change} \\
+Case & $|V|$ & $|E|$ & $|I_1|$ & $|I_2|$ & $k$ & Source \\
 \midrule
-5000 & 35422.8638 & --- & --- & --- \\
-10000 & 35422.6518 & $-$0.2120 & 0.2120 & 0.00060\% \\
-30000 & 35422.2860 & $-$0.3658 & 0.3658 & 0.00103\% \\
-50000 & 35422.3208 & +0.0348 & \textbf{0.0348} & \textbf{0.00010\%} \\
+map1 & 475   & 13289  & 8  & 12 & 10 & Provided \\
+map2 & 36742 & 49248  & 14 & 10 & 15 & Provided \\
+map3 & 36742 & 49248  & 8  & 6  & 15 & Provided \\
+map4 & 7115  & 103689 & 5  & 7  & 15 & Generated \\
+map5 & 3454  & 32140  & 6  & 8  & 15 & Generated \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Evidence of Convergence}:
-\begin{enumerate}
-    \item \textbf{Decreasing step sizes}: The absolute differences between consecutive estimates decrease as simulation count increases: 0.21 $\rightarrow$ 0.37 $\rightarrow$ \textbf{0.03}. The final step shows a dramatic reduction, indicating the estimate has stabilized.
-    
-    \item \textbf{Oscillation damping}: The changes alternate in direction ($-$, $-$, $+$), characteristic of random fluctuations around a stable mean rather than systematic drift.
-    
-    \item \textbf{Magnitude}: The final difference of 0.0348 points represents only $9.8 \times 10^{-7}$\% relative to the estimate magnitude.
-\end{enumerate}
+\textbf{Evolutionary pipeline case configuration.}
+\begin{table}[h]
+\centering
+\caption{Evolutionary cases used by batch script}
+\begin{tabular}{lrrrrrl}
+\toprule
+Case & $|V|$ & $|E|$ & $|I_1|$ & $|I_2|$ & $k$ & Source \\
+\midrule
+map1 & 475   & 13289 & 5 & 10 & 10 & Provided \\
+map2 & 13984 & 17319 & 5 & 7  & 14 & Provided \\
+map3 & 13984 & 17319 & 5 & 5  & 14 & Provided \\
+map4 & 3454  & 32140 & 5 & 7  & 15 & Generated \\
+map5 & 3454  & 32140 & 6 & 8  & 15 & Generated \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\textbf{Signal-to-Noise Ratio}: With typical algorithm performance differences of 544 points and an estimated standard deviation of 0.36 at 50,000 simulations, the signal-to-noise ratio exceeds \textbf{1,500:1}. This confirms that 50,000 simulations provide sufficient precision for reliable algorithm comparison.
+\subsection{Experimental Procedure (Batch Scripts)}
+All experiments are executed by batch scripts for reproducibility.
 
-\subsection{Computational Efficiency and Convergence}
-
-Evaluation time scales linearly with simulation count, as expected:
+\textbf{Heuristic pipeline.}
 \begin{itemize}
-    \item Case 0: 0.05s (100 sims) $\rightarrow$ 2.45s (5000 sims), ratio 49$\times$
-    \item Case 1: 0.07s (100 sims) $\rightarrow$ 3.40s (5000 sims) $\rightarrow$ 34.35s (50000 sims), ratio 491$\times$
+        \item Generate solutions: \texttt{python run\_all\_maps.py}
+        \item Evaluate scores: \texttt{python evaluate\_all\_results.py}
 \end{itemize}
 
-The slight deviation from exact linear scaling is due to constant-time overhead in graph loading and initialization. The linear relationship permits reliable time budgeting for evaluation procedures.
-
-\textbf{Convergence Confirmation}: The convergence trajectory (Table \ref{tab:convergence-trajectory}) demonstrates that 50,000 simulations achieve statistical convergence:
+\textbf{Evolutionary pipeline.}
 \begin{itemize}
-    \item Difference between 30k and 50k estimates: only 0.0348 points
-    \item Relative change: $9.8 \times 10^{-7}$\%
-    \item Signal-to-noise ratio: $>$1,500:1 for typical algorithm comparisons
+        \item Timed optimization: \texttt{python run\_all\_maps\_timed.py}
+        \item Evaluate generated seeds: \texttt{python evaluate\_all\_seeds.py}
 \end{itemize}
 
-This confirms that \textbf{50,000 simulations} (34.35s) within the 48-second Higher TL yield estimates effectively indistinguishable from the asymptotic true value, with a substantial 28.4\% (13.65s) safety margin.
+Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation result files (\texttt{result.txt}), and timing/evaluation summaries (CSV).
+
+\subsection{Reserved Result Tables (To Be Filled)}
+
+\textbf{Hyperparameters for Table A (Heuristic).}
+\begin{itemize}
+        \item Base batch setting (map1/map2/map4/map5): \texttt{mc\_sim=200}, \texttt{max\_iter=20}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
+        \item map3 uses rerun result: \texttt{run\_initial=map3/seed2}, \texttt{mc\_sim=200}, \texttt{max\_iter=20}, \texttt{candidate\_size=3000}, \texttt{seed=None}; evaluation uses \texttt{simulations=60000}.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Table A. Heuristic runtime and final score (fill after run)}
+\begin{tabular}{lcc}
+\toprule
+Case & Runtime (s) & Final Score \\
+\midrule
+map1 & 55.5138 & 452.9900 \\
+map2 & 109.9021 & 36029.4305 \\
+map3 & 268.8919 & 36217.9507 \\
+map4 & 360.2779 & 6074.4319 \\
+map5 & 146.1592 & 3080.1615 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Hyperparameters for Table B (Evolutionary).}
+\begin{itemize}
+        \item \texttt{pop\_size=50}, \texttt{generations=200}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}.
+        \item Fitness estimation: \texttt{mc\_coarse=30}, \texttt{mc\_fine=200}, \texttt{seed=None}.
+        \item Final evaluation script: \texttt{simulations=60000}.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Table B. Evolutionary runtime and final score (fill after run)}
+\begin{tabular}{lcc}
+\toprule
+Case & Runtime (s) & Final Score \\
+\midrule
+map1 & 158.0262 & 449.6143 \\
+map2 & 146.2559 & 13660.3256 \\
+map3 & 192.3487 & 13680.5682 \\
+map4 & 20.3860 & 3188.0685 \\
+map5 & 22.6403 & 3146.8819 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Hyperparameters for Table C (Cross-method).}
+\begin{itemize}
+        \item This table directly combines Table A and Table B; hyperparameters are exactly inherited from the corresponding heuristic/evolutionary settings above.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Table C. Cross-method comparison (fill after run)}
+\begin{tabular}{lcccc}
+\toprule
+Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
+\midrule
+map1 & 55.5138 & 452.9900 & 158.0262 & 449.6143 \\
+map2 & 109.9021 & 36029.4305 & 146.2559 & 13660.3256 \\
+map3 & 268.8919 & 36217.9507 & 192.3487 & 13680.5682 \\
+map4 & 360.2779 & 6074.4319 & 20.3860 & 3188.0685 \\
+map5 & 146.1592 & 3080.1615 & 22.6403 & 3146.8819 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Hyperparameters for Table D--E (Evaluator staged experiment).}
+\begin{itemize}
+        \item Simulation stages: \texttt{[30000, 40000, 50000, 60000]}.
+        \item Cases: \texttt{map1} and \texttt{map2}; threshold in timing script: \texttt{time\_threshold=48s}.
+        \item Evaluator random seed is not fixed (default stochastic Monte Carlo).
+\end{itemize}
+
+\subsection{Evaluator Staged Results (30000--60000 Simulations)}
+
+\begin{table}[h]
+\centering
+\caption{Table D. Evaluator detailed results by case and simulation stage}
+\begin{tabular}{lrrr}
+\toprule
+Case & Simulations & Time (s) & Score \\
+\midrule
+map1 & 30000 & 16.9350 & 423.5149 \\
+map2 & 30000 & 22.8284 & 35560.4609 \\
+map1 & 40000 & 22.3746 & 423.7382 \\
+map2 & 40000 & 31.8855 & 35560.6718 \\
+map1 & 50000 & 28.7068 & 423.7666 \\
+map2 & 50000 & 38.8280 & 35560.9353 \\
+map1 & 60000 & 33.6887 & 423.6112 \\
+map2 & 60000 & 46.3011 & 35560.9804 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Table E. Evaluator stage summary (from \texttt{timing\_score\_stage\_summary.csv})}
+\begin{tabular}{rrrrrrr}
+\toprule
+Sims & OK Cases & Avg Time (s) & Avg Score & Mean $|\Delta\text{Score}|$ & Max $|\Delta\text{Score}|$ & Avg Time Ratio \\
+\midrule
+30000 & 2 & 19.8817 & 17991.9879 & - & - & - \\
+40000 & 2 & 27.1301 & 17992.2050 & 0.2171 & 0.2233 & 1.3590 \\
+50000 & 2 & 33.7674 & 17992.3510 & 0.1460 & 0.2635 & 1.2504 \\
+60000 & 2 & 39.9949 & 17992.2958 & 0.1003 & 0.1554 & 1.1830 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+From Table E, the stage-to-stage score change decreases from 0.2171 (30000$\rightarrow$40000) to 0.14595 (40000$\rightarrow$50000) and then to 0.10025 (50000$\rightarrow$60000), while time growth ratio also drops to 1.1830 at the last stage. This supports using 60000 simulations as a reasonable trade-off between estimate stability and computational overhead.
+
+\section{Discussion}
+The three components provide a practical trade-off between optimization quality and runtime:
+\begin{itemize}
+        \item The MC evaluator is unbiased but computationally expensive, especially for large $|V|,|E|$ and high simulation counts.
+        \item The heuristic uses scenario sharing plus incremental diffusion, which significantly reduces repeated computation and is often stable for medium/large graphs.
+        \item The evolutionary method explores a wider combinational space and can discover non-greedy seed allocations, but its cost depends heavily on population size, generation count, and MC fidelity.
+\end{itemize}
+
+In practice, candidate screening (IMRank) and feasible repair are both essential engineering choices: they keep search tractable while preserving solution validity under budget and disjointness constraints.
+
+\section{Conclusion}
+This report presents a unified IEM pipeline with three core algorithms: Monte Carlo IC evaluation, MC-SAA greedy heuristic with IMRank screening, and pymoo-based binary evolutionary optimization. The formulation, pseudocode, and batch experiment protocol support reproducible comparison across provided and generated datasets. After filling the reserved result tables, the report can be directly used to analyze efficiency-quality trade-offs between heuristic and evolutionary strategies under consistent evaluation settings.
+
+
 
 \end{document}

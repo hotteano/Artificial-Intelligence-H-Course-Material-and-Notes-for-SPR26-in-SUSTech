@@ -1,0 +1,4 @@
+timestamp,map,budget,simulations,heuristic_elapsed_seconds,evaluation_elapsed_seconds,score,balanced_file,result_file,status
+2026-04-06 23:40:22,map3,15,60000,276.228288,49.203226,35926.678400,map3/seed_balanced,map3/result.txt,OK
+2026-04-06 23:47:15,map3,15,60000,249.423748,49.144956,35926.249600,map3/seed_balanced,map3/result.txt,OK
+2026-04-06 23:57:33,map3,15,60000,268.891868,37.840688,36217.950700,map3/seed_balanced,map3/result.txt,OK
