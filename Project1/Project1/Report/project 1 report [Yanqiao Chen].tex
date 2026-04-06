@@ -1,31 +1,17 @@
-\documentclass[a4paper]{article}
-\usepackage{ieeetrans}
-\usepackage[UTF8]{ctex}
+\documentclass[onecolumn,a4paper]{IEEEtran}
 \usepackage{setspace}
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath}
+\usepackage{courier}
+\let\openbox\relax
+\usepackage{newtxtext,newtxmath}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
-\usepackage{amsmath}
-\usepackage{amsthm}
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
-
-\theoremstyle{plain}
-\newtheorem{theorem}{\indent Theorem}[section]
-\newtheorem{lemma}[theorem]{\indent Lemma}
-\newtheorem{assumption}{\indent Assumption}[section]
-\newtheorem{note}[theorem]{\indent Notation}
-\newtheorem{proposition}[theorem]{\indent Proposition}
-\newtheorem{corollary}[theorem]{\indent Corollary}
-\newtheorem{definition}{\indent Definition}[section]
-\newtheorem{example}{\indent Example}[section]
-\newtheorem{remark}{\indent Remark}[section]
-\newenvironment{solution}{\begin{proof}[\indent\textbf{Solution}]}{\end{proof}}
-\renewcommand{\proofname}{\indent\textbf{Proof}}
 
 \title{\textbf{Information Exposure Maximization in Social Networks: A Comparative Study of Monte Carlo-Guided Heuristics and Evolutionary Algorithms}}
 
@@ -93,7 +79,7 @@ h_2(v) &= \mathbb{E}\left[2\,|\Delta R_2(v)\cap R_1| - |\Delta R_2(v)|\right].
 \end{align}
 Here $\Delta R_i(v)$ is the newly reached set when adding $v$ to campaign $i$ on top of a sampled base state. The better of $\max_v h_1(v)$ and $\max_v h_2(v)$ is selected.
 
-To reduce candidate evaluation cost, IMRank provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step.
+To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step.
 
 \begin{algorithm}[h]
 \caption{MC-SAA Greedy with IMRank Candidate Pool}
@@ -158,14 +144,14 @@ Feasibility is enforced by repair:
 
 \textbf{Hardware.}
 \begin{itemize}
-        \item CPU: \underline{\hspace{6cm}}
-        \item RAM: \underline{\hspace{6cm}}
-        \item OS: \underline{\hspace{6cm}}
+        \item CPU: Intel Core i7-14650HX
+        \item RAM: 32GB
+        \item OS: Windows 11 64-bit
 \end{itemize}
 
 \textbf{Algorithmic settings (default in scripts).}
 \begin{itemize}
-        \item Heuristic: MC scenarios per step $N=200$, IMRank iterations $=20$, candidate pool size $=1000$.
+        \item Heuristic: MC scenarios per step $N=200$, IMRank iterations $=380$, candidate pool size $=1000$.
         \item Evolutionary: population $=50$, generations $=200$, crossover $=0.8$, mutation $=0.05$, MC-coarse $=30$, MC-fine $=200$.
         \item Evaluator: Monte Carlo simulations $=60000$.
 \end{itemize}
@@ -228,22 +214,22 @@ Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation r
 
 \textbf{Hyperparameters for Table A (Heuristic).}
 \begin{itemize}
-        \item Base batch setting (map1/map2/map4/map5): \texttt{mc\_sim=200}, \texttt{max\_iter=20}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
-        \item map3 uses rerun result: \texttt{run\_initial=map3/seed2}, \texttt{mc\_sim=200}, \texttt{max\_iter=20}, \texttt{candidate\_size=3000}, \texttt{seed=None}; evaluation uses \texttt{simulations=60000}.
+        \item Batch setting (map1--map5): \texttt{mc\_sim=200}, \texttt{max\_iter=380}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
+        \item map3 uses \texttt{run\_initial=map3/seed2}; evaluation uses \texttt{simulations=60000}.
 \end{itemize}
 
 \begin{table}[h]
 \centering
-\caption{Table A. Heuristic runtime and final score (fill after run)}
+\caption{Table A. Heuristic runtime and final score}
 \begin{tabular}{lcc}
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 55.5138 & 452.9900 \\
-map2 & 109.9021 & 36029.4305 \\
-map3 & 268.8919 & 36217.9507 \\
-map4 & 360.2779 & 6074.4319 \\
-map5 & 146.1592 & 3080.1615 \\
+map1 & 29.9538 & 452.3518 \\
+map2 & 55.1415 & 36030.2249 \\
+map3 & 64.3315 & 36217.9467 \\
+map4 & 138.9894 & 6059.4188 \\
+map5 & 73.7135 & 3080.6154 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -278,16 +264,16 @@ map5 & 22.6403 & 3146.8819 \\
 
 \begin{table}[h]
 \centering
-\caption{Table C. Cross-method comparison (fill after run)}
+\caption{Table C. Cross-method comparison}
 \begin{tabular}{lcccc}
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
 \midrule
-map1 & 55.5138 & 452.9900 & 158.0262 & 449.6143 \\
-map2 & 109.9021 & 36029.4305 & 146.2559 & 13660.3256 \\
-map3 & 268.8919 & 36217.9507 & 192.3487 & 13680.5682 \\
-map4 & 360.2779 & 6074.4319 & 20.3860 & 3188.0685 \\
-map5 & 146.1592 & 3080.1615 & 22.6403 & 3146.8819 \\
+map1 & 29.9538 & 452.3518 & 158.0262 & 449.6143 \\
+map2 & 55.1415 & 36030.2249 & 146.2559 & 13660.3256 \\
+map3 & 64.3315 & 36217.9467 & 192.3487 & 13680.5682 \\
+map4 & 138.9894 & 6059.4188 & 20.3860 & 3188.0685 \\
+map5 & 73.7135 & 3080.6154 & 22.6403 & 3146.8819 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -350,6 +336,9 @@ In practice, candidate screening (IMRank) and feasible repair are both essential
 \section{Conclusion}
 This report presents a unified IEM pipeline with three core algorithms: Monte Carlo IC evaluation, MC-SAA greedy heuristic with IMRank screening, and pymoo-based binary evolutionary optimization. The formulation, pseudocode, and batch experiment protocol support reproducible comparison across provided and generated datasets. After filling the reserved result tables, the report can be directly used to analyze efficiency-quality trade-offs between heuristic and evolutionary strategies under consistent evaluation settings.
 
+\bibliography{references} 
+\bibliographystyle{IEEEtran} 
+        
 
 
 \end{document}
