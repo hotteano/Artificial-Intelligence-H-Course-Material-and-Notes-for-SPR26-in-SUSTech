@@ -46,6 +46,12 @@ def parse_args() -> argparse.Namespace:
         default="evaluation_summary.csv",
         help="Summary CSV filename (saved in Evolutionary folder)",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=3407,
+        help="Random seed for deterministic Evaluator MC runs (default: 3407)",
+    )
     return parser.parse_args()
 
 
@@ -120,6 +126,8 @@ def main() -> int:
                 str(output_file),
                 "--simulations",
                 str(args.simulations),
+                "--seed",
+                str(args.seed),
             ]
 
             start = time.perf_counter()

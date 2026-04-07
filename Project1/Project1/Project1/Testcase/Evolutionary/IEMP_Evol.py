@@ -412,7 +412,7 @@ def main():
         default=100,
         help="MC simulations for final eval (default: 100)",
     )
-    parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument("--seed", type=int, default=3407, help="Random seed (default: 3407)")
 
     args = parser.parse_args()
 

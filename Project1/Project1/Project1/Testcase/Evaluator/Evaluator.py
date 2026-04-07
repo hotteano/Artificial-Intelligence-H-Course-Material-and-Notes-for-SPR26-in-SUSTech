@@ -203,8 +203,11 @@ def main():
     parser.add_argument('-k', '--budget', type=int, required=True, help='Budget k')
     parser.add_argument('-o', '--output', required=True, help='Path to output file for objective value')
     parser.add_argument('--simulations', type=int, default=5000, help='Number of Monte Carlo simulations (default: 5000)')
+    parser.add_argument('--seed', type=int, default=3407, help='Random seed for reproducible Monte Carlo (default: 3407)')
     
     args = parser.parse_args()
+
+    random.seed(args.seed)
     
     # Validate input files exist
     if not os.path.exists(args.network):

@@ -37,13 +37,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--crossover-rate", type=float, default=0.8)
     parser.add_argument("--mutation-rate", type=float, default=0.10)
     parser.add_argument("--elitism", type=int, default=2)
-    parser.add_argument("--mc-coarse", type=int, default=60)
+    parser.add_argument("--mc-coarse", type=int, default=70)
     parser.add_argument("--mc-fine", type=int, default=100)
     parser.add_argument(
         "--seed",
         type=int,
-        default=None,
-        help="Global seed; if omitted, each run is stochastic",
+        default=3407,
+        help="Global seed for deterministic runs (default: 3407)",
     )
     parser.add_argument(
         "--summary-csv",
@@ -105,8 +105,7 @@ def main() -> int:
             "--mc-fine",
             str(args.mc_fine),
         ]
-        if args.seed is not None:
-            cmd.extend(["--seed", str(args.seed)])
+        cmd.extend(["--seed", str(args.seed)])
 
         print(f"\n{'=' * 72}")
         print(f"[{map_name}] Running... budget={budget}")

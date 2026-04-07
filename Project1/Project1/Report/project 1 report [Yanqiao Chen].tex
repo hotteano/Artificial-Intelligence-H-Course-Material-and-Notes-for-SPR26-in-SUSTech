@@ -137,23 +137,26 @@ Feasibility is enforced by repair:
 \subsection{Environment and Settings}
 \textbf{Interpreter and libraries.}
 \begin{itemize}
-        \item Python interpreter: 3.12.4
-        \item NumPy: used by both heuristic and evolutionary implementations
-        \item pymoo: 0.6.0.1 (required by evolutionary solver)
+        \item Python interpreter: 3.10
+        \item pymoo: 0.6.0.1
+        \item pandas: 2.0.3
+        \item numpy: 1.24.4
+        \item scipy: 1.14.1
+        \item networkx: 2.8.8
 \end{itemize}
 
 \textbf{Hardware.}
 \begin{itemize}
-        \item CPU: Intel Core i7-14650HX
+        \item CPU: Intel Core Ultra 7 258V
         \item RAM: 32GB
         \item OS: Windows 11 64-bit
 \end{itemize}
 
 \textbf{Algorithmic settings (default in scripts).}
 \begin{itemize}
-        \item Heuristic: MC scenarios per step $N=200$, IMRank iterations $=380$, candidate pool size $=1000$.
-        \item Evolutionary: population $=50$, generations $=200$, crossover $=0.8$, mutation $=0.05$, MC-coarse $=30$, MC-fine $=200$.
-        \item Evaluator: Monte Carlo simulations $=60000$.
+        \item Heuristic: \texttt{mc\_sim=75}, \texttt{max\_iter=380}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
+        \item Evolutionary: \texttt{pop\_size=30}, \texttt{generations=80}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.10}, \texttt{elitism=2}, \texttt{mc\_coarse=60}, \texttt{mc\_fine=100}, \texttt{seed=3407}.
+        \item Evaluator: \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
 
 \subsection{Data Sources and Case Parameters}
@@ -214,45 +217,45 @@ Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation r
 
 \textbf{Hyperparameters for Table A (Heuristic).}
 \begin{itemize}
-        \item Batch setting (map1--map5): \texttt{mc\_sim=200}, \texttt{max\_iter=380}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
-        \item map3 uses \texttt{run\_initial=map3/seed2}; evaluation uses \texttt{simulations=60000}.
+        \item Batch setting (map1--map5): \texttt{mc\_sim=75}, \texttt{max\_iter=380}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
+        \item map3 uses \texttt{run\_initial=map3/seed2}; evaluation uses Evaluator defaults \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
 
 \begin{table}[h]
 \centering
-\caption{Table A. Heuristic runtime and final score}
+\caption{Table A. Heuristic runtime (solve+evaluate) and final score}
 \begin{tabular}{lcc}
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 26.8623 & 452.104200 \\
-map2 & 52.8216 & 36028.663000 \\
-map3 & 66.9392 & 36217.997800 \\
-map4 & 146.3354 & 6047.755200 \\
-map5 & 73.6552 & 3078.983200 \\
+map1 & 20.9717 & 453.182000 \\
+map2 & 43.5107 & 36027.300000 \\
+map3 & 51.2274 & 36219.086800 \\
+map4 & 85.9123 & 6040.877600 \\
+map5 & 43.1856 & 3075.517200 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \textbf{Hyperparameters for Table B (Evolutionary).}
 \begin{itemize}
-        \item \texttt{pop\_size=50}, \texttt{generations=200}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}.
-        \item Fitness estimation: \texttt{mc\_coarse=30}, \texttt{mc\_fine=200}, \texttt{seed=None}.
-        \item Final evaluation script: \texttt{simulations=60000}.
+        \item \texttt{pop\_size=30}, \texttt{generations=80}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.10}, \texttt{elitism=2}.
+        \item Fitness estimation: \texttt{mc\_coarse=60}, \texttt{mc\_fine=100}, \texttt{seed=3407}.
+        \item Final evaluation script uses Evaluator defaults: \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
 
 \begin{table}[h]
 \centering
-\caption{Table B. Evolutionary runtime and final score}
+\caption{Table B. Evolutionary runtime (solve+evaluate) and final score}
 \begin{tabular}{lcc}
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 121.7841 & 448.057800 \\
-map2 & 86.3108 & 13706.360400 \\
-map3 & 141.8942 & 13674.072200 \\
-map4 & 13.3375 & 3160.701400 \\
-map5 & 16.0666 & 3131.765600 \\
+map1 & 106.1194 & 444.934400 \\
+map2 & 64.5506 & 13659.657600 \\
+map3 & 107.9452 & 13657.122000 \\
+map4 & 13.0866 & 3172.074800 \\
+map5 & 15.5371 & 3140.051400 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -264,16 +267,16 @@ map5 & 16.0666 & 3131.765600 \\
 
 \begin{table}[h]
 \centering
-\caption{Table C. Cross-method comparison}
+\caption{Table C. Cross-method comparison (runtime = solve+evaluate)}
 \begin{tabular}{lcccc}
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
 \midrule
-map1 & 26.8623 & 452.104200 & 121.7841 & 448.057800 \\
-map2 & 52.8216 & 36028.663000 & 86.3108 & 13706.360400 \\
-map3 & 66.9392 & 36217.997800 & 141.8942 & 13674.072200 \\
-map4 & 146.3354 & 6047.755200 & 13.3375 & 3160.701400 \\
-map5 & 73.6552 & 3078.983200 & 16.0666 & 3131.765600 \\
+map1 & 20.9717 & 453.182000 & 106.1194 & 444.934400 \\
+map2 & 43.5107 & 36027.300000 & 64.5506 & 13659.657600 \\
+map3 & 51.2274 & 36219.086800 & 107.9452 & 13657.122000 \\
+map4 & 85.9123 & 6040.877600 & 13.0866 & 3172.074800 \\
+map5 & 43.1856 & 3075.517200 & 15.5371 & 3140.051400 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -282,7 +285,7 @@ map5 & 73.6552 & 3078.983200 & 16.0666 & 3131.765600 \\
 \begin{itemize}
         \item Simulation stages: \texttt{[5000, 10000, 20000, 30000, 40000, 50000, 60000]}.
         \item Cases: \texttt{map1} and \texttt{map2}; threshold in timing script: \texttt{time\_threshold=48s}.
-        \item Evaluator random seed is not fixed (default stochastic Monte Carlo).
+        \item Evaluator random seed is fixed to \texttt{3407}.
 \end{itemize}
 
 \subsection{Evaluator Staged Results (5000--60000 Simulations)}
