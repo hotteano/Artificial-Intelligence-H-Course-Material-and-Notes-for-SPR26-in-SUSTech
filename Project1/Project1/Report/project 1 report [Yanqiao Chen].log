@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.17)  7 APR 2026 17:07
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.17)  7 APR 2026 20:21
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -818,9 +818,24 @@ Package hyperref Info: bookmark level for unknown algorithm defaults to 0 on inp
 
 [1{c:/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{c:/texlive/2025/texmf-dist/fonts/enc/dvips/newtx/ntx-ot1-tlf.enc}{c:/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc}{c:/texlive/2025/texmf-dist/fonts/enc/dvips/newtx/ntx-ot1-tlf-pc.enc}]
 
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+
 [2]
+Overfull \hbox (4.22784pt too wide) in paragraph at lines 168--169
+[]\OT1/minntx/m/n/10 Evolutionary: \OT1/pcr/m/n/10 pop_size=30\OT1/minntx/m/n/10 , \OT1/pcr/m/n/10 generations=120\OT1/minntx/m/n/10 , \OT1/pcr/m/n/10 crossover_rate=0.8\OT1/minntx/m/n/10 , \OT1/pcr/m/n/10 mutation_rate=0.05\OT1/minntx/m/n/10 , \OT1/pcr/m/n/10 elitism=2\OT1/minntx/m/n/10 ,
+ []
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
 
 [3]
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
@@ -867,18 +882,18 @@ LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2020/03/25>
  ***********
 Package rerunfilecheck Info: File `"project 1 report [Yanqiao Chen]".out' has not changed.
-(rerunfilecheck)             Checksum: 8DBE9FF7C37173AC65BF403B5040F850;2747.
+(rerunfilecheck)             Checksum: 095F59E580F65793FE5F728164B9BC0E;2872.
  ) 
 Here is how much of TeX's memory you used:
- 16693 strings out of 468872
- 258217 string characters out of 5451976
- 660261 words of memory out of 5000000
- 44909 multiletter control sequences out of 15000+600000
+ 16695 strings out of 468872
+ 258247 string characters out of 5451976
+ 664261 words of memory out of 5000000
+ 44911 multiletter control sequences out of 15000+600000
  713211 words of font info for 195 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
- 75i,10n,117p,580b,544s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,10n,117p,619b,558s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI5.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txexs.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsym.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb><c:/texlive/2025/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmr.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmri.pfb>
-Output written on "project 1 report [Yanqiao Chen].pdf" (5 pages, 201791 bytes).
+Output written on "project 1 report [Yanqiao Chen].pdf" (5 pages, 206226 bytes).
 PDF statistics:
  172 PDF objects out of 1000 (max. 8388607)
  140 compressed objects within 2 object streams
