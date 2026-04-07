@@ -21,8 +21,8 @@ MAP_CONFIG = {
     "map1": {"dataset": "dataset1", "budget": 10},
     "map2": {"dataset": "dataset2", "budget": 14},
     "map3": {"dataset": "dataset2", "budget": 14},
-    "map4": {"dataset": "dataset3", "budget": 15},
-    "map5": {"dataset": "dataset4", "budget": 15},
+    "map4": {"dataset": "dataset3", "budget": 25},
+    "map5": {"dataset": "dataset4", "budget": 25},
 }
 
 

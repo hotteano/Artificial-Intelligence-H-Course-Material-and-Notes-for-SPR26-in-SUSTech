@@ -23,8 +23,8 @@ TEST_CASES = [
     ("map1", "../Evaluator/map1/dataset1", "../Evaluator/map1/seed", "map1/seed_balanced", 10, "map1/result.txt"),
     ("map2", "../Evaluator/map2/dataset2", "../Evaluator/map2/seed", "map2/seed_balanced", 15, "map2/result.txt"),
     ("map3", "map3/dataset2", "map3/seed2", "map3/seed_balanced", 15, "map3/result.txt"),
-    ("map4", "map4/dataset3", "map4/seed", "map4/seed_balanced", 15, "map4/result.txt"),
-    ("map5", "map5/dataset4", "map5/seed", "map5/seed_balanced", 15, "map5/result.txt"),
+    ("map4", "map4/dataset3", "map4/seed", "map4/seed_balanced", 25, "map4/result.txt"),
+    ("map5", "map5/dataset4", "map5/seed", "map5/seed_balanced", 25, "map5/result.txt"),
 ]
 
 

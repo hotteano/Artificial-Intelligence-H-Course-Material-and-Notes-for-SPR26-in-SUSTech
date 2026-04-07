@@ -25,8 +25,8 @@ TEST_CASES = [
     ("map1", "dataset1", 10),
     ("map2", "dataset2", 14),
     ("map3", "dataset2", 14),
-    ("map4", "dataset3", 15),
-    ("map5", "dataset4", 15),
+    ("map4", "dataset3", 25),
+    ("map5", "dataset4", 25),
 ]
 
 
