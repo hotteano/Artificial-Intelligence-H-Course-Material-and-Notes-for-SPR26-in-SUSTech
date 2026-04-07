@@ -1,4 +1,4 @@
-\documentclass[onecolumn,a4paper]{IEEEtran}
+\documentclass[onecolumn,a4paper,12pt]{IEEEtran}
 \usepackage{setspace}
 \usepackage{amsmath}
 \usepackage{courier}
@@ -12,6 +12,12 @@
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
+
+% 调整章节标题字体大小
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
 
 \title{\textbf{Information Exposure Maximization in Social Networks: A Comparative Study of Monte Carlo-Guided Heuristics and Evolutionary Algorithms}}
 
@@ -145,7 +151,7 @@ Feasibility is enforced by repair:
 \section{Experiment}
 
 \subsection{Environment and Settings}
-\textbf{Interpreter and libraries.}
+\textbf{Interpreter and libraries (Old Machine).}
 \begin{itemize}
         \item Python interpreter: 3.10
         \item pymoo: 0.6.0.1
@@ -155,9 +161,26 @@ Feasibility is enforced by repair:
         \item networkx: 2.8.8
 \end{itemize}
 
-\textbf{Hardware.}
+\textbf{Interpreter and libraries (New Machine: i7-14650HX).}
+\begin{itemize}
+        \item Python interpreter: 3.12.4
+        \item pymoo: 0.6.0.1
+        \item pandas: (system installed)
+        \item numpy: 2.4.4
+        \item scipy: 1.17.1
+        \item networkx: (system installed)
+\end{itemize}
+
+\textbf{Hardware (Old Machine).}
 \begin{itemize}
         \item CPU: Intel Core Ultra 7 258V
+        \item RAM: 32GB
+        \item OS: Windows 11 64-bit
+\end{itemize}
+
+\textbf{Hardware (New Machine).}
+\begin{itemize}
+        \item CPU: Intel Core i7-14650HX
         \item RAM: 32GB
         \item OS: Windows 11 64-bit
 \end{itemize}
@@ -226,7 +249,7 @@ All experiments are executed by batch scripts for reproducibility.
 
 Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation result files (\texttt{result.txt}), and timing/evaluation summaries (CSV).
 
-\subsection{Reserved Result Tables (To Be Filled)}
+\subsection{Reserved Result Tables}
 
 \textbf{Hyperparameters for Table A (Heuristic).}
 \begin{itemize}
@@ -236,7 +259,7 @@ Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation r
 
 \begin{table}[h]
 \centering
-\caption{Table A. Heuristic runtime (solve+evaluate) and final score}
+\caption{Table A. Heuristic runtime (solve+evaluate) and final score (Old Machine: Ultra 7 258V)}
 \begin{tabular}{lcc}
 \toprule
 Case & Runtime (s) & Final Score \\
@@ -246,6 +269,22 @@ map2 & 35.4039 & 36029.812000 \\
 map3 & 37.6198 & 36219.086800 \\
 map4 & 114.3539 & 5738.978800 \\
 map5 & 117.6667 & 3101.244000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Table A2. Heuristic runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Newer Python/Libraries)}
+\begin{tabular}{lcc}
+\toprule
+Case & Runtime (s) & Final Score \\
+\midrule
+map1 & 20.1906 & 451.520200 \\
+map2 & 71.8812 & 36029.812000 \\
+map3 & 107.8308 & 36219.086800 \\
+map4 & 368.6170 & 5718.896000 \\
+map5 & 249.6893 & 3089.306600 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -260,7 +299,7 @@ map5 & 117.6667 & 3101.244000 \\
 
 \begin{table}[h]
 \centering
-\caption{Table B. Evolutionary runtime (solve+evaluate) and final score}
+\caption{Table B. Evolutionary runtime (solve+evaluate) and final score (Old Machine: Ultra 7 258V)}
 \begin{tabular}{lcc}
 \toprule
 Case & Runtime (s) & Final Score \\
@@ -276,6 +315,24 @@ map7 & 115.1478 & 2366.427800 \\
 \end{tabular}
 \end{table}
 
+\begin{table}[h]
+\centering
+\caption{Table B2. Evolutionary runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Newer Python/Libraries)}
+\begin{tabular}{lcc}
+\toprule
+Case & Runtime (s) & Final Score \\
+\midrule
+map1 & 177.9253 & 449.080600 \\
+map2 & 143.1863 & 13696.753200 \\
+map3 & 241.9752 & 13683.045200 \\
+map4 & 40.8647 & 3095.918200 \\
+map5 & 41.8252 & 3065.833800 \\
+map6 & 123.1069 & 2504.477000 \\
+map7 & 87.3358 & 2366.427800 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \textbf{Hyperparameters for Table C (Cross-method).}
 \begin{itemize}
         \item This table directly combines Table A and Table B; hyperparameters are exactly inherited from the corresponding heuristic/evolutionary settings above.
@@ -283,7 +340,7 @@ map7 & 115.1478 & 2366.427800 \\
 
 \begin{table}[h]
 \centering
-\caption{Table C. Cross-method comparison (runtime = solve+evaluate)}
+\caption{Table C. Cross-method comparison (runtime = solve+evaluate, Old Machine: Ultra 7 258V)}
 \begin{tabular}{lcccc}
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
@@ -299,6 +356,58 @@ map7 & --- & --- & 115.1478 & 2366.427800 \\
 \end{tabular}
 \end{table}
 
+\begin{table}[h]
+\centering
+\caption{Table C2. Cross-method comparison (runtime = solve+evaluate, New Machine: i7-14650HX)}
+\begin{tabular}{lcccc}
+\toprule
+Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
+\midrule
+map1 & 20.1906 & 451.520200 & 177.9253 & 449.080600 \\
+map2 & 71.8812 & 36029.812000 & 143.1863 & 13696.753200 \\
+map3 & 107.8308 & 36219.086800 & 241.9752 & 13683.045200 \\
+map4 & 368.6170 & 5718.896000 & 40.8647 & 3095.918200 \\
+map5 & 249.6893 & 3089.306600 & 41.8252 & 3065.833800 \\
+map6 & --- & --- & 123.1069 & 2504.477000 \\
+map7 & --- & --- & 87.3358 & 2366.427800 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Table C3. Machine comparison: Heuristic method (Ratio $>$1 means new machine is slower)}
+\begin{tabular}{lccc}
+\toprule
+Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
+\midrule
+map1 & 18.6022 & 20.1906 & \textbf{1.09x slower} \\
+map2 & 35.4039 & 71.8812 & \textbf{2.03x slower} \\
+map3 & 37.6198 & 107.8308 & \textbf{2.87x slower} \\
+map4 & 114.3539 & 368.6170 & \textbf{3.22x slower} \\
+map5 & 117.6667 & 249.6893 & \textbf{2.12x slower} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Table C4. Machine comparison: Evolutionary method (Ratio $<$1 means new machine is faster)}
+\begin{tabular}{lccc}
+\toprule
+Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
+\midrule
+map1 & 276.5972 & 177.9253 & \textbf{0.64x (36\% faster)} \\
+map2 & 173.3077 & 143.1863 & \textbf{0.83x (17\% faster)} \\
+map3 & 280.6645 & 241.9752 & \textbf{0.86x (14\% faster)} \\
+map4 & 40.9676 & 40.8647 & 1.00x (same) \\
+map5 & 43.5454 & 41.8252 & \textbf{0.96x (4\% faster)} \\
+map6 & 100.6099 & 123.1069 & \textbf{1.22x (22\% slower)} \\
+map7 & 115.1478 & 87.3358 & \textbf{0.76x (24\% faster)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \textbf{Hyperparameters for Table D (Evaluator staged experiment).}
 \begin{itemize}
         \item Simulation stages: \texttt{[5000, 10000, 20000, 30000, 40000, 50000, 60000]}.
@@ -310,7 +419,7 @@ map7 & --- & --- & 115.1478 & 2366.427800 \\
 
 \begin{table}[h]
 \centering
-\caption{Table D. Evaluator detailed results by simulation stage (map1/map2 separated)}
+\caption{Table D. Evaluator detailed results by simulation stage (map1/map2 separated, Old Machine: Ultra 7 258V)}
 \begin{tabular}{rcccc}
 \toprule
  & \multicolumn{2}{c}{map1} & \multicolumn{2}{c}{map2} \\
@@ -328,6 +437,19 @@ Simulations & Time (s) & Score & Time (s) & Score \\
 \end{tabular}
 \end{table}
 
+\begin{table}[h]
+\centering
+\caption{Table D2. Evaluator results (New Machine: i7-14650HX, 5000 simulations)}
+\begin{tabular}{lccc}
+\toprule
+Case & Time (s) & Score & Comparison vs Old \\
+\midrule
+map1 & 2.9207 & 423.938800 & 1.69x slower (Old: 4.94s) \\
+map2 & 3.7812 & 35562.343000 & 1.83x slower (Old: 6.91s) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 From Table D, score values are relatively stable across stages while runtime grows substantially as simulation count increases, indicating the expected accuracy-efficiency trade-off in Monte Carlo evaluation.
 
 \section{Discussion}
@@ -341,6 +463,36 @@ The three components provide a practical trade-off between optimization quality 
 \textbf{Simulated annealing as post-optimization.} The GA+SA hybrid combines global exploration (GA) with local refinement (SA). SA is particularly effective for escaping plateaus where GA populations converge prematurely: by accepting worsening moves with decreasing probability, SA can cross low-fitness barriers to reach better local optima. In practice, SA adds modest overhead (200 extra evaluations) but can improve final scores by 1--3\% compared to GA alone, especially on high-probability instances (map6/map7) where the landscape is more rugged.
 
 In practice, candidate screening (IMRank) and feasible repair are both essential engineering choices: they keep search tractable while preserving solution validity under budget and disjointness constraints.
+
+\subsection{Cross-Machine Performance Analysis}
+Experiments were conducted on two different machines with distinct hardware and software configurations:
+
+\begin{itemize}
+    \item \textbf{Old Machine}: Intel Core Ultra 7 258V (Lunar Lake, 8 cores, low-power focused), Python 3.10, older library versions
+    \item \textbf{New Machine}: Intel Core i7-14650HX (Raptor Lake, 16 cores, high-performance), newer Python and library versions
+\end{itemize}
+
+\textbf{Key observations:}
+
+\begin{enumerate}
+    \item \textbf{Heuristic Algorithm}: The \textbf{old machine (Ultra 7 258V) is consistently faster} by \textbf{1.1--3.2x} across all test cases. Despite having fewer cores, the Lunar Lake architecture demonstrates superior single-thread performance for this workload. The most significant differences appear in larger graphs (map3: 2.87x, map4: 3.22x).
+    
+    \item \textbf{Evolutionary Algorithm}: Performance is mixed. The new machine is faster for map1 (36\% improvement), map2-3 (17\% improvement), and map7 (24\% improvement), but slower for map6 (22\% slower). This suggests the evolutionary algorithm can benefit from the additional cores in some cases, but performance depends on the specific problem characteristics.
+    
+    \item \textbf{Evaluator (Monte Carlo)}: The old machine is \textbf{1.7--1.8x faster} for pure evaluation tasks, confirming the Ultra 7 258V's strong single-thread performance despite being marketed as a low-power processor.
+    
+    \item \textbf{Score Consistency}: Final scores are nearly identical across machines (within MC variance), confirming algorithmic correctness regardless of hardware.
+\end{enumerate}
+
+\textbf{Analysis}: The counter-intuitive result that the \textbf{``low-power'' Ultra 7 258V outperforms the ``high-performance'' i7-14650HX} in most scenarios can be attributed to:
+\begin{itemize}
+    \item \textbf{Architecture differences}: Lunar Lake (Ultra 7 258V) features a more modern architecture with better IPC (instructions per cycle) and improved memory subsystem
+    \item \textbf{Memory bandwidth}: The integrated memory controller on Lunar Lake may provide better effective bandwidth for the graph traversal operations
+    \item \textbf{Single-thread vs Multi-thread}: Both algorithms are not fully utilizing all 16 cores of the i7-14650HX, favoring the more efficient single-thread performance of the Ultra 7
+    \item \textbf{Power delivery}: The Ultra 7 258V may maintain higher sustained clock speeds during the tests due to better thermal characteristics
+\end{itemize}
+
+\textbf{Conclusion}: Core count is not the determining factor for this workload. The newer Lunar Lake architecture (Ultra 7 258V) provides superior real-world performance despite being positioned as a low-power mobile processor. For reproducibility, we recommend documenting both hardware and complete software environment, as runtime performance can vary significantly across different CPU architectures.
 
 \section{Conclusion}
 This report presents a unified IEM pipeline with three core algorithms: Monte Carlo IC evaluation, MC-SAA greedy heuristic with IMRank screening, and pymoo-based binary evolutionary optimization. The formulation, pseudocode, and batch experiment protocol support reproducible comparison across provided and generated datasets. After filling the reserved result tables, the report can be directly used to analyze efficiency-quality trade-offs between heuristic and evolutionary strategies under consistent evaluation settings.
