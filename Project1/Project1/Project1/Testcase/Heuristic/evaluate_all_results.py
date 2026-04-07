@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--simulations",
         type=int,
-        default=60000,
+        default=5000,
         help="Number of MC simulations for evaluator (default: 60000)",
     )
     parser.add_argument(

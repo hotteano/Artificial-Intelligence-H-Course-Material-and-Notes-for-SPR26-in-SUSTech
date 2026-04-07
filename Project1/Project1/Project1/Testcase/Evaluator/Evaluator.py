@@ -202,7 +202,7 @@ def main():
     parser.add_argument('-b', '--balanced', required=True, help='Path to balanced seed set file')
     parser.add_argument('-k', '--budget', type=int, required=True, help='Budget k')
     parser.add_argument('-o', '--output', required=True, help='Path to output file for objective value')
-    parser.add_argument('--simulations', type=int, default=60000, help='Number of Monte Carlo simulations (default: 60000)')
+    parser.add_argument('--simulations', type=int, default=5000, help='Number of Monte Carlo simulations (default: 5000)')
     
     args = parser.parse_args()
     

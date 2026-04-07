@@ -31,8 +31,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--simulations",
         type=int,
-        default=60000,
-        help="Evaluator MC simulations (default: 60000)",
+        default=5000,
+        help="Evaluator MC simulations (default: 5000)",
     )
     parser.add_argument(
         "--seed-prefix",

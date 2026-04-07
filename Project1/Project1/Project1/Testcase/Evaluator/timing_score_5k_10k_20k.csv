@@ -1,0 +1,7 @@
+case,simulations,elapsed_seconds,score,status,output_file
+map1,5000,4.936041,423.684400,OK,map1\timed_result_5000.txt
+map2,5000,6.912980,35560.841600,OK,map2\timed_result_5000.txt
+map1,10000,8.130052,423.674800,OK,map1\timed_result_10000.txt
+map2,10000,12.096449,35561.435200,OK,map2\timed_result_10000.txt
+map1,20000,16.736388,423.556100,OK,map1\timed_result_20000.txt
+map2,20000,23.764549,35561.280900,OK,map2\timed_result_20000.txt

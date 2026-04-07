@@ -390,27 +390,27 @@ def main():
     parser.add_argument("-b", "--balanced", required=True, help="Path to output balanced seed set file")
     parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
 
-    parser.add_argument("--pop-size", type=int, default=50, help="Population size (default: 60)")
-    parser.add_argument("--generations", type=int, default=300, help="Number of generations (default: 300)")
+    parser.add_argument("--pop-size", type=int, default=30, help="Population size (default: 30)")
+    parser.add_argument("--generations", type=int, default=80, help="Number of generations (default: 80)")
     parser.add_argument("--crossover-rate", type=float, default=0.8, help="Crossover rate (default: 0.8)")
     parser.add_argument(
         "--mutation-rate",
         type=float,
-        default=0.05,
+        default=0.10,
         help="Bit-flip mutation rate (default: 0.05)",
     )
     parser.add_argument("--elitism", type=int, default=2, help="Legacy parameter kept for compatibility")
     parser.add_argument(
         "--mc-coarse",
         type=int,
-        default=100,
+        default=60,
         help="MC simulations for evolution (default: 30)",
     )
     parser.add_argument(
         "--mc-fine",
         type=int,
-        default=200,
-        help="MC simulations for final eval (default: 200)",
+        default=100,
+        help="MC simulations for final eval (default: 100)",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
 

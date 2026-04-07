@@ -1,6 +1,6 @@
 map,budget,output_seed,elapsed_seconds,status
-map1,10,map1/seed_balanced,29.9538,OK
-map2,15,map2/seed_balanced,55.1415,OK
-map3,15,map3/seed_balanced,64.3315,OK
-map4,15,map4/seed_balanced,138.9894,OK
-map5,15,map5/seed_balanced,73.7135,OK
+map1,10,map1/seed_balanced,26.8623,OK
+map2,15,map2/seed_balanced,52.8216,OK
+map3,15,map3/seed_balanced,66.9392,OK
+map4,15,map4/seed_balanced,146.3354,OK
+map5,15,map5/seed_balanced,73.6552,OK

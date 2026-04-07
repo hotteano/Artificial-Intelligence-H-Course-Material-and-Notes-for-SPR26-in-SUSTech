@@ -1,6 +1,6 @@
 map,seed_file,budget,score,elapsed_seconds,status,result_file
-map1,map1/seed_balanced,10,452.351800,39.4988,OK,map1/result.txt
-map2,map2/seed_balanced,15,36030.224900,50.4886,OK,map2/result.txt
-map3,map3/seed_balanced,15,36217.946700,36.7220,OK,map3/result.txt
-map4,map4/seed_balanced,15,6059.418800,14.1457,OK,map4/result.txt
-map5,map5/seed_balanced,15,3080.615400,4.5280,OK,map5/result.txt
+map1,map1/seed_balanced,10,452.104200,5.4250,OK,map1/result.txt
+map2,map2/seed_balanced,15,36028.663000,7.6719,OK,map2/result.txt
+map3,map3/seed_balanced,15,36217.997800,4.9769,OK,map3/result.txt
+map4,map4/seed_balanced,15,6047.755200,2.6277,OK,map4/result.txt
+map5,map5/seed_balanced,15,3078.983200,0.8122,OK,map5/result.txt

@@ -225,11 +225,11 @@ Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation r
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 29.9538 & 452.3518 \\
-map2 & 55.1415 & 36030.2249 \\
-map3 & 64.3315 & 36217.9467 \\
-map4 & 138.9894 & 6059.4188 \\
-map5 & 73.7135 & 3080.6154 \\
+map1 & 26.8623 & 452.104200 \\
+map2 & 52.8216 & 36028.663000 \\
+map3 & 66.9392 & 36217.997800 \\
+map4 & 146.3354 & 6047.755200 \\
+map5 & 73.6552 & 3078.983200 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -248,11 +248,11 @@ map5 & 73.7135 & 3080.6154 \\
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 140.9983 & 447.2058 \\
-map2 & 121.6444 & 13682.2913 \\
-map3 & 199.7473 & 13702.3233 \\
-map4 & 21.3537 & 3188.0955 \\
-map5 & 30.7049 & 3149.6636 \\
+map1 & 121.7841 & 448.057800 \\
+map2 & 86.3108 & 13706.360400 \\
+map3 & 141.8942 & 13674.072200 \\
+map4 & 13.3375 & 3160.701400 \\
+map5 & 16.0666 & 3131.765600 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -269,59 +269,45 @@ map5 & 30.7049 & 3149.6636 \\
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
 \midrule
-map1 & 29.9538 & 452.3518 & 140.9983 & 447.2058 \\
-map2 & 55.1415 & 36030.2249 & 121.6444 & 13682.2913 \\
-map3 & 64.3315 & 36217.9467 & 199.7473 & 13702.3233 \\
-map4 & 138.9894 & 6059.4188 & 21.3537 & 3188.0955 \\
-map5 & 73.7135 & 3080.6154 & 30.7049 & 3149.6636 \\
+map1 & 26.8623 & 452.104200 & 121.7841 & 448.057800 \\
+map2 & 52.8216 & 36028.663000 & 86.3108 & 13706.360400 \\
+map3 & 66.9392 & 36217.997800 & 141.8942 & 13674.072200 \\
+map4 & 146.3354 & 6047.755200 & 13.3375 & 3160.701400 \\
+map5 & 73.6552 & 3078.983200 & 16.0666 & 3131.765600 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Hyperparameters for Table D--E (Evaluator staged experiment).}
+\textbf{Hyperparameters for Table D (Evaluator staged experiment).}
 \begin{itemize}
-        \item Simulation stages: \texttt{[30000, 40000, 50000, 60000]}.
+        \item Simulation stages: \texttt{[5000, 10000, 20000, 30000, 40000, 50000, 60000]}.
         \item Cases: \texttt{map1} and \texttt{map2}; threshold in timing script: \texttt{time\_threshold=48s}.
         \item Evaluator random seed is not fixed (default stochastic Monte Carlo).
 \end{itemize}
 
-\subsection{Evaluator Staged Results (30000--60000 Simulations)}
+\subsection{Evaluator Staged Results (5000--60000 Simulations)}
 
 \begin{table}[h]
 \centering
-\caption{Table D. Evaluator detailed results by case and simulation stage}
-\begin{tabular}{lrrr}
+\caption{Table D. Evaluator detailed results by simulation stage (map1/map2 separated)}
+\begin{tabular}{rcccc}
 \toprule
-Case & Simulations & Time (s) & Score \\
+ & \multicolumn{2}{c}{map1} & \multicolumn{2}{c}{map2} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Simulations & Time (s) & Score & Time (s) & Score \\
 \midrule
-map1 & 30000 & 16.9350 & 423.5149 \\
-map2 & 30000 & 22.8284 & 35560.4609 \\
-map1 & 40000 & 22.3746 & 423.7382 \\
-map2 & 40000 & 31.8855 & 35560.6718 \\
-map1 & 50000 & 28.7068 & 423.7666 \\
-map2 & 50000 & 38.8280 & 35560.9353 \\
-map1 & 60000 & 33.6887 & 423.6112 \\
-map2 & 60000 & 46.3011 & 35560.9804 \\
+5000  & 4.9360  & 423.6844 & 6.9130  & 35560.8416 \\
+10000 & 8.1301  & 423.6748 & 12.0964 & 35561.4352 \\
+20000 & 16.7364 & 423.5561 & 23.7645 & 35561.2809 \\
+30000 & 16.9350 & 423.5149 & 22.8284 & 35560.4609 \\
+40000 & 22.3746 & 423.7382 & 31.8855 & 35560.6718 \\
+50000 & 28.7068 & 423.7666 & 38.8280 & 35560.9353 \\
+60000 & 33.6887 & 423.6112 & 46.3011 & 35560.9804 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[h]
-\centering
-\caption{Table E. Evaluator stage summary (from \texttt{timing\_score\_stage\_summary.csv})}
-\begin{tabular}{rrrrrrr}
-\toprule
-Sims & OK Cases & Avg Time (s) & Avg Score & Mean $|\Delta\text{Score}|$ & Max $|\Delta\text{Score}|$ & Avg Time Ratio \\
-\midrule
-30000 & 2 & 19.8817 & 17991.9879 & - & - & - \\
-40000 & 2 & 27.1301 & 17992.2050 & 0.2171 & 0.2233 & 1.3590 \\
-50000 & 2 & 33.7674 & 17992.3510 & 0.1460 & 0.2635 & 1.2504 \\
-60000 & 2 & 39.9949 & 17992.2958 & 0.1003 & 0.1554 & 1.1830 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-From Table E, the stage-to-stage score change decreases from 0.2171 (30000$\rightarrow$40000) to 0.14595 (40000$\rightarrow$50000) and then to 0.10025 (50000$\rightarrow$60000), while time growth ratio also drops to 1.1830 at the last stage. This supports using 60000 simulations as a reasonable trade-off between estimate stability and computational overhead.
+From Table D, score values are relatively stable across stages while runtime grows substantially as simulation count increases, indicating the expected accuracy-efficiency trade-off in Monte Carlo evaluation.
 
 \section{Discussion}
 The three components provide a practical trade-off between optimization quality and runtime:

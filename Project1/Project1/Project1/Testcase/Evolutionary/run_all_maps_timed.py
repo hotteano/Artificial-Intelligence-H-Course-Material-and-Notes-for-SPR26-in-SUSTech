@@ -32,13 +32,13 @@ TEST_CASES = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Timed batch runner for IEMP_Evol.py")
-    parser.add_argument("--pop-size", type=int, default=50)
-    parser.add_argument("--generations", type=int, default=200)
+    parser.add_argument("--pop-size", type=int, default=30)
+    parser.add_argument("--generations", type=int, default=80)
     parser.add_argument("--crossover-rate", type=float, default=0.8)
-    parser.add_argument("--mutation-rate", type=float, default=0.05)
+    parser.add_argument("--mutation-rate", type=float, default=0.10)
     parser.add_argument("--elitism", type=int, default=2)
-    parser.add_argument("--mc-coarse", type=int, default=30)
-    parser.add_argument("--mc-fine", type=int, default=200)
+    parser.add_argument("--mc-coarse", type=int, default=60)
+    parser.add_argument("--mc-fine", type=int, default=100)
     parser.add_argument(
         "--seed",
         type=int,
