@@ -224,24 +224,12 @@ def main():
     evaluator = IEMEvaluator()
     evaluator.read_data(args.network, args.initial, args.balanced)
     
-    # Validate budget constraint
-    total_balanced_seeds = len(evaluator.balanced_seeds[0]) + len(evaluator.balanced_seeds[1])
-    if total_balanced_seeds > args.budget:
-        print(f"Warning: Total balanced seeds ({total_balanced_seeds}) exceeds budget ({args.budget})")
-    
-    print(f"Graph: {evaluator.n_nodes} nodes, {evaluator.n_edges} edges")
-    print(f"Initial seeds: Campaign 1: {len(evaluator.initial_seeds[0])}, Campaign 2: {len(evaluator.initial_seeds[1])}")
-    print(f"Balanced seeds: Campaign 1: {len(evaluator.balanced_seeds[0])}, Campaign 2: {len(evaluator.balanced_seeds[1])} (Total: {total_balanced_seeds}, Budget: {args.budget})")
-    print(f"Running {args.simulations} simulations...")
-    
     # Evaluate
     score = evaluator.evaluate(args.simulations)
-    print(f"\nBalanced Information Exposure: {score:.4f}")
-    
+
     # Write output to file
     with open(args.output, 'w') as f:
         f.write(f"{score:.4f}\n")
-    print(f"Result written to: {args.output}")
 
 
 if __name__ == "__main__":

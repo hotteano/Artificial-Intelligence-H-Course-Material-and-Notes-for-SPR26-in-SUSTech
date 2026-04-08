@@ -23,7 +23,6 @@ import numpy as np
 
 try:
     from pymoo.algorithms.soo.nonconvex.ga import GA
-    from pymoo.core.callback import Callback
     from pymoo.core.problem import ElementwiseProblem
     from pymoo.core.repair import Repair
     from pymoo.operators.crossover.pntx import TwoPointCrossover
@@ -349,10 +348,6 @@ class IEMPEvolutionary:
         threshold = 15.0
         should_enable = avg_degree <= threshold
 
-        if self.use_sa and not should_enable:
-            print(f"  [Auto-adjust] Graph too dense (avg_degree={avg_degree:.1f} > {threshold}), "
-                  f"disabling SA to save time")
-
         return should_enable
 
     def evolve(self) -> Tuple[Set[int], Set[int]]:
@@ -363,29 +358,10 @@ class IEMPEvolutionary:
             )
 
         if self.n_available == 0:
-            print("No available nodes to optimize.")
             return set(), set()
 
         # 根据图的边密度决定是否启用 SA
         effective_use_sa = self._should_use_sa()
-
-        print("\n" + "=" * 60)
-        print("pymoo Binary GA for IEMP")
-        print("=" * 60)
-        print("Parameters:")
-        print(f"  Population: {self.population_size}")
-        print(f"  Generations: {self.generations}")
-        print(f"  Budget: {self.budget}")
-        print(f"  Available nodes: {self.n_available}")
-        print(f"  Chromosome length: {self.chromosome_length}")
-        print(f"  Crossover rate: {self.crossover_rate}")
-        print(f"  Mutation rate: {self.mutation_rate}")
-        print(f"  Elitism parameter (legacy): {self.elitism}")
-        print(f"  MC (coarse): {self.mc_coarse}, MC (fine): {self.mc_fine}")
-        print(
-            f"  Simulated Annealing: {'ON' if effective_use_sa else 'OFF'}"
-            f" (steps={self.sa_steps}, T0={self.sa_t0}, alpha={self.sa_alpha})"
-        )
 
         class _IEMPRepair(Repair):
             def __init__(self, solver: "IEMPEvolutionary"):
@@ -428,17 +404,6 @@ class IEMPEvolutionary:
                     float(overlap),
                 ])
 
-        class _Progress(Callback):
-            def __init__(self):
-                super().__init__()
-
-            def notify(self, algorithm):
-                gen = algorithm.n_gen
-                if gen == 1 or gen % 20 == 0:
-                    F = algorithm.pop.get("F")
-                    best = float(np.min(F))
-                    print(f"Gen {gen}: Best coarse fitness = {-best:.4f}")
-
         problem = _IEMPProblem(self)
         repair = _IEMPRepair(self)
 
@@ -456,7 +421,6 @@ class IEMPEvolutionary:
             algorithm,
             termination=get_termination("n_gen", self.generations),
             seed=self.seed,
-            callback=_Progress(),
             verbose=False,
             save_history=False,
         )
@@ -472,34 +436,14 @@ class IEMPEvolutionary:
         best_x = self.repair_chromosome(best_x)
 
         if effective_use_sa and self.sa_steps > 0:
-            print("\n" + "=" * 60)
-            print("Simulated Annealing Refinement")
-            print("=" * 60)
             ga_coarse = self.coarse_fitness(best_x)
             sa_x, sa_coarse = self.simulated_annealing_refine(best_x)
 
             if sa_coarse > ga_coarse:
-                print(f"SA improved coarse fitness: {ga_coarse:.4f} -> {sa_coarse:.4f}")
                 best_x = sa_x
-            else:
-                print(f"SA kept GA solution (best coarse: {ga_coarse:.4f})")
 
         S1, S2 = self.decode_chromosome(best_x)
-
-        print("\n" + "=" * 60)
-        print("Final Fine Evaluation")
-        print("=" * 60)
         self.evaluator.clear_cache()
-
-        coarse_score = self.evaluator.evaluate(S1, S2, self.mc_coarse)
-        fine_score = self.evaluator.evaluate(S1, S2, self.mc_fine)
-
-        print(f"Final Coarse Fitness (score only): {coarse_score:.4f}")
-        print(f"Final Fine Fitness (score only): {fine_score:.4f}")
-        print(f"S1 ({len(S1)} nodes): {sorted(S1)}")
-        print(f"S2 ({len(S2)} nodes): {sorted(S2)}")
-        print(f"Total: {len(S1) + len(S2)} / {self.budget}")
-        print("=" * 60)
 
         return S1, S2
 
@@ -583,17 +527,6 @@ def main():
     data.load_graph(args.network)
     data.load_initial_seeds(args.initial)
 
-    print(f"Graph: {data.n_nodes} nodes, {data.n_edges} edges")
-    print(f"Initial seeds: I1={len(data.I1)}, I2={len(data.I2)}")
-    print(f"Available nodes: {len(data.available_nodes)}")
-    print(f"Budget k: {args.budget}")
-
-    if args.budget > len(data.available_nodes):
-        print(
-            "Warning: budget is larger than available nodes; with disjoint assignment, "
-            "effective maximum is number of available nodes."
-        )
-
     solver = IEMPEvolutionary(
         data=data,
         budget=args.budget,
@@ -613,7 +546,6 @@ def main():
 
     S1, S2 = solver.evolve()
     data.save_solution(S1, S2, args.balanced)
-    print(f"\nSolution saved to: {args.balanced}")
 
 
 if __name__ == "__main__":

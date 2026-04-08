@@ -391,23 +391,13 @@ class IEMPMCHeuristic:
             self.data.S1, self.data.S2 = S1, S2
             return S1, S2
 
-        print("=" * 70)
-        print("MC SAA Greedy Heuristic")
-        print("=" * 70)
         use_imrank = 0 < self.candidate_pool_size < len(available)
         rank1: List[int] = []
         rank2: List[int] = []
 
         if use_imrank:
-            print("Preparing IMRank rankings for candidate screening...")
             rank1 = self.imrank_self_consistent(campaign_idx=0)
             rank2 = self.imrank_self_consistent(campaign_idx=1)
-
-        print(
-            f"Parameters: budget={self.budget}, MC scenarios={self.mc_simulations}, "
-            f"candidate_mode={'imrank_pool' if use_imrank else 'all_vertices'}, "
-            f"candidate_size={self.candidate_pool_size if use_imrank else len(available)}"
-        )
 
         steps = min(self.budget, len(available))
 
@@ -518,17 +508,7 @@ class IEMPMCHeuristic:
                 S2.add(best_v2)
                 available.remove(best_v2)
 
-        print("\n" + "=" * 70)
-        print("Final Result")
-        print("=" * 70)
-        print(f"  S1 ({len(S1)} nodes): {sorted(S1)}")
-        print(f"  S2 ({len(S2)} nodes): {sorted(S2)}")
-        print(f"  Total: {len(S1) + len(S2)} / {self.budget}")
-
-        print("\n  Final MC evaluation...")
         final_score = self.mc_evaluate(S1, S2)
-        print(f"  Final MC Score: {final_score:.4f}")
-        print("=" * 70)
 
         self.data.S1, self.data.S2 = S1, S2
         return S1, S2
@@ -543,20 +523,20 @@ def main():
     parser.add_argument(
         "--mc-sim",
         type=int,
-        default=70,
-        help="MC scenarios per step and final evaluation (default: 70)",
+        default=75,
+        help="MC scenarios per step and final evaluation (default: 75)",
     )
     parser.add_argument(
         "--max-iter",
         type=int,
-        default=300,
-        help="Maximum IMRank self-consistency iterations (default: 300)",
+        default=200,
+        help="Maximum IMRank self-consistency iterations (default: 200)",
     )
     parser.add_argument(
         "--candidate-size",
         type=int,
-        default=900,
-        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 900)",
+        default=500,
+        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 500)",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
 
@@ -575,9 +555,7 @@ def main():
     data.load_graph(args.network)
     data.load_initial_seeds(args.initial)
 
-    print(f"Graph: {data.n_nodes} nodes, {data.n_edges} edges")
-    print(f"Initial seeds: I1={len(data.I1)}, I2={len(data.I2)}")
-    print(f"Budget k: {args.budget}")
+    pass
 
     heuristic = IEMPMCHeuristic(
         data,
@@ -590,7 +568,6 @@ def main():
     heuristic.run()
 
     data.save_solution(args.balanced)
-    print(f"\nSolution saved to: {args.balanced}")
 
 
 if __name__ == "__main__":
