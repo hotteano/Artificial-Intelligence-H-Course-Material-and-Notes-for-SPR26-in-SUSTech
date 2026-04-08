@@ -543,20 +543,20 @@ def main():
     parser.add_argument(
         "--mc-sim",
         type=int,
-        default=65,
+        default=63,
         help="MC scenarios per step and final evaluation (default: 65)",
     )
     parser.add_argument(
         "--max-iter",
         type=int,
-        default=380,
-        help="Maximum IMRank self-consistency iterations (default: 380)",
+        default=350,
+        help="Maximum IMRank self-consistency iterations (default: 300)",
     )
     parser.add_argument(
         "--candidate-size",
         type=int,
-        default=800,
-        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 7000)",
+        default=900,
+        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 800)",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
 

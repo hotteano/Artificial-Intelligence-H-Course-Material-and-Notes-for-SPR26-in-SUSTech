@@ -337,6 +337,24 @@ class IEMPEvolutionary:
 
         return best, best_f
 
+    def _should_use_sa(self) -> bool:
+        """根据图的边密度判断是否启用模拟退火。稠密图禁用 SA 以节省时间。"""
+        if not self.use_sa or self.sa_steps <= 0:
+            return False
+
+        # 计算平均度数（遍历边的结果）
+        avg_degree = self.data.n_edges / self.data.n_nodes if self.data.n_nodes > 0 else 0
+
+        # 阈值：平均度数 > 15 认为是稠密图，SA 开销大收益小，自动禁用
+        threshold = 15.0
+        should_enable = avg_degree <= threshold
+
+        if self.use_sa and not should_enable:
+            print(f"  [Auto-adjust] Graph too dense (avg_degree={avg_degree:.1f} > {threshold}), "
+                  f"disabling SA to save time")
+
+        return should_enable
+
     def evolve(self) -> Tuple[Set[int], Set[int]]:
         """Run pymoo GA and return best solution."""
         if not PYMOO_AVAILABLE:
@@ -347,6 +365,9 @@ class IEMPEvolutionary:
         if self.n_available == 0:
             print("No available nodes to optimize.")
             return set(), set()
+
+        # 根据图的边密度决定是否启用 SA
+        effective_use_sa = self._should_use_sa()
 
         print("\n" + "=" * 60)
         print("pymoo Binary GA for IEMP")
@@ -362,7 +383,7 @@ class IEMPEvolutionary:
         print(f"  Elitism parameter (legacy): {self.elitism}")
         print(f"  MC (coarse): {self.mc_coarse}, MC (fine): {self.mc_fine}")
         print(
-            f"  Simulated Annealing: {'ON' if self.use_sa else 'OFF'}"
+            f"  Simulated Annealing: {'ON' if effective_use_sa else 'OFF'}"
             f" (steps={self.sa_steps}, T0={self.sa_t0}, alpha={self.sa_alpha})"
         )
 
@@ -450,7 +471,7 @@ class IEMPEvolutionary:
 
         best_x = self.repair_chromosome(best_x)
 
-        if self.use_sa and self.sa_steps > 0:
+        if effective_use_sa and self.sa_steps > 0:
             print("\n" + "=" * 60)
             print("Simulated Annealing Refinement")
             print("=" * 60)
@@ -491,7 +512,7 @@ def main():
     parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
 
     parser.add_argument("--pop-size", type=int, default=30, help="Population size (default: 30)")
-    parser.add_argument("--generations", type=int, default=120, help="Number of generations (default: 100)")
+    parser.add_argument("--generations", type=int, default=100, help="Number of generations (default: 100)")
     parser.add_argument("--crossover-rate", type=float, default=0.8, help="Crossover rate (default: 0.8)")
     parser.add_argument(
         "--mutation-rate",
@@ -509,8 +530,8 @@ def main():
     parser.add_argument(
         "--mc-fine",
         type=int,
-        default=100,
-        help="MC simulations for final eval (default: 100)",
+        default=200,
+        help="MC simulations for final eval (default: 200)",
     )
     parser.add_argument(
         "--no-sa",
@@ -520,8 +541,8 @@ def main():
     parser.add_argument(
         "--sa-steps",
         type=int,
-        default=200,
-        help="Simulated annealing steps (default: 200)",
+        default=150,
+        help="Simulated annealing steps (default: 150)",
     )
     parser.add_argument(
         "--sa-t0",

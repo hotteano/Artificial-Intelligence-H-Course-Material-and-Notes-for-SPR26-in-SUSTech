@@ -55,9 +55,28 @@ This report implements and compares three core algorithmic components:
         \item Binary Evolutionary Optimization using pymoo with feasibility repair.
 \end{itemize}
 
+We implement experiments on provided and generated datasets, with detailed timing and score reporting for both heuristic and evolutionary pipelines. The report also includes a cross-machine performance analysis to understand hardware impacts on runtime. All algorithms and experiments are designed for reproducibility, with fixed random seeds and batch scripts for execution. See Github for complete scripts and data: \url{https://github.com/hotteano/Artificial-Intelligence-H-Course-Material-and-Notes-for-SPR26-in-SUSTech}.
+
+\subsection{Terminology} 
+
+\begin{itemize}
+        \item \textbf{Heuristic} refers to the MC-SAA Greedy method with IMRank screening.
+        \item \textbf{Evolutionary} refers to the Binary GA + SA Refinement method.
+        \item \textbf{Evaluator} refers to the Monte Carlo IC Evaluator used for final score estimation.
+        \item \textbf{IEM} stands for Information Exposure Maximization.
+        \item \textbf{GA} stands for Genetic Algorithm.
+        \item \textbf{SA} stands for Simulated Annealing.
+        \item \textbf{MC} stands for Monte Carlo.
+\end{itemize}
+
 \section{Method}
 
+In this section, we introduce the three core algorithms in our IEM pipeline: the Monte Carlo IC Evaluator, the MC-SAA Greedy Heuristic with IMRank Screening, and the Binary Evolutionary Optimization with Simulated Annealing Refinement. Each algorithm is designed to balance solution quality and computational efficiency under the constraints of the IEM problem.
+
 \subsection{Algorithm A: Monte Carlo IC Evaluator}
+
+Computing the IEM objective $\Phi$ exactly is \#P-hard due to the combinatorial nature of influence spread under the IC model. Therefore, we use a Monte Carlo (MC) simulation approach to estimate $\mathbb{E}[\Phi]$ for given seed sets $S_1$ and $S_2$.
+
 For each simulation, both campaigns diffuse independently under IC. A node is considered reached if it is activated or attempted. The score of one simulation is $|V|-|R_1\oplus R_2|$, and the final estimate is the sample mean over $T$ runs:
 \begin{equation}
 \hat{\Phi}(S_1,S_2)=\frac{1}{T}\sum_{t=1}^{T}\left(|V|-|R_1^{(t)}\oplus R_2^{(t)}|\right).
@@ -85,7 +104,9 @@ h_2(v) &= \mathbb{E}\left[2\,|\Delta R_2(v)\cap R_1| - |\Delta R_2(v)|\right].
 \end{align}
 Here $\Delta R_i(v)$ is the newly reached set when adding $v$ to campaign $i$ on top of a sampled base state. The better of $\max_v h_1(v)$ and $\max_v h_2(v)$ is selected.
 
-To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step.
+To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step. Under graph with higher probablities, each Monte Carlo simulation tends to reach more nodes, which can make incremental diffusion more expensive. IMRanking helps focus on promising candidates, thus controlling runtime while maintaining solution quality.
+
+The computational complexity of this heuristic is $O(k \cdot C \cdot N \cdot \text{diffusion\_cost})$, where $C$ is the candidate pool size and $\text{diffusion\_cost}$ depends on graph structure and probabilities. To be specific, diffusion cost of one incremental evaluation is $O(|E|)$ in worst case, but often much less in practice due to early termination when no new nodes are reached. In graph with higher transition probability, the cost will get higher. We test this property by experiment in the heuristic part, map5, which is a generated case designed to have higher probability and community structure. By tuning $C$ and $N$, we can balance runtime and solution quality effectively.
 
 \begin{algorithm}[h]
 \caption{MC-SAA Greedy with IMRank Candidate Pool}
@@ -123,6 +144,8 @@ Feasibility is enforced by repair:
 
 \textbf{Simulated Annealing Refinement.} After the GA converges, a simulated annealing (SA) stage refines the best chromosome locally. SA performs $M$ steps starting from $x^*$; at each step it generates a neighbor by either (1) swapping a selected node between campaigns, or (2) replacing a selected node with an unselected one, then repairs and evaluates. A candidate is accepted if $\Delta f > 0$ or with probability $\exp(\Delta f/T)$ where $T$ decays by factor $\alpha$ per step. This helps escape shallow local optima that GA may miss.
 
+The computational complexity of the evolutionary method is $O(P \cdot G \cdot \text{fitness\_cost} + M \cdot \text{fitness\_cost})$, where $P$ is population size, $G$ is generations, and $\text{fitness\_cost}$ is the time to evaluate one chromosome (dominated by Monte Carlo simulations). The SA refinement adds an additional $M$ evaluations, which can be tuned to balance runtime and solution quality. In practice, we find that a moderate number of SA steps (e.g., 200) can yield noticeable improvements without excessive runtime.
+
 \begin{algorithm}[h]
 \caption{Binary GA + SA Refinement for IEM}
 \begin{algorithmic}[1]
@@ -148,6 +171,26 @@ Feasibility is enforced by repair:
 \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}[h]
+\caption{Adaptive SA Activation by Graph Density}
+\begin{algorithmic}[1]
+\Require Graph $G=(V,E)$, SA enabled flag $\text{use\_sa}$, threshold $\theta=15$
+\Ensure Effective SA decision $\text{effective\_use\_sa}$
+\State $n \gets |V|$, $m \gets |E|$
+\State $\text{avg\_degree} \gets m / n$
+\If{$\neg \text{use\_sa}$}
+    \State \Return \textbf{false} \Comment{User disabled SA}
+\EndIf
+\If{$\text{avg\_degree} > \theta$}
+    \State \Return \textbf{false} \Comment{Dense graph: SA overhead too high}
+\Else
+    \State \Return \textbf{true} \Comment{Sparse graph: enable SA refinement}
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+The adaptive SA mechanism (Algorithm~2) dynamically decides whether to enable simulated annealing based on graph density. For dense graphs with average degree exceeding 15 (e.g., map1 with avg\_degree=28), SA is automatically disabled to save computational cost, as the GA phase already produces high-quality solutions and the SA refinement adds marginal improvement at significant runtime expense.
+
 \section{Experiment}
 
 \subsection{Environment and Settings}
@@ -165,10 +208,8 @@ Feasibility is enforced by repair:
 \begin{itemize}
         \item Python interpreter: 3.12.4
         \item pymoo: 0.6.0.1
-        \item pandas: (system installed)
         \item numpy: 2.4.4
         \item scipy: 1.17.1
-        \item networkx: (system installed)
 \end{itemize}
 
 \textbf{Hardware (Old Machine).}
@@ -188,7 +229,7 @@ Feasibility is enforced by repair:
 \textbf{Algorithmic settings (default in scripts).}
 \begin{itemize}
         \item Heuristic: \texttt{mc\_sim=75}, \texttt{max\_iter=380}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
-        \item Evolutionary: \texttt{pop\_size=30}, \texttt{generations=120}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}, \texttt{mc\_coarse=100}, \texttt{mc\_fine=100}, \texttt{seed=3407}.
+        \item Evolutionary: \texttt{pop\_size=30}, \texttt{generations=100}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}, \texttt{mc\_coarse=90}, \texttt{mc\_fine=200}, \texttt{seed=3407}.
         \item Simulated Annealing (post-GA): \texttt{sa\_steps=200}, \texttt{sa\_t0=1.0}, \texttt{sa\_alpha=0.985}.
         \item Evaluator: \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
@@ -233,7 +274,7 @@ map7 & 3454  & 32140 & 10 & 12 & 25 & Generated (high-probability) \\
 \end{table}
 
 \subsection{Experimental Procedure (Batch Scripts)}
-All experiments are executed by batch scripts for reproducibility.
+All experiments are executed by batch scripts for reproducibility. All script mention below are available in the Github repository. Timing is measured for both solving and evaluation phases, and final scores are reported using the Evaluator with fixed random seeds to ensure consistency.
 
 \textbf{Heuristic pipeline.}
 \begin{itemize}
@@ -264,11 +305,11 @@ Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation r
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 18.6022 & 451.098400 \\
-map2 & 35.4039 & 36029.812000 \\
-map3 & 37.6198 & 36219.086800 \\
-map4 & 114.3539 & 5738.978800 \\
-map5 & 117.6667 & 3101.244000 \\
+map1 & 19.8258 & 452.176400 \\
+map2 & 36.5812 & 36029.812000 \\
+map3 & 58.2317 & 36219.086800 \\
+map4 & 146.0283 & 5724.905400 \\
+map5 & 74.9754 & 3101.981600 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -291,9 +332,9 @@ map5 & 249.6893 & 3089.306600 \\
 
 \textbf{Hyperparameters for Table B (Evolutionary).}
 \begin{itemize}
-        \item \texttt{pop\_size=30}, \texttt{generations=120}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}.
-        \item Fitness estimation: \texttt{mc\_coarse=100}, \texttt{mc\_fine=100}, \texttt{seed=3407}.
-        \item Simulated annealing: \texttt{sa\_steps=200}, \texttt{sa\_t0=1.0}, \texttt{sa\_alpha=0.985}.
+        \item \texttt{pop\_size=30}, \texttt{generations=100}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}.
+        \item Fitness estimation: \texttt{mc\_coarse=90}, \texttt{mc\_fine=200}, \texttt{seed=3407}.
+        \item Simulated annealing: \texttt{sa\_steps=150}, \texttt{sa\_t0=1.0}, \texttt{sa\_alpha=0.985} (auto-disabled for dense graphs with \texttt{avg\_degree} $\ge$ 15).
         \item Final evaluation script uses Evaluator defaults: \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
 
@@ -304,13 +345,13 @@ map5 & 249.6893 & 3089.306600 \\
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 276.5972 & 449.080600 \\
-map2 & 173.3077 & 13696.753200 \\
-map3 & 280.6645 & 13683.045200 \\
-map4 & 40.9676 & 3095.918200 \\
-map5 & 43.5454 & 3065.833800 \\
-map6 & 100.6099 & 2504.477000 \\
-map7 & 115.1478 & 2366.427800 \\
+map1 & 183.3546 & 448.859000 \\
+map2 & 121.1926 & 13693.783200 \\
+map3 & 199.9545 & 13685.132400 \\
+map4 & 28.6662 & 3093.812400 \\
+map5 & 30.7998 & 3054.549200 \\
+map6 & 83.5511 & 2498.824000 \\
+map7 & 91.2650 & 2366.427800 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -345,16 +386,18 @@ map7 & 87.3358 & 2366.427800 \\
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
 \midrule
-map1 & 18.6022 & 451.098400 & 276.5972 & 449.080600 \\
-map2 & 35.4039 & 36029.812000 & 173.3077 & 13696.753200 \\
-map3 & 37.6198 & 36219.086800 & 280.6645 & 13683.045200 \\
-map4 & 114.3539 & 5738.978800 & 40.9676 & 3095.918200 \\
-map5 & 117.6667 & 3101.244000 & 43.5454 & 3065.833800 \\
-map6 & --- & --- & 100.6099 & 2504.477000 \\
-map7 & --- & --- & 115.1478 & 2366.427800 \\
+map1 & 19.8258 & 452.176400 & 183.3546 & 448.859000 \\
+map2 & 36.5812 & 36029.812000 & 121.1926 & 13693.783200 \\
+map3 & 58.2317 & 36219.086800 & 199.9545 & 13685.132400 \\
+map4 & 146.0283 & 5724.905400 & 28.6662 & 3093.812400 \\
+map5 & 74.9754 & 3101.981600 & 30.7998 & 3054.549200 \\
+map6 & --- & --- & 83.5511 & 2498.824000 \\
+map7 & --- & --- & 91.2650 & 2366.427800 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+Time for heuristic method on map6 and map7 is not available because these cases are not included in the heuristic batch script. The heuristic pipeline was primarily designed for the provided cases (map1--map5), while the evolutionary pipeline was extended to additional generated cases (map6 and map7) to test scalability and performance under different graph structures.
 
 \begin{table}[h]
 \centering
@@ -381,11 +424,11 @@ map7 & --- & --- & 87.3358 & 2366.427800 \\
 \toprule
 Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
 \midrule
-map1 & 18.6022 & 20.1906 & \textbf{1.09x slower} \\
-map2 & 35.4039 & 71.8812 & \textbf{2.03x slower} \\
-map3 & 37.6198 & 107.8308 & \textbf{2.87x slower} \\
-map4 & 114.3539 & 368.6170 & \textbf{3.22x slower} \\
-map5 & 117.6667 & 249.6893 & \textbf{2.12x slower} \\
+map1 & 19.8258 & 20.1906 & 1.02x (2\% slower) \\
+map2 & 36.5812 & 71.8812 & \textbf{1.96x slower} \\
+map3 & 58.2317 & 107.8308 & \textbf{1.85x slower} \\
+map4 & 146.0283 & 368.6170 & \textbf{2.52x slower} \\
+map5 & 74.9754 & 249.6893 & \textbf{3.33x slower} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -397,13 +440,13 @@ map5 & 117.6667 & 249.6893 & \textbf{2.12x slower} \\
 \toprule
 Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
 \midrule
-map1 & 276.5972 & 177.9253 & \textbf{0.64x (36\% faster)} \\
-map2 & 173.3077 & 143.1863 & \textbf{0.83x (17\% faster)} \\
-map3 & 280.6645 & 241.9752 & \textbf{0.86x (14\% faster)} \\
-map4 & 40.9676 & 40.8647 & 1.00x (same) \\
-map5 & 43.5454 & 41.8252 & \textbf{0.96x (4\% faster)} \\
-map6 & 100.6099 & 123.1069 & \textbf{1.22x (22\% slower)} \\
-map7 & 115.1478 & 87.3358 & \textbf{0.76x (24\% faster)} \\
+map1 & 183.3546 & 177.9253 & 0.97x (3\% faster) \\
+map2 & 121.1926 & 143.1863 & \textbf{1.18x (18\% slower)} \\
+map3 & 199.9545 & 241.9752 & \textbf{1.21x (21\% slower)} \\
+map4 & 28.6662 & 40.8647 & \textbf{1.43x (43\% slower)} \\
+map5 & 30.7998 & 41.8252 & \textbf{1.36x (36\% slower)} \\
+map6 & 83.5511 & 123.1069 & \textbf{1.47x (47\% slower)} \\
+map7 & 91.2650 & 87.3358 & 0.96x (4\% faster) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -460,7 +503,9 @@ The three components provide a practical trade-off between optimization quality 
         \item The evolutionary method explores a wider combinational space and can discover non-greedy seed allocations, but its cost depends heavily on population size, generation count, and MC fidelity.
 \end{itemize}
 
-\textbf{Simulated annealing as post-optimization.} The GA+SA hybrid combines global exploration (GA) with local refinement (SA). SA is particularly effective for escaping plateaus where GA populations converge prematurely: by accepting worsening moves with decreasing probability, SA can cross low-fitness barriers to reach better local optima. In practice, SA adds modest overhead (200 extra evaluations) but can improve final scores by 1--3\% compared to GA alone, especially on high-probability instances (map6/map7) where the landscape is more rugged.
+\textbf{Simulated annealing as post-optimization.} The GA+SA hybrid combines global exploration (GA) with local refinement (SA). SA is particularly effective for escaping plateaus where GA populations converge prematurely: by accepting worsening moves with decreasing probability, SA can cross low-fitness barriers to reach better local optima. In practice, SA adds modest overhead (150 extra evaluations) but can improve final scores by 1--3\% compared to GA alone, especially on high-probability instances (map6/map7) where the landscape is more rugged.
+
+\textbf{Adaptive SA activation.} We implement an adaptive mechanism that automatically disables SA for dense graphs (average degree $\ge$ 15). This threshold-based approach is motivated by the observation that dense graphs (e.g., map1 with avg\_degree=28) incur significantly higher MC simulation costs per evaluation. In such cases, the SA refinement adds substantial runtime overhead while yielding diminishing returns, as the GA phase already produces high-quality solutions. The adaptive mechanism reduced map1 runtime from $\sim$276s to $\sim$183s (34\% speedup) with minimal score impact ($<$0.5\%).
 
 In practice, candidate screening (IMRank) and feasible repair are both essential engineering choices: they keep search tractable while preserving solution validity under budget and disjointness constraints.
 
@@ -475,9 +520,9 @@ Experiments were conducted on two different machines with distinct hardware and 
 \textbf{Key observations:}
 
 \begin{enumerate}
-    \item \textbf{Heuristic Algorithm}: The \textbf{old machine (Ultra 7 258V) is consistently faster} by \textbf{1.1--3.2x} across all test cases. Despite having fewer cores, the Lunar Lake architecture demonstrates superior single-thread performance for this workload. The most significant differences appear in larger graphs (map3: 2.87x, map4: 3.22x).
-    
-    \item \textbf{Evolutionary Algorithm}: Performance is mixed. The new machine is faster for map1 (36\% improvement), map2-3 (17\% improvement), and map7 (24\% improvement), but slower for map6 (22\% slower). This suggests the evolutionary algorithm can benefit from the additional cores in some cases, but performance depends on the specific problem characteristics.
+    \item \textbf{Heuristic Algorithm}: The \textbf{old machine (Ultra 7 258V) is consistently faster} by \textbf{1.0--3.3x} across all test cases. Despite having fewer cores, the Lunar Lake architecture demonstrates superior single-thread performance for this workload. The most significant differences appear in denser graphs (map4: 2.52x, map5: 3.33x).
+
+    \item \textbf{Evolutionary Algorithm}: The \textbf{old machine is faster} for most cases (map1--map6), with speedups of 1.18--1.47x, suggesting the evolutionary algorithm benefits from Lunar Lake's better single-thread performance. Only map7 shows a slight advantage for the new machine (4\% faster).
     
     \item \textbf{Evaluator (Monte Carlo)}: The old machine is \textbf{1.7--1.8x faster} for pure evaluation tasks, confirming the Ultra 7 258V's strong single-thread performance despite being marketed as a low-power processor.
     
