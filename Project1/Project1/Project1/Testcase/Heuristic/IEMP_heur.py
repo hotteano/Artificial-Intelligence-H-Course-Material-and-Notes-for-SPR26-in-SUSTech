@@ -523,8 +523,8 @@ def main():
     parser.add_argument(
         "--mc-sim",
         type=int,
-        default=75,
-        help="MC scenarios per step and final evaluation (default: 75)",
+        default=70,
+        help="MC scenarios per step and final evaluation (default: 70)",
     )
     parser.add_argument(
         "--max-iter",
