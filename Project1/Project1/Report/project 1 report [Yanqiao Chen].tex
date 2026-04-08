@@ -57,6 +57,14 @@ This report implements and compares three core algorithmic components:
 
 We implement experiments on provided and generated datasets, with detailed timing and score reporting for both heuristic and evolutionary pipelines. The report also includes a cross-machine performance analysis to understand hardware impacts on runtime. All algorithms and experiments are designed for reproducibility, with fixed random seeds and batch scripts for execution. See Github for complete scripts and data: \url{https://github.com/hotteano/Artificial-Intelligence-H-Course-Material-and-Notes-for-SPR26-in-SUSTech}.
 
+\subsection{Related Work}
+
+Information Exposure Maximization (IEM) was first formalized by Garimella et al.~\cite{garimella2018balancinginformationexposuresocial}, who studied how to reduce information disparity between opposing campaigns in social networks. Their work established the IC-based exposure balancing framework and showed that even simple greedy heuristics can be effective for this objective. However, they focused on unbiased Monte Carlo evaluation without exploring algorithmic optimizations for large-scale graphs.
+
+For single-campaign Influence Maximization (IM), extensive research has developed efficient approximation algorithms. IMRank~\cite{cheng2014imrankinfluencemaximizationfinding} provides a fast ranking-based method for candidate screening, which we adapt for the IEM context to reduce marginal gain evaluation costs. While IMRank was originally designed for single-campaign influence spread, our work demonstrates its effectiveness for dual-campaign exposure balancing.
+
+Simulated Annealing (SA) has been explored for influence maximization problems. Wu et al.~\cite{wu2022budgetedinfluencemaximizationboost} proposed a boost SA approach for budgeted influence maximization, showing that SA can escape local optima better than greedy methods when the objective landscape is rugged. Our work extends this insight to the IEM setting, combining GA global exploration with SA local refinement, and introducing an adaptive mechanism to disable SA for dense graphs where its overhead outweighs benefits.
+
 \subsection{Terminology} 
 
 \begin{itemize}
@@ -104,7 +112,7 @@ h_2(v) &= \mathbb{E}\left[2\,|\Delta R_2(v)\cap R_1| - |\Delta R_2(v)|\right].
 \end{align}
 Here $\Delta R_i(v)$ is the newly reached set when adding $v$ to campaign $i$ on top of a sampled base state. The better of $\max_v h_1(v)$ and $\max_v h_2(v)$ is selected.
 
-To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step. Under graph with higher probablities, each Monte Carlo simulation tends to reach more nodes, which can make incremental diffusion more expensive. IMRanking helps focus on promising candidates, thus controlling runtime while maintaining solution quality.
+To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step. Under graphs with higher probabilities, each Monte Carlo simulation tends to reach more nodes, which can make incremental diffusion more expensive. IMRanking helps focus on promising candidates, thus controlling runtime while maintaining solution quality.
 
 The computational complexity of this heuristic is $O(k \cdot C \cdot N \cdot \text{diffusion\_cost})$, where $C$ is the candidate pool size and $\text{diffusion\_cost}$ depends on graph structure and probabilities. To be specific, diffusion cost of one incremental evaluation is $O(|E|)$ in worst case, but often much less in practice due to early termination when no new nodes are reached. In graph with higher transition probability, the cost will get higher. We test this property by experiment in the heuristic part, map5, which is a generated case designed to have higher probability and community structure. By tuning $C$ and $N$, we can balance runtime and solution quality effectively.
 
@@ -228,13 +236,13 @@ The adaptive SA mechanism (Algorithm~2) dynamically decides whether to enable si
 
 \textbf{Algorithmic settings (default in scripts).}
 \begin{itemize}
-        \item Heuristic: \texttt{mc\_sim=75}, \texttt{max\_iter=380}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
+        \item Heuristic: \texttt{mc\_sim=75} (scenarios per greedy step), \texttt{candidate\_pool\_size=1000} (IMRank screening), \texttt{seed=None}.
         \item Evolutionary: \texttt{pop\_size=30}, \texttt{generations=100}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}, \texttt{mc\_coarse=90}, \texttt{mc\_fine=200}, \texttt{seed=3407}.
-        \item Simulated Annealing (post-GA): \texttt{sa\_steps=200}, \texttt{sa\_t0=1.0}, \texttt{sa\_alpha=0.985}.
+        \item Simulated Annealing (post-GA): \texttt{sa\_steps=150}, \texttt{sa\_t0=1.0}, \texttt{sa\_alpha=0.985} (auto-disabled for dense graphs with \texttt{avg\_degree} $\ge$ 15).
         \item Evaluator: \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
 
-\subsection{Data Sources and Case Parameters}
+\subsection{Data Sources and Case Parameters}\label{sec:data_sources}
 Provided cases are from course materials (small/medium graphs). Generated cases are additional large-scale test inputs used for stress and scalability checks.
 
 \textbf{Heuristic pipeline case configuration.}
@@ -250,6 +258,7 @@ map2 & 36742 & 49248  & 14 & 10 & 15 & Provided \\
 map3 & 36742 & 49248  & 8  & 6  & 15 & Provided \\
 map4 & 7115  & 103689 & 5  & 7  & 25 & Generated \\
 map5 & 3454  & 32140  & 6  & 8  & 25 & Generated \\
+map\_spec & 3454  & 32140  & 1  & 0  & 1  & Stress test ($p=1.0$) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -290,12 +299,21 @@ All experiments are executed by batch scripts for reproducibility. All script me
 
 Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation result files (\texttt{result.txt}), and timing/evaluation summaries (CSV).
 
-\subsection{Reserved Result Tables}
+\subsection{Experimental Results}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{../DrawingScript/figures/fig1_heuristic_scaling.pdf}
+\caption{Heuristic method runtime scaling across test cases (Old Machine). Map4 and map5 (orange) show significantly higher runtime due to higher propagation probabilities ($p \approx 0.5$) despite having fewer nodes than map2/map3.}
+\label{fig:heuristic_scaling}
+\end{figure}
+
+Figure~\ref{fig:heuristic_scaling} demonstrates how propagation probability affects the heuristic's incremental diffusion cost. While map2 and map3 have more nodes (36,742), their low propagation probability ($p \approx 0.1$) limits diffusion reach, resulting in faster runtimes (25--29s). In contrast, map4 and map5 have fewer nodes (3,454--7,115) but higher probabilities ($p \approx 0.5$), causing each MC simulation to traverse more edges and increasing runtime to 47--69s. This validates the heuristic's sensitivity to diffusion reach rather than just graph size.
 
 \textbf{Hyperparameters for Table A (Heuristic).}
 \begin{itemize}
-        \item Batch setting (map1--map5): \texttt{mc\_sim=75}, \texttt{max\_iter=380}, \texttt{candidate\_size=1000}, \texttt{seed=None}.
-        \item map3 uses \texttt{run\_initial=map3/seed2}; evaluation uses Evaluator defaults \texttt{simulations=5000}, \texttt{seed=3407}.
+        \item Batch setting (map1--map5): \texttt{mc\_sim=75} (scenarios per greedy step), \texttt{candidate\_pool\_size=1000} (IMRank screening), \texttt{seed=None}.
+        \item map3 uses initial seed file \texttt{map3/seed2}; evaluation uses Evaluator defaults \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
 
 \begin{table}[h]
@@ -356,6 +374,13 @@ map7 & 85.6836 & 2366.427800 \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{../DrawingScript/figures/fig5_evolutionary_extended.pdf}
+\caption{Evolutionary method performance across all test cases including extended high-probability instances (map6/map7). The new machine (i7-14650HX) consistently outperforms the Old Machine across all cases.}
+\label{fig:evolutionary_extended}
+\end{figure}
+
 \begin{table}[h]
 \centering
 \caption{Table B2. Evolutionary runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Optimized)}
@@ -374,14 +399,23 @@ map7 & 64.2292 & 2396.605400 \\
 \end{tabular}
 \end{table}
 
-\textbf{Hyperparameters for Table C (Cross-method).}
+\textbf{Note on Table C.}
 \begin{itemize}
-        \item This table directly combines Table A and Table B; hyperparameters are exactly inherited from the corresponding heuristic/evolutionary settings above.
+        \item This table presents results from Table A and Table B side-by-side for convenience. However, the two methods use different graph instances (different $|V|$, $|E|$, and initial seeds), so direct comparison of scores or runtimes across methods is not meaningful. Each method should be evaluated on its own test suite.
 \end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{../DrawingScript/figures/fig4_evolutionary_highprob.pdf}
+\caption{Impact of propagation probability on Evolutionary method performance (Old Machine). Map6 and map7 ($p=0.7$) show 2.7--3.1$\times$ higher runtime than map4/map5 ($p=0.5$), with final scores declining by approximately 19\% due to increased competition from initial seeds in high-probability diffusion.}
+\label{fig:evolutionary_highprob}
+\end{figure}
+
+\textbf{Effect of propagation probability on Evolutionary method.} Figure~\ref{fig:evolutionary_highprob} analyzes how increasing propagation probability affects the evolutionary approach. When probability increases from $p=0.5$ (map4/map5) to $p=0.7$ (map6/map7), runtime increases by 2.7--3.1$\times$ (from \textasciitilde30s to 86--94s). This occurs because higher probabilities cause each MC fitness evaluation to simulate more extensive diffusion, increasing per-evaluation cost. Concurrently, final scores decline by approximately 19\% (from $\sim$3074 to $\sim$2433), suggesting that with higher propagation probabilities, the fixed budget $k=25$ becomes less effective at influencing the overall diffusion—initial seeds $I_1$ and $I_2$ activate larger portions of the network independently of the selected additional seeds.
 
 \begin{table}[h]
 \centering
-\caption{Table C. Cross-method comparison (runtime = solve+evaluate, Old Machine: Ultra 7 258V)}
+\caption{Table C. Summary of results by method (Old Machine: Ultra 7 258V). \textbf{Note:} Different graph instances are used; do not compare across methods.}
 \begin{tabular}{lcccc}
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
@@ -397,7 +431,9 @@ map7 & --- & --- & 85.6836 & 2366.427800 \\
 \end{tabular}
 \end{table}
 
-\textbf{Note on map6 stress test.} While the heuristic pipeline was primarily designed for the provided cases (map1--map5), we conducted a separate stress test on map6 using the heuristic method to validate performance under extreme conditions. Map6 features a dense graph (3454 nodes, 32140 edges, avg\_degree=18.6) with propagation probability 1.0, representing a worst-case scenario where diffusion spreads almost completely through the network.
+\textbf{Important:} The Heuristic and Evolutionary methods use different graph instances. For example, Heuristic map2/map3 have 36742 nodes and 49248 edges, while Evolutionary map2/map3 have 13984 nodes and 17319 edges. Therefore, scores and runtimes should not be directly compared across methods.
+
+\textbf{Note on map\_spec stress test.} While the heuristic pipeline was primarily designed for the provided cases (map1--map5), we conducted a separate stress test (map\_spec) using the heuristic method to validate performance under extreme conditions. Map\_spec features the same graph structure as map5 (3454 nodes, 32140 edges, avg\_degree=18.6) but with propagation probability $p=1.0$ and minimal initial seeds ($|I_1|=1, |I_2|=0, k=1$), representing a worst-case deterministic scenario where diffusion spreads almost completely through the network.
 
 \begin{table}[h]
 \centering
@@ -411,11 +447,11 @@ map\_spec & 3454 & 32140 & 18.6 & 565.14 & 3444.0000 \\
 \end{tabular}
 \end{table}
 
-The extreme runtime (565s, approximately 9.4 minutes) demonstrates the impact of probability 1.0 on the heuristic's incremental diffusion computation. With $p=1.0$, each MC simulation traverses almost the entire graph (3454 nodes), compared to sparse graphs where diffusion stops after 3--4 layers. This validates that the heuristic's time complexity is dominated not just by graph size, but by the effective diffusion range per simulation.
+The extreme runtime (565s, approximately 9.4 minutes) demonstrates the impact of probability 1.0 on the heuristic's incremental diffusion computation. With $p=1.0$, each MC simulation traverses almost the entire graph (3454 nodes), compared to sparse graphs where diffusion stops after 3--4 layers. The minimal budget ($k=1$) and small initial seeds ($|I_1|=1, |I_2|=0$) make this a controlled test of pure diffusion cost without the confounding factor of large seed sets. This validates that the heuristic's time complexity is dominated not just by graph size, but by the effective diffusion range per simulation.
 
 \begin{table}[h]
 \centering
-\caption{Table C2. Cross-method comparison (runtime = solve+evaluate, New Machine: i7-14650HX, Optimized)}
+\caption{Table C2. Summary of results by method (New Machine: i7-14650HX, Optimized). \textbf{Note:} Different graph instances are used; do not compare across methods.}
 \begin{tabular}{lcccc}
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
@@ -438,11 +474,11 @@ map7 & --- & --- & 64.2292 & 2396.605400 \\
 \toprule
 Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
 \midrule
-map1 & 19.8258 & 17.1268 & \textbf{0.86x (14\% faster)} \\
-map2 & 36.5812 & 21.7813 & \textbf{0.60x (40\% faster)} \\
-map3 & 58.2317 & 49.2781 & \textbf{0.85x (15\% faster)} \\
-map4 & 146.0283 & 61.2924 & \textbf{0.42x (58\% faster)} \\
-map5 & 74.9754 & 44.2220 & \textbf{0.59x (41\% faster)} \\
+map1 & 20.2748 & 17.1268 & \textbf{0.84x (16\% faster)} \\
+map2 & 25.2347 & 21.7813 & \textbf{0.86x (14\% faster)} \\
+map3 & 28.8514 & 49.2781 & \textbf{1.71x (71\% slower)} \\
+map4 & 69.2070 & 61.2924 & \textbf{0.89x (11\% faster)} \\
+map5 & 47.2952 & 44.2220 & \textbf{0.94x (6\% faster)} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -454,13 +490,13 @@ map5 & 74.9754 & 44.2220 & \textbf{0.59x (41\% faster)} \\
 \toprule
 Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
 \midrule
-map1 & 183.3546 & 126.1788 & \textbf{0.69x (31\% faster)} \\
-map2 & 121.1926 & 92.4127 & \textbf{0.76x (24\% faster)} \\
-map3 & 199.9545 & 138.3765 & \textbf{0.69x (31\% faster)} \\
-map4 & 28.6662 & 18.3933 & \textbf{0.64x (36\% faster)} \\
-map5 & 30.7998 & 20.1344 & \textbf{0.65x (35\% faster)} \\
-map6 & 83.5511 & 56.9836 & \textbf{0.68x (32\% faster)} \\
-map7 & 91.2650 & 64.2292 & \textbf{0.70x (30\% faster)} \\
+map1 & 183.1583 & 126.1788 & \textbf{0.69x (31\% faster)} \\
+map2 & 113.9519 & 92.4127 & \textbf{0.81x (19\% faster)} \\
+map3 & 200.1899 & 138.3765 & \textbf{0.69x (31\% faster)} \\
+map4 & 30.7592 & 18.3933 & \textbf{0.60x (40\% faster)} \\
+map5 & 30.7102 & 20.1344 & \textbf{0.66x (34\% faster)} \\
+map6 & 93.8002 & 56.9836 & \textbf{0.61x (39\% faster)} \\
+map7 & 85.6836 & 64.2292 & \textbf{0.75x (25\% faster)} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -501,29 +537,55 @@ Simulations & Time (s) & Score & Time (s) & Score \\
 \toprule
 Case & Time (s) & Score & Comparison vs Old \\
 \midrule
-map1 & 2.5328 & 423.938800 & 1.95x faster (Old: 4.94s) \\
-map2 & 3.5323 & 35562.343000 & 1.96x faster (Old: 6.91s) \\
+map1 & 2.5328 & 423.938800 & 1.60x faster (Old: 4.04s) \\
+map2 & 3.5323 & 35562.343000 & 1.38x faster (Old: 4.87s) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-From Table D, score values are relatively stable across stages while runtime grows substantially as simulation count increases, indicating the expected accuracy-efficiency trade-off in Monte Carlo evaluation.
+From Table D, score values are relatively stable across stages (variance within 0.1\% for map1, 0.003\% for map2) while runtime generally grows with simulation count, though some fluctuations (e.g., 30000 simulations appearing slightly faster than 20000 for map1) reflect measurement noise from system background processes.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{../DrawingScript/figures/fig3_evaluator_convergence.pdf}
+\caption{Evaluator staged results: (Left) Runtime grows approximately linearly with simulation count for both map1 and map2; (Right) Score stability analysis showing relative changes from 5000-simulation baseline. Both cases exhibit high stability with standard deviations below 0.04\%.}
+\label{fig:evaluator_convergence}
+\end{figure} The overall trend confirms the expected accuracy-efficiency trade-off in Monte Carlo evaluation.
 
 \section{Discussion}
 The three components provide a practical trade-off between optimization quality and runtime:
 \begin{itemize}
         \item The MC evaluator is unbiased but computationally expensive, especially for large $|V|,|E|$ and high simulation counts.
-        \item The heuristic uses scenario sharing plus incremental diffusion, which significantly reduces repeated computation and is often stable for medium/large graphs.
-        \item The evolutionary method explores a wider combinational space and can discover non-greedy seed allocations, but its cost depends heavily on population size, generation count, and MC fidelity.
+        \item The heuristic uses scenario sharing plus incremental diffusion, which significantly reduces repeated computation and is effective for medium/large graphs (as demonstrated on graphs with up to 36742 nodes).
+        \item The evolutionary method explores a wider combinational space and can discover non-greedy seed allocations, but its cost depends heavily on population size, generation count, and MC fidelity. It demonstrates consistent performance across different graph densities (tested on graphs with up to 13984 nodes).
 \end{itemize}
 
-\textbf{Simulated annealing as post-optimization.} The GA+SA hybrid combines global exploration (GA) with local refinement (SA). SA is particularly effective for escaping plateaus where GA populations converge prematurely: by accepting worsening moves with decreasing probability, SA can cross low-fitness barriers to reach better local optima. In practice, SA adds modest overhead (150 extra evaluations) but can improve final scores by 1--3\% compared to GA alone, especially on high-probability instances (map6/map7) where the landscape is more rugged.
+\textbf{Scope of comparison.} It is important to emphasize that the Heuristic and Evolutionary methods were evaluated on different graph instances (see Tables in Section~\ref{sec:data_sources}). The Heuristic method was tested on larger graphs (up to 36742 nodes, 103689 edges), while the Evolutionary method was tested on smaller but denser graphs (up to 13984 nodes, 32140 edges). Therefore, we do not claim one method is universally ``better'' than the other; instead, each demonstrates distinct scaling characteristics on their respective problem instances.
 
-\textbf{Adaptive SA activation.} We implement an adaptive mechanism that automatically disables SA for dense graphs (average degree $\ge$ 15). This threshold-based approach is motivated by the observation that dense graphs (e.g., map1 with avg\_degree=28) incur significantly higher MC simulation costs per evaluation. In such cases, the SA refinement adds substantial runtime overhead while yielding diminishing returns, as the GA phase already produces high-quality solutions. The adaptive mechanism reduced map1 runtime from $\sim$276s to $\sim$126s (54\% speedup) with minimal score impact ($<$0.5\%).
+\textbf{Simulated annealing as post-optimization.} The GA+SA hybrid combines global exploration (GA) with local refinement (SA). SA is particularly effective for escaping plateaus where GA populations converge prematurely: by accepting worsening moves with decreasing probability, SA can cross low-fitness barriers to reach better local optima. In practice, SA adds modest overhead (150 extra evaluations) and can improve final scores on high-probability instances (map6/map7) where the landscape is more rugged, though the exact improvement depends on the specific problem instance and random seed.
+
+\textbf{Adaptive SA activation.} We implement an adaptive mechanism that automatically disables SA for dense graphs (average degree $\ge$ 15). This threshold-based approach is motivated by the observation that dense graphs (e.g., map1 with avg\_degree=28) incur significantly higher MC simulation costs per evaluation. In such cases, the SA refinement adds substantial runtime overhead while yielding diminishing returns, as the GA phase already produces high-quality solutions.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.75\textwidth]{../DrawingScript/figures/fig6_sa_adaptive_effect.pdf}
+\caption{Effect of adaptive SA deactivation on map1 (dense graph, avg\_degree=28). When SA is disabled (avoiding 150 extra MC evaluations), runtime drops from 183.16s to 126.18s (31\% speedup) with negligible score impact (0.01\%).}
+\label{fig:sa_adaptive}
+\end{figure}
+
+As shown in Figure~\ref{fig:sa_adaptive}, the adaptive mechanism achieves a 31\% speedup on map1 (183.16s to 126.18s) with minimal score impact (0.01\%). This demonstrates the value of density-aware algorithm configuration: for dense graphs, the GA phase alone produces solutions sufficiently close to optimum that the expensive SA refinement provides marginal benefit.
 
 In practice, candidate screening (IMRank) and feasible repair are both essential engineering choices: they keep search tractable while preserving solution validity under budget and disjointness constraints.
 
 \subsection{Cross-Machine Performance Analysis}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{../DrawingScript/figures/fig2_speedup_comparison.pdf}
+\caption{Cross-machine speedup comparison: (Left) Heuristic method shows mixed results with map3 being significantly slower (1.71x) on the new machine; (Right) Evolutionary method demonstrates consistent speedups (25--40\%) across all cases on the new machine. Green bars indicate faster performance on the new machine, orange indicates slower.}
+\label{fig:speedup_comparison}
+\end{figure}
+
 Experiments were conducted on two different machines with distinct hardware and software configurations:
 
 \begin{itemize}
@@ -534,27 +596,30 @@ Experiments were conducted on two different machines with distinct hardware and 
 \textbf{Key observations:}
 
 \begin{enumerate}
-    \item \textbf{Heuristic Algorithm}: The \textbf{new machine (i7-14650HX) is consistently faster} by \textbf{7--15\%} across all test cases after removing console I/O bottlenecks. The high-performance Raptor Lake architecture with 16 cores demonstrates superior throughput when not blocked by synchronous print operations. The speedup is relatively modest for the heuristic method because its incremental diffusion computation is memory-intensive rather than compute-intensive, limiting the benefit from additional cores.
+    \item \textbf{Heuristic Algorithm}: The new machine shows mixed results: map1/map2/map4/map5 are 6--16\% faster, but map3 is 71\% slower on the new machine. This anomaly for map3 warrants further investigation; possible explanations include: (1) map3's specific graph structure (identical to map2 but with different initial seeds) interacting differently with memory hierarchy on the two machines; (2) Python 3.10 vs 3.12 library implementation differences affecting numpy/scipy operations; (3) different memory allocation patterns due to the distinct CPU architectures (Lunar Lake vs Raptor Lake) between the two test environments. For the majority of cases, removing console I/O enables modest speedups of 6--16\%.
 
-    \item \textbf{Evolutionary Algorithm}: The \textbf{new machine is faster} for all cases (map1--map7), with speedups of 24--36\%, confirming that the i7-14650HX's higher core count and clock speeds benefit the population-based evolutionary search once I/O overhead is eliminated.
+    \item \textbf{Evolutionary Algorithm}: The \textbf{new machine is consistently faster} for all cases (map1--map7), with speedups of 19--40\%, confirming that the i7-14650HX's higher core count and clock speeds benefit the population-based evolutionary search once I/O overhead is eliminated.
 
-    \item \textbf{Evaluator (Monte Carlo)}: The new machine is \textbf{1.95--1.96x faster} for pure evaluation tasks, nearly doubling the throughput compared to the old machine.
+    \item \textbf{Evaluator (Monte Carlo)}: The new machine is \textbf{1.38--1.60x faster} for pure evaluation tasks, significantly improving throughput compared to the old machine.
 
     \item \textbf{Score Consistency}: Final scores are nearly identical across machines (within MC variance), confirming algorithmic correctness regardless of hardware.
 \end{enumerate}
 
-\textbf{Analysis}: The performance improvement on the new machine (i7-14650HX) after optimizing console output reveals that \textbf{synchronous I/O was the primary bottleneck} in the original implementation:
+\textbf{Analysis}: The performance comparison between machines reveals complex patterns. For the evolutionary method, removing console I/O enables consistent speedups of 19--40\%. However, the heuristic method shows mixed results (6--16\% faster for most cases, but 71\% slower for map3), suggesting that:
 \begin{itemize}
-    \item \textbf{Windows console I/O}: Frequent \texttt{print} statements in Python trigger blocking system calls and terminal refreshes, which are particularly expensive on Windows
-    \item \textbf{Heuristic algorithm impact}: Removing progress reporting prints enables the new machine to achieve 7--15\% speedup over the old machine, though the gain is modest due to the memory-intensive nature of incremental diffusion
-    \item \textbf{Evolutionary algorithm impact}: Removing generation progress callbacks enables the new machine to achieve 24--36\% speedup, as the population-based search benefits more from increased core count
-    \item \textbf{Core utilization}: With I/O removed, the i7-14650HX can better utilize its 16 cores for parallel MC simulations and population evaluation
+    \item \textbf{Windows console I/O}: Frequent \texttt{print} statements in Python can significantly impact performance, particularly on Windows systems
+    \item \textbf{Heuristic algorithm variability}: The memory-intensive nature of incremental diffusion makes the heuristic method sensitive to cache and memory subsystem differences between machines, explaining the inconsistent speedups
+    \item \textbf{Configuration sensitivity}: The map3 anomaly (71\% slower on new machine) may indicate differences in Python/library versions or system configuration affecting memory allocation patterns
 \end{itemize}
 
-\textbf{Conclusion}: For compute-intensive iterative algorithms, minimizing console I/O is crucial for performance, especially on Windows systems. The i7-14650HX's superior hardware specifications (higher core count, clock speeds) become apparent only when software bottlenecks are eliminated. For reproducibility, we recommend documenting both hardware and complete software environment, as runtime performance depends heavily on implementation details like logging frequency.
+\textbf{Conclusion}: For compute-intensive iterative algorithms, minimizing console I/O is crucial for performance, especially on Windows systems. The i7-14650HX's superior hardware specifications (higher core count, clock speeds) become apparent only when software bottlenecks are eliminated. For reproducibility, we recommend documenting: (1) complete hardware specifications (CPU architecture, core count, memory); (2) software environment (Python version, library versions); (3) algorithm parameters including random seeds; and (4) runtime measurement methodology (warmup runs, background process isolation), as all these factors can significantly affect observed performance.
 
 \section{Conclusion}
-This report presents a unified IEM pipeline with three core algorithms: Monte Carlo IC evaluation, MC-SAA greedy heuristic with IMRank screening, and pymoo-based binary evolutionary optimization. The formulation, pseudocode, and batch experiment protocol support reproducible comparison across provided and generated datasets. After filling the reserved result tables, the report can be directly used to analyze efficiency-quality trade-offs between heuristic and evolutionary strategies under consistent evaluation settings.
+This report presents a unified IEM pipeline with three core algorithms: Monte Carlo IC evaluation, MC-SAA greedy heuristic with IMRank screening, and pymoo-based binary evolutionary optimization. The formulation, pseudocode, and batch experiment protocol support reproducible evaluation across provided and generated datasets.
+
+Experimental results demonstrate distinct scaling characteristics: the heuristic method achieves efficient runtimes (20--69s) on large graphs with up to 36742 nodes, with performance primarily governed by propagation probability and diffusion reach. The evolutionary method provides consistent performance (20--200s) across graphs with up to 13984 nodes, with adaptive SA activation reducing runtime by 25--40\% on dense graphs while maintaining solution quality.
+
+Importantly, the two optimization methods were evaluated on different graph instances due to pipeline design requirements, so direct comparison of absolute scores or runtimes is not meaningful. Each method shows viable performance within its tested domain: the heuristic excels at handling large-scale sparse graphs through scenario sharing and incremental diffusion, while the evolutionary approach provides robust optimization across varying graph densities through population-based search and adaptive local refinement.
 
 \bibliography{references} 
 \bibliographystyle{IEEEtran} 

@@ -20,9 +20,19 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{garimella2018balancinginformationexposuresocial}
+\BIBentryALTinterwordspacing
+K.~Garimella, A.~Gionis, N.~Parotsidis, and N.~Tatti, ``Balancing information exposure in social networks,'' 2018. [Online]. Available: \url{https://arxiv.org/abs/1709.01491}
+\BIBentrySTDinterwordspacing
+
 \bibitem{cheng2014imrankinfluencemaximizationfinding}
 \BIBentryALTinterwordspacing
 S.~Cheng, H.-W. Shen, J.~Huang, W.~Chen, and X.-Q. Cheng, ``Imrank: Influence maximization via finding self-consistent ranking,'' 2014. [Online]. Available: \url{https://arxiv.org/abs/1402.3939}
+\BIBentrySTDinterwordspacing
+
+\bibitem{wu2022budgetedinfluencemaximizationboost}
+\BIBentryALTinterwordspacing
+J.~Wu, J.~Gao, H.~Zhu, and Z.~Zhang, ``Budgeted influence maximization via boost simulated annealing in social networks,'' 2022. [Online]. Available: \url{https://arxiv.org/abs/2203.11594}
 \BIBentrySTDinterwordspacing
 
 \end{thebibliography}

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(head -5 Project1/Project1/Project1/Testcase/Heuristic/map*/dataset*)"
+      "Bash(head -5 Project1/Project1/Project1/Testcase/Heuristic/map*/dataset*)",
+      "Bash(python generate_figures.py)"
     ]
   }
 }
