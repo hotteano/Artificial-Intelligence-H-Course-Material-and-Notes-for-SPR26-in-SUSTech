@@ -305,11 +305,11 @@ Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation r
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 19.8258 & 452.176400 \\
-map2 & 36.5812 & 36029.812000 \\
-map3 & 58.2317 & 36219.086800 \\
-map4 & 146.0283 & 5724.905400 \\
-map5 & 74.9754 & 3101.981600 \\
+map1 & 20.2748 & 452.518800 \\
+map2 & 25.2347 & 36026.377600 \\
+map3 & 28.8514 & 36219.086800 \\
+map4 & 69.2070 & 5625.145400 \\
+map5 & 47.2952 & 3093.375200 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -345,13 +345,13 @@ map5 & 44.2220 & 3091.349200 \\
 \toprule
 Case & Runtime (s) & Final Score \\
 \midrule
-map1 & 183.3546 & 448.859000 \\
-map2 & 121.1926 & 13693.783200 \\
-map3 & 199.9545 & 13685.132400 \\
-map4 & 28.6662 & 3093.812400 \\
-map5 & 30.7998 & 3054.549200 \\
-map6 & 83.5511 & 2498.824000 \\
-map7 & 91.2650 & 2366.427800 \\
+map1 & 183.1583 & 448.859000 \\
+map2 & 113.9519 & 13693.783200 \\
+map3 & 200.1899 & 13685.132400 \\
+map4 & 30.7592 & 3093.812400 \\
+map5 & 30.7102 & 3054.549200 \\
+map6 & 93.8002 & 2498.824000 \\
+map7 & 85.6836 & 2366.427800 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -386,13 +386,13 @@ map7 & 64.2292 & 2396.605400 \\
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
 \midrule
-map1 & 19.8258 & 452.176400 & 183.3546 & 448.859000 \\
-map2 & 36.5812 & 36029.812000 & 121.1926 & 13693.783200 \\
-map3 & 58.2317 & 36219.086800 & 199.9545 & 13685.132400 \\
-map4 & 146.0283 & 5724.905400 & 28.6662 & 3093.812400 \\
-map5 & 74.9754 & 3101.981600 & 30.7998 & 3054.549200 \\
-map6 & 1142.26 & 3444.0000 & 83.5511 & 2498.824000 \\
-map7 & --- & --- & 91.2650 & 2366.427800 \\
+map1 & 20.2748 & 452.518800 & 183.1583 & 448.859000 \\
+map2 & 25.2347 & 36026.377600 & 113.9519 & 13693.783200 \\
+map3 & 28.8514 & 36219.086800 & 200.1899 & 13685.132400 \\
+map4 & 69.2070 & 5625.145400 & 30.7592 & 3093.812400 \\
+map5 & 47.2952 & 3093.375200 & 30.7102 & 3054.549200 \\
+map6 & --- & --- & 93.8002 & 2498.824000 \\
+map7 & --- & --- & 85.6836 & 2366.427800 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -406,12 +406,12 @@ map7 & --- & --- & 91.2650 & 2366.427800 \\
 \toprule
 Case & Nodes & Edges & Avg. Degree & Runtime (s) & Score \\
 \midrule
-map\_spec & 3454 & 32140 & 18.6 & 1142.26 & 3444.0000 \\
+map\_spec & 3454 & 32140 & 18.6 & 565.14 & 3444.0000 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The extreme runtime (1142s, approximately 19 minutes) demonstrates the impact of probability 1.0 on the heuristic's incremental diffusion computation. With $p=1.0$, each MC simulation traverses almost the entire graph (3454 nodes), compared to sparse graphs where diffusion stops after 3--4 layers. This validates that the heuristic's time complexity is dominated not just by graph size, but by the effective diffusion range per simulation.
+The extreme runtime (565s, approximately 9.4 minutes) demonstrates the impact of probability 1.0 on the heuristic's incremental diffusion computation. With $p=1.0$, each MC simulation traverses almost the entire graph (3454 nodes), compared to sparse graphs where diffusion stops after 3--4 layers. This validates that the heuristic's time complexity is dominated not just by graph size, but by the effective diffusion range per simulation.
 
 \begin{table}[h]
 \centering
@@ -483,7 +483,7 @@ map7 & 91.2650 & 64.2292 & \textbf{0.70x (30\% faster)} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
 Simulations & Time (s) & Score & Time (s) & Score \\
 \midrule
-5000  & 4.9360  & 423.6844 & 6.9130  & 35560.8416 \\
+5000  & 4.0394  & 423.9388 & 4.8658  & 35562.3430 \\
 10000 & 8.1301  & 423.6748 & 12.0964 & 35561.4352 \\
 20000 & 16.7364 & 423.5561 & 23.7645 & 35561.2809 \\
 30000 & 16.9350 & 423.5149 & 22.8284 & 35560.4609 \\
@@ -534,7 +534,7 @@ Experiments were conducted on two different machines with distinct hardware and 
 \textbf{Key observations:}
 
 \begin{enumerate}
-    \item \textbf{Heuristic Algorithm}: The \textbf{new machine (i7-14650HX) is consistently faster} by \textbf{14--58\%} across all test cases after removing console I/O bottlenecks. The high-performance Raptor Lake architecture with 16 cores demonstrates superior throughput when not blocked by synchronous print operations. The most significant speedup appears in denser graphs (map4: 58\% faster, map5: 41\% faster).
+    \item \textbf{Heuristic Algorithm}: The \textbf{new machine (i7-14650HX) is consistently faster} by \textbf{7--15\%} across all test cases after removing console I/O bottlenecks. The high-performance Raptor Lake architecture with 16 cores demonstrates superior throughput when not blocked by synchronous print operations. The speedup is relatively modest for the heuristic method because its incremental diffusion computation is memory-intensive rather than compute-intensive, limiting the benefit from additional cores.
 
     \item \textbf{Evolutionary Algorithm}: The \textbf{new machine is faster} for all cases (map1--map7), with speedups of 24--36\%, confirming that the i7-14650HX's higher core count and clock speeds benefit the population-based evolutionary search once I/O overhead is eliminated.
 
@@ -543,11 +543,11 @@ Experiments were conducted on two different machines with distinct hardware and 
     \item \textbf{Score Consistency}: Final scores are nearly identical across machines (within MC variance), confirming algorithmic correctness regardless of hardware.
 \end{enumerate}
 
-\textbf{Analysis}: The dramatic performance improvement on the new machine (i7-14650HX) after optimizing console output reveals that \textbf{synchronous I/O was the primary bottleneck} in the original implementation:
+\textbf{Analysis}: The performance improvement on the new machine (i7-14650HX) after optimizing console output reveals that \textbf{synchronous I/O was the primary bottleneck} in the original implementation:
 \begin{itemize}
     \item \textbf{Windows console I/O}: Frequent \texttt{print} statements in Python trigger blocking system calls and terminal refreshes, which are particularly expensive on Windows
-    \item \textbf{Heuristic algorithm impact}: The original heuristic showed 2--3x slowdown on the new machine due to more intensive progress reporting; removing these prints inverted the comparison to 1.4--2.4x speedup
-    \item \textbf{Evolutionary algorithm impact}: Similarly, removing generation progress callbacks improved new machine performance from 1.2--1.5x slower to 1.3--1.6x faster
+    \item \textbf{Heuristic algorithm impact}: Removing progress reporting prints enables the new machine to achieve 7--15\% speedup over the old machine, though the gain is modest due to the memory-intensive nature of incremental diffusion
+    \item \textbf{Evolutionary algorithm impact}: Removing generation progress callbacks enables the new machine to achieve 24--36\% speedup, as the population-based search benefits more from increased core count
     \item \textbf{Core utilization}: With I/O removed, the i7-14650HX can better utilize its 16 cores for parallel MC simulations and population evaluation
 \end{itemize}
 
