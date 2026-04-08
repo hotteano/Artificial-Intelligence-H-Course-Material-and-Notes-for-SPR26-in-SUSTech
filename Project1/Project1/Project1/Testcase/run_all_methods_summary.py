@@ -62,7 +62,7 @@ def main() -> int:
     root = Path(__file__).resolve().parent
 
     evaluator_script = root / "Evaluator" / "Evaluator.py"
-    heuristic_script = root / "Heuristic" / "IEMP_heur.py"
+    heuristic_script = root / "Heuristic" / "IEMP_Heur.py"
     evolutionary_script = root / "Evolutionary" / "IEMP_Evol.py"
 
     pipelines = [

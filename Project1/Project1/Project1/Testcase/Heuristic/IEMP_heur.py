@@ -555,8 +555,8 @@ def main():
     parser.add_argument(
         "--candidate-size",
         type=int,
-        default=1000,
-        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 1000)",
+        default=800,
+        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 7000)",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
 
