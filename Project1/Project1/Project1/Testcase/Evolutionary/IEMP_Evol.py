@@ -530,8 +530,8 @@ def main():
     parser.add_argument(
         "--mc-fine",
         type=int,
-        default=200,
-        help="MC simulations for final eval (default: 200)",
+        default=100,
+        help="MC simulations for final eval (default: 100)",
     )
     parser.add_argument(
         "--no-sa",

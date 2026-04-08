@@ -391,13 +391,27 @@ map2 & 36.5812 & 36029.812000 & 121.1926 & 13693.783200 \\
 map3 & 58.2317 & 36219.086800 & 199.9545 & 13685.132400 \\
 map4 & 146.0283 & 5724.905400 & 28.6662 & 3093.812400 \\
 map5 & 74.9754 & 3101.981600 & 30.7998 & 3054.549200 \\
-map6 & --- & --- & 83.5511 & 2498.824000 \\
+map6 & 1142.26 & 3444.0000 & 83.5511 & 2498.824000 \\
 map7 & --- & --- & 91.2650 & 2366.427800 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Time for heuristic method on map6 and map7 is not available because these cases are not included in the heuristic batch script. The heuristic pipeline was primarily designed for the provided cases (map1--map5), while the evolutionary pipeline was extended to additional generated cases (map6 and map7) to test scalability and performance under different graph structures.
+\textbf{Note on map6 stress test.} While the heuristic pipeline was primarily designed for the provided cases (map1--map5), we conducted a separate stress test on map6 using the heuristic method to validate performance under extreme conditions. Map6 features a dense graph (3454 nodes, 32140 edges, avg\_degree=18.6) with propagation probability 1.0, representing a worst-case scenario where diffusion spreads almost completely through the network.
+
+\begin{table}[h]
+\centering
+\caption{Table Spec. Heuristic stress test on map6 (special extreme case with $p=1.0$)}
+\begin{tabular}{lcccc}
+\toprule
+Case & Nodes & Edges & Avg. Degree & Runtime (s) & Score \\
+\midrule
+map\_spec & 3454 & 32140 & 18.6 & 1142.26 & 3444.0000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The extreme runtime (1142s, approximately 19 minutes) demonstrates the impact of probability 1.0 on the heuristic's incremental diffusion computation. With $p=1.0$, each MC simulation traverses almost the entire graph (3454 nodes), compared to sparse graphs where diffusion stops after 3--4 layers. This validates that the heuristic's time complexity is dominated not just by graph size, but by the effective diffusion range per simulation.
 
 \begin{table}[h]
 \centering
