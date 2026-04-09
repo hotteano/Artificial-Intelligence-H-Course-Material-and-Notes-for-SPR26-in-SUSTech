@@ -174,6 +174,14 @@ class IEMData:
             self.I1 = set(int(f.readline().strip()) for _ in range(n1))
             self.I2 = set(int(f.readline().strip()) for _ in range(n2))
 
+    def check_high_probability(self, threshold: float = 0.99) -> bool:
+        """Check if all edge probabilities equal or exceed a high threshold."""
+        for u in self.graph:
+            for v, p1, p2 in self.graph[u]:
+                if p1 < threshold or p2 < threshold:
+                    return False
+        return True
+
     def save_solution(self, filepath: str):
         """Save solution to file."""
         with open(filepath, "w") as f:
@@ -204,6 +212,10 @@ class IEMPMCHeuristic:
         self.candidate_pool_size = candidate_pool_size
         self.workers = workers
         self.rng = np.random.default_rng(seed)
+
+        if self.data.check_high_probability(0.95):
+            print("[Warning] High probability graph detected (p>=0.95). Reducing MC simulations to 3.")
+            self.mc_simulations = 3
 
         # Cache adjacency as NumPy arrays for faster repeated simulation.
         self._mc_neighbors: List[np.ndarray] = []

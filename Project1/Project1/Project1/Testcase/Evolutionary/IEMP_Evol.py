@@ -78,6 +78,18 @@ class IEMData:
         ]
         self.node_to_idx = {node: idx for idx, node in enumerate(self.available_nodes)}
 
+    def check_high_probability(self, threshold: float = 0.99) -> bool:
+        """Check if all edge probabilities equal or exceed the given threshold.
+        Returns True if the network is extremely high probability (e.g. p=1.0)."""
+        if self.n_edges == 0:
+            return False
+            
+        for node in range(self.n_nodes):
+            for neighbor, p1, p2 in self.graph.get(node, []):
+                if p1 < threshold or p2 < threshold:
+                    return False
+        return True
+
     def save_solution(self, S1: Set[int], S2: Set[int], filepath: str):
         """Save solution to file."""
         with open(filepath, "w") as f:
@@ -185,6 +197,14 @@ class IEMPEvolutionary:
         self.sa_t0 = sa_t0
         self.sa_alpha = sa_alpha
         self.seed = seed
+
+        # Special logic: if extremely high probability network (e.g. p=1.0),
+        # force mc simulations to exactly 1, since the graph acts deterministically
+        if self.data.check_high_probability(0.95):
+            print("[INFO] High probability network detected (p >= 0.95). Reducing MC simulations to 1.")
+            self.mc_coarse = 3
+            self.mc_fine = 1
+            self.use_sa = False  # SA isn't worth it on a purely deterministic dense graph
 
         self.n_available = len(data.available_nodes)
         self.chromosome_length = 2 * self.n_available

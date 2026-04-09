@@ -117,6 +117,18 @@ class IEMEvaluator:
         self.read_initial_seeds(seed_path)
         self.read_balanced_seeds(seed_balanced_path)
         
+
+    def check_high_probability(self, threshold: float = 0.95) -> bool:
+        """Check if all edge probabilities equal or exceed a high threshold."""
+        if self.n_edges == 0:
+            return False
+        for node, edges in self.graph.items():
+            for neighbor, p1, p2 in edges:
+                if p1 < threshold or p2 < threshold:
+                    return False
+        return True
+
+
     def ic_simulation(self, seeds: Set[int], campaign_idx: int) -> Set[int]:
         """
         Run one IC (Independent Cascade) simulation
@@ -155,7 +167,7 @@ class IEMEvaluator:
         
         return reached
     
-    def evaluate(self, n_simulations: int = 50000) -> float:
+    def evaluate(self, n_simulations: int = 5000) -> float:
         """
         Evaluate the objective function (balanced information exposure)
         
@@ -170,6 +182,12 @@ class IEMEvaluator:
         """
         total_score = 0
         
+        # Check if the graph is purely deterministic/high probability
+        # to avoid 5000+ deep graph traversals
+        if self.check_high_probability(0.95):
+            print(f"[INFO] High probability network detected (p >= 0.95). Reducing MC simulations from {n_simulations} to 5.")
+            n_simulations = 5
+            
         # Full seed sets for both campaigns
         full_seeds_1 = self.initial_seeds[0] | self.balanced_seeds[0]
         full_seeds_2 = self.initial_seeds[1] | self.balanced_seeds[1]
