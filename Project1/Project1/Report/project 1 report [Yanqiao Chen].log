@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.17)  9 APR 2026 17:18
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.17)  9 APR 2026 17:56
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -879,7 +879,7 @@ Overfull \hbox (40.97316pt too wide) in paragraph at lines 365--366
 
 
 [7 <../DrawingScript/figures/fig1_heuristic_scaling.pdf>]
-<../DrawingScript/figures/fig5_evolutionary_extended.pdf, id=188, 570.53024pt x 353.7993pt>
+<../DrawingScript/figures/fig5_evolutionary_extended.pdf, id=189, 570.53024pt x 353.7993pt>
 File: ../DrawingScript/figures/fig5_evolutionary_extended.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig5_evolutionary_extended.pdf>
 Package pdftex.def Info: ../DrawingScript/figures/fig5_evolutionary_extended.pdf  used on input line 391.
@@ -888,7 +888,7 @@ Package pdftex.def Info: ../DrawingScript/figures/fig5_evolutionary_extended.pdf
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<../DrawingScript/figures/fig4_evolutionary_highprob.pdf, id=189, 859.55063pt x 353.7993pt>
+<../DrawingScript/figures/fig4_evolutionary_highprob.pdf, id=190, 859.55063pt x 353.7993pt>
 File: ../DrawingScript/figures/fig4_evolutionary_highprob.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig4_evolutionary_highprob.pdf>
 Package pdftex.def Info: ../DrawingScript/figures/fig4_evolutionary_highprob.pdf  used on input line 421.
@@ -910,7 +910,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 [10]
-<../DrawingScript/figures/fig3_evaluator_convergence.pdf, id=314, 857.50772pt x 353.7993pt>
+<../DrawingScript/figures/fig3_evaluator_convergence.pdf, id=315, 857.50772pt x 353.7993pt>
 File: ../DrawingScript/figures/fig3_evaluator_convergence.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig3_evaluator_convergence.pdf>
 Package pdftex.def Info: ../DrawingScript/figures/fig3_evaluator_convergence.pdf  used on input line 568.
@@ -922,7 +922,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 [11]
-<../DrawingScript/figures/fig6_sa_adaptive_effect.pdf, id=323, 573.33852pt x 354.25497pt>
+<../DrawingScript/figures/fig6_sa_adaptive_effect.pdf, id=324, 573.33852pt x 354.25497pt>
 File: ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf>
 Package pdftex.def Info: ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf  used on input line 589.
@@ -934,7 +934,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 [12 <../DrawingScript/figures/fig3_evaluator_convergence.pdf>]
-<../DrawingScript/figures/fig2_speedup_comparison.pdf, id=384, 860.03119pt x 380.49841pt>
+<../DrawingScript/figures/fig2_speedup_comparison.pdf, id=385, 860.03119pt x 380.49841pt>
 File: ../DrawingScript/figures/fig2_speedup_comparison.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig2_speedup_comparison.pdf>
 Package pdftex.def Info: ../DrawingScript/figures/fig2_speedup_comparison.pdf  used on input line 602.
@@ -999,9 +999,9 @@ Here is how much of TeX's memory you used:
  430 hyphenation exceptions out of 8191
  75i,10n,117p,1053b,560s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txexs.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsym.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb><c:/texlive/2025/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
-Output written on "project 1 report [Yanqiao Chen].pdf" (15 pages, 290223 bytes).
+Output written on "project 1 report [Yanqiao Chen].pdf" (15 pages, 290356 bytes).
 PDF statistics:
- 597 PDF objects out of 1000 (max. 8388607)
+ 598 PDF objects out of 1000 (max. 8388607)
  254 compressed objects within 3 object streams
  68 named destinations out of 1000 (max. 500000)
  167 words of extra memory for PDF output out of 10000 (max. 10000000)

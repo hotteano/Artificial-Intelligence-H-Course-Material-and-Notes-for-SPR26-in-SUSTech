@@ -29,14 +29,14 @@ heuristic_runtime = [20.2748, 25.2347, 28.8514, 69.2070, 47.2952]
 heuristic_score = [452.518800, 36026.377600, 36219.086800, 5625.145400, 3093.375200]
 heuristic_nodes = [475, 36742, 36742, 7115, 3454]
 heuristic_edges = [13289, 49248, 49248, 103689, 32140]
-heuristic_prob = [0.1, 0.1, 0.1, 0.5, 0.5]  # 近似传播概率
+heuristic_prob = [0.01, 0.01, 0.01, 0.05, 0.05]  # 近似传播概率
 
 # Table B - Evolutionary Old Machine
 evolutionary_cases = ['map1', 'map2', 'map3', 'map4', 'map5', 'map6', 'map7']
 evolutionary_runtime = [183.1583, 113.9519, 200.1899, 30.7592, 30.7102, 93.8002, 85.6836]
 evolutionary_score = [448.859000, 13693.783200, 13685.132400, 3093.812400, 3054.549200, 2498.824000, 2366.427800]
 evolutionary_nodes = [475, 13984, 13984, 3454, 3454, 3454, 3454]
-evolutionary_prob = [0.1, 0.1, 0.1, 0.5, 0.5, 0.7, 0.7]  # 近似传播概率
+evolutionary_prob = [0.01, 0.01, 0.01, 0.05, 0.05, 0.7, 0.7]  # 近似传播概率
 
 # Table C3 - 跨机器对比（Heuristic）
 cross_cases_h = ['map1', 'map2', 'map3', 'map4', 'map5']
@@ -62,7 +62,7 @@ def plot_heuristic_scaling():
     fig, ax = plt.subplots(figsize=(8, 5))
 
     x = np.arange(len(heuristic_cases))
-    colors = ['#4472C4' if p <= 0.1 else '#C55A11' for p in heuristic_prob]
+    colors = ['#4472C4' if p < 0.05 else '#C55A11' for p in heuristic_prob]
 
     bars = ax.bar(x, heuristic_runtime, color=colors, edgecolor='black', linewidth=0.5)
 
@@ -89,8 +89,8 @@ def plot_heuristic_scaling():
     # 添加图例
     from matplotlib.patches import Patch
     legend_elements = [
-        Patch(facecolor='#4472C4', edgecolor='black', label='Low probability (p≈0.1)'),
-        Patch(facecolor='#C55A11', edgecolor='black', label='High probability (p≈0.5)')
+        Patch(facecolor='#4472C4', edgecolor='black', label='Low probability (p<0.01)'),
+        Patch(facecolor='#C55A11', edgecolor='black', label='Medium probability (p≈0.05)')
     ]
     ax.legend(handles=legend_elements, loc='upper left')
 
