@@ -19,7 +19,7 @@
 \titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
 \titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
 
-\title{\textbf{Information Exposure Maximization in Social Networks: A Comparative Study of Monte Carlo-Guided Heuristics and Evolutionary Algorithms}}
+\title{\textbf{Information Exposure Maximization in Social Networks: An Empirical Study of Monte Carlo-Guided Heuristics and Evolutionary Algorithms}}
 
 \author{\textbf{Yanqiao Chen}\\
         Department of Computer Science\\
@@ -33,6 +33,9 @@
 
 \maketitle
 
+\begin{abstract}
+Information Exposure Maximization (IEM) aims to balance the spread of competing campaigns and mitigate information disparity in social networks. Driven by the NP-hard nature of the diffusion models, we empirically investigate two distinct approaches relying on Monte Carlo (MC) sampling: an MC-SAA Greedy Heuristic with IMRank candidate screening, and a Binary Evolutionary Algorithm with Simulated Annealing refinement. Rather than performing a strict performance comparison between the two—given their differing scalability constraints and dataset configurations—this study focuses on characterizing their individual behaviors under various graph topologies and propagation probabilities. Furthermore, we conduct a cross-architecture hardware benchmark to reveal how algorithmic bottlenecks respond to modern CPU upgrades. Our findings underscore that computational efficiency is dominated not merely by graph size, but by the effective diffusion range dictated by transmission probabilities.
+\end{abstract}
 
 \section{Introduction}
 Information Exposure Maximization (IEM) studies how to reduce information disparity between two competing campaigns over a directed social network. Given initial seed sets $I_1$ and $I_2$, we select additional seed sets $S_1$ and $S_2$ under a total budget constraint to maximize balanced exposure under Independent Cascade (IC) propagation.
@@ -90,8 +93,11 @@ For each simulation, both campaigns diffuse independently under IC. A node is co
 \hat{\Phi}(S_1,S_2)=\frac{1}{T}\sum_{t=1}^{T}\left(|V|-|R_1^{(t)}\oplus R_2^{(t)}|\right).
 \end{equation}
 
+See \ref{alg:eval} for the detailed algorithm. The computational complexity of this evaluator is $O(T \cdot \text{diffusion\_cost})$, where $\text{diffusion\_cost}$ depends on the graph structure and propagation probabilities. In practice, we find that $T=5000$ provides a good balance between estimation accuracy and runtime for our test cases.
+ 
 \begin{algorithm}[h]
 \caption{Monte Carlo IC Evaluation}
+\label{alg:eval}
 \begin{algorithmic}[1]
 \Require Graph $G$, probabilities $(p_1,p_2)$, initial seeds $(I_1,I_2)$, additional seeds $(S_1,S_2)$, simulations $T$
 \State $\text{sum}\gets 0$
@@ -112,12 +118,13 @@ h_2(v) &= \mathbb{E}\left[2\,|\Delta R_2(v)\cap R_1| - |\Delta R_2(v)|\right].
 \end{align}
 Here $\Delta R_i(v)$ is the newly reached set when adding $v$ to campaign $i$ on top of a sampled base state. The better of $\max_v h_1(v)$ and $\max_v h_2(v)$ is selected.
 
-To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step. Under graphs with higher probabilities, each Monte Carlo simulation tends to reach more nodes, which can make incremental diffusion more expensive. IMRanking helps focus on promising candidates, thus controlling runtime while maintaining solution quality.
+To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step. Under graphs with higher probabilities, each Monte Carlo simulation tends to reach more nodes, which can make incremental diffusion more expensive. IMRanking helps focus on promising candidates, thus controlling runtime while maintaining solution quality. See \ref{alg:heu} for the detailed algorithm.
 
 The computational complexity of this heuristic is $O(k \cdot C \cdot N \cdot \text{diffusion\_cost})$, where $C$ is the candidate pool size and $\text{diffusion\_cost}$ depends on graph structure and probabilities. To be specific, diffusion cost of one incremental evaluation is $O(|E|)$ in worst case, but often much less in practice due to early termination when no new nodes are reached. In graph with higher transition probability, the cost will get higher. We test this property by experiment in the heuristic part, map5, which is a generated case designed to have higher probability and community structure. By tuning $C$ and $N$, we can balance runtime and solution quality effectively.
 
 \begin{algorithm}[h]
 \caption{MC-SAA Greedy with IMRank Candidate Pool}
+\label{alg:heu}
 \begin{algorithmic}[1]
 \Require Budget $k$, scenarios per step $N$, candidate pool size $C$
 \State $S_1\gets\varnothing$, $S_2\gets\varnothing$, $U\gets V\setminus(I_1\cup I_2)$
@@ -150,12 +157,13 @@ Feasibility is enforced by repair:
         \item if below budget, randomly fill free nodes to reach target.
 \end{itemize}
 
-\textbf{Simulated Annealing Refinement.} After the GA converges, a simulated annealing (SA) stage refines the best chromosome locally. SA performs $M$ steps starting from $x^*$; at each step it generates a neighbor by either (1) swapping a selected node between campaigns, or (2) replacing a selected node with an unselected one, then repairs and evaluates. A candidate is accepted if $\Delta f > 0$ or with probability $\exp(\Delta f/T)$ where $T$ decays by factor $\alpha$ per step. This helps escape shallow local optima that GA may miss.
+\textbf{Simulated Annealing Refinement.} After the GA converges, a simulated annealing (SA) stage refines the best chromosome locally. SA performs $M$ steps starting from $x^*$; at each step it generates a neighbor by either (1) swapping a selected node between campaigns, or (2) replacing a selected node with an unselected one, then repairs and evaluates. A candidate is accepted if $\Delta f > 0$ or with probability $\exp(\Delta f/T)$ where $T$ decays by factor $\alpha$ per step. This helps escape shallow local optima that GA may miss. See \ref{alg:evo} for the detailed algorithm.
 
 The computational complexity of the evolutionary method is $O(P \cdot G \cdot \text{fitness\_cost} + M \cdot \text{fitness\_cost})$, where $P$ is population size, $G$ is generations, and $\text{fitness\_cost}$ is the time to evaluate one chromosome (dominated by Monte Carlo simulations). The SA refinement adds an additional $M$ evaluations, which can be tuned to balance runtime and solution quality. In practice, we find that a moderate number of SA steps (e.g., 200) can yield noticeable improvements without excessive runtime.
 
 \begin{algorithm}[h]
 \caption{Binary GA + SA Refinement for IEM}
+\label{alg:evo}
 \begin{algorithmic}[1]
 \Require Population size $P$, generations $G$, budget $k$, SA steps $M$, initial temp $T_0$, decay $\alpha$
 \State Initialize binary population $\mathcal{X}$
@@ -212,7 +220,7 @@ The adaptive SA mechanism (Algorithm~2) dynamically decides whether to enable si
         \item networkx: 2.8.8
 \end{itemize}
 
-\textbf{Interpreter and libraries (New Machine: i7-14650HX).}
+\textbf{Interpreter and libraries (New Machine).}
 \begin{itemize}
         \item Python interpreter: 3.12.4
         \item pymoo: 0.6.0.1
@@ -236,7 +244,7 @@ The adaptive SA mechanism (Algorithm~2) dynamically decides whether to enable si
 
 \textbf{Algorithmic settings (default in scripts).}
 \begin{itemize}
-        \item Heuristic: \texttt{mc\_sim=75} (scenarios per greedy step), \texttt{candidate\_pool\_size=1000} (IMRank screening), \texttt{seed=None}.
+        \item Heuristic: \texttt{mc\_sim=75} (scenarios per greedy step), \texttt{candidate\_pool\_size=1000} (IMRank screening), \texttt{seed=3407}.
         \item Evolutionary: \texttt{pop\_size=30}, \texttt{generations=100}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}, \texttt{mc\_coarse=90}, \texttt{mc\_fine=200}, \texttt{seed=3407}.
         \item Simulated Annealing (post-GA): \texttt{sa\_steps=150}, \texttt{sa\_t0=1.0}, \texttt{sa\_alpha=0.985} (auto-disabled for dense graphs with \texttt{avg\_degree} $\ge$ 15).
         \item Evaluator: \texttt{simulations=5000}, \texttt{seed=3407}.
@@ -249,6 +257,7 @@ Provided cases are from course materials (small/medium graphs). Generated cases 
 \begin{table}[h]
 \centering
 \caption{Heuristic cases used by batch script}
+\label{tab:heur_cases}
 \begin{tabular}{lrrrrrl}
 \toprule
 Case & $|V|$ & $|E|$ & $|I_1|$ & $|I_2|$ & $k$ & Source \\
@@ -267,6 +276,7 @@ map\_spec & 3454  & 32140  & 1  & 0  & 1  & Stress test ($p=1.0$) \\
 \begin{table}[h]
 \centering
 \caption{Evolutionary cases used by batch script}
+\label{tab:evo_cases}
 \begin{tabular}{lrrrrrl}
 \toprule
 Case & $|V|$ & $|E|$ & $|I_1|$ & $|I_2|$ & $k$ & Source \\
@@ -310,7 +320,7 @@ Main outputs include per-case seed files (\texttt{seed\_balanced}), evaluation r
 
 Figure~\ref{fig:heuristic_scaling} demonstrates how propagation probability affects the heuristic's incremental diffusion cost. While map2 and map3 have more nodes (36,742), their low propagation probability ($p \approx 0.1$) limits diffusion reach, resulting in faster runtimes (25--29s). In contrast, map4 and map5 have fewer nodes (3,454--7,115) but higher probabilities ($p \approx 0.5$), causing each MC simulation to traverse more edges and increasing runtime to 47--69s. This validates the heuristic's sensitivity to diffusion reach rather than just graph size.
 
-\textbf{Hyperparameters for Table A (Heuristic).}
+\textbf{Hyperparameters for Table~\ref{tab:heur_old} (Heuristic).}
 \begin{itemize}
         \item Batch setting (map1--map5): \texttt{mc\_sim=75} (scenarios per greedy step), \texttt{candidate\_pool\_size=1000} (IMRank screening), \texttt{seed=None}.
         \item map3 uses initial seed file \texttt{map3/seed2}; evaluation uses Evaluator defaults \texttt{simulations=5000}, \texttt{seed=3407}.
@@ -318,7 +328,8 @@ Figure~\ref{fig:heuristic_scaling} demonstrates how propagation probability affe
 
 \begin{table}[h]
 \centering
-\caption{Table A. Heuristic runtime (solve+evaluate) and final score (Old Machine: Ultra 7 258V)}
+\caption{Heuristic runtime (solve+evaluate) and final score (Old Machine: Ultra 7 258V)}
+\label{tab:heur_old}
 \begin{tabular}{lcc}
 \toprule
 Case & Runtime (s) & Final Score \\
@@ -334,7 +345,8 @@ map5 & 47.2952 & 3093.375200 \\
 
 \begin{table}[h]
 \centering
-\caption{Table A2. Heuristic runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Optimized)}
+\caption{Heuristic runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Optimized)}
+\label{tab:heur_new}
 \begin{tabular}{lcc}
 \toprule
 Case & Runtime (s) & Final Score \\
@@ -348,7 +360,7 @@ map5 & 44.2220 & 3091.349200 \\
 \end{tabular}
 \end{table}
 
-\textbf{Hyperparameters for Table B (Evolutionary).}
+\textbf{Hyperparameters for Table~\ref{tab:evo_old} (Evolutionary).}
 \begin{itemize}
         \item \texttt{pop\_size=30}, \texttt{generations=100}, \texttt{crossover\_rate=0.8}, \texttt{mutation\_rate=0.05}, \texttt{elitism=2}.
         \item Fitness estimation: \texttt{mc\_coarse=90}, \texttt{mc\_fine=200}, \texttt{seed=3407}.
@@ -437,7 +449,8 @@ map7 & --- & --- & 85.6836 & 2366.427800 \\
 
 \begin{table}[h]
 \centering
-\caption{Table Spec. Heuristic stress test on map6 (special extreme case with $p=1.0$)}
+\caption{Heuristic stress test on map\_spec (special extreme case with $p=1.0$)}
+\label{tab:heur_spec}
 \begin{tabular}{lccccc}
 \toprule
 Case & Nodes & Edges & Avg. Degree & Runtime (s) & Score \\
@@ -451,7 +464,8 @@ The extreme runtime (565s, approximately 9.4 minutes) demonstrates the impact of
 
 \begin{table}[h]
 \centering
-\caption{Table C2. Summary of results by method (New Machine: i7-14650HX, Optimized). \textbf{Note:} Different graph instances are used; do not compare across methods.}
+\caption{Summary of results by method (New Machine: i7-14650HX, Optimized). \textbf{Note:} Different graph instances are used; do not compare across methods.}
+\label{tab:summary_new}
 \begin{tabular}{lcccc}
 \toprule
 Case & Heur. Runtime (s) & Heur. Score & Evol. Runtime (s) & Evol. Score \\
@@ -469,7 +483,8 @@ map7 & --- & --- & 64.2292 & 2396.605400 \\
 
 \begin{table}[h]
 \centering
-\caption{Table C3. Machine comparison: Heuristic method (Ratio $<$1 means new machine is faster)}
+\caption{Machine comparison: Heuristic method (Ratio $<$1 means new machine is faster)}
+\label{tab:mach_heur}
 \begin{tabular}{lccc}
 \toprule
 Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
@@ -485,7 +500,8 @@ map5 & 47.2952 & 44.2220 & \textbf{0.94x (6\% faster)} \\
 
 \begin{table}[h]
 \centering
-\caption{Table C4. Machine comparison: Evolutionary method (Ratio $<$1 means new machine is faster)}
+\caption{Machine comparison: Evolutionary method (Ratio $<$1 means new machine is faster)}
+\label{tab:mach_evo}
 \begin{tabular}{lccc}
 \toprule
 Case & Old Machine (s) & New Machine (s) & Ratio (New/Old) \\
@@ -501,7 +517,7 @@ map7 & 85.6836 & 64.2292 & \textbf{0.75x (25\% faster)} \\
 \end{tabular}
 \end{table}
 
-\textbf{Hyperparameters for Table D (Evaluator staged experiment).}
+\textbf{Hyperparameters for Table~\ref{tab:eval_stages} (Evaluator staged experiment).}
 \begin{itemize}
         \item Simulation stages: \texttt{[5000, 10000, 20000, 30000, 40000, 50000, 60000]}.
         \item Cases: \texttt{map1} and \texttt{map2}; threshold in timing script: \texttt{time\_threshold=48s}.
@@ -512,7 +528,8 @@ map7 & 85.6836 & 64.2292 & \textbf{0.75x (25\% faster)} \\
 
 \begin{table}[h]
 \centering
-\caption{Table D. Evaluator detailed results by simulation stage (map1/map2 separated, Old Machine: Ultra 7 258V)}
+\caption{Evaluator detailed results by simulation stage (map1/map2 separated, Old Machine: Ultra 7 258V)}
+\label{tab:eval_stages}
 \begin{tabular}{rcccc}
 \toprule
  & \multicolumn{2}{c}{map1} & \multicolumn{2}{c}{map2} \\
@@ -532,7 +549,8 @@ Simulations & Time (s) & Score & Time (s) & Score \\
 
 \begin{table}[h]
 \centering
-\caption{Table D2. Evaluator results (New Machine: i7-14650HX, 5000 simulations, Optimized)}
+\caption{Evaluator results (New Machine: i7-14650HX, 5000 simulations, Optimized)}
+\label{tab:eval_new}
 \begin{tabular}{lccc}
 \toprule
 Case & Time (s) & Score & Comparison vs Old \\
@@ -543,7 +561,7 @@ map2 & 3.5323 & 35562.343000 & 1.38x faster (Old: 4.87s) \\
 \end{tabular}
 \end{table}
 
-From Table D, score values are relatively stable across stages (variance within 0.1\% for map1, 0.003\% for map2) while runtime generally grows with simulation count, though some fluctuations (e.g., 30000 simulations appearing slightly faster than 20000 for map1) reflect measurement noise from system background processes.
+From Table~\ref{tab:eval_stages}, score values are relatively stable across stages (variance within 0.1\% for map1, 0.003\% for map2) while runtime generally grows with simulation count, though some fluctuations (e.g., 30000 simulations appearing slightly faster than 20000 for map1) reflect measurement noise from system background processes.
 
 \begin{figure}[h]
 \centering

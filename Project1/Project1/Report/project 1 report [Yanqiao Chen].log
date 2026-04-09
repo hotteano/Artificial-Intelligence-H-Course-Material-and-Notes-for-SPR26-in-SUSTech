@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.17)  9 APR 2026 02:29
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.17)  9 APR 2026 17:18
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -748,112 +748,120 @@ LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 35
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 17.0pt on input line 37.
+(Font)              scaled to size 17.0pt on input line 40.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/b/n' will be
-(Font)              scaled to size 17.0pt on input line 37.
-LaTeX Font Info:    Trying to load font information for OT1+minntx on input line 38.
+(Font)              scaled to size 17.0pt on input line 40.
+LaTeX Font Info:    Trying to load font information for OT1+minntx on input line 41.
  (c:/texlive/2025/texmf-dist/tex/latex/newtx/ot1minntx.fd
 File: ot1minntx.fd 2023/09/09 v1.1 font definition file for OT1/minntx
 )
 LaTeX Font Info:    Font shape `OT1/minntx/m/n' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `OT1/minntx/m/n' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `OT1/minntx/m/n' will be
-(Font)              scaled to size 6.6pt on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
 LaTeX Font Info:    Font shape `OML/ntxmi/m/it' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `OML/ntxmi/m/it' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `OML/ntxmi/m/it' will be
-(Font)              scaled to size 6.6pt on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
 LaTeX Font Info:    Font shape `LMS/ntxsy/m/n' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `LMS/ntxsy/m/n' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `LMS/ntxsy/m/n' will be
-(Font)              scaled to size 6.6pt on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
 LaTeX Font Info:    Font shape `LMX/ntxexx/m/n' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `LMX/ntxexx/m/n' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `LMX/ntxexx/m/n' will be
-(Font)              scaled to size 6.6pt on input line 38.
-LaTeX Font Info:    Trying to load font information for U+ntxmia on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
+LaTeX Font Info:    Trying to load font information for U+ntxmia on input line 41.
  (c:/texlive/2025/texmf-dist/tex/latex/newtx/untxmia.fd
 File: untxmia.fd 2024/04/09 Fontinst v1.933 font definitions for U/ntxmia.
 )
 LaTeX Font Info:    Font shape `U/ntxmia/m/it' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxmia/m/it' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxmia/m/it' will be
-(Font)              scaled to size 6.6pt on input line 38.
-LaTeX Font Info:    Trying to load font information for U+ntxsym on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
+LaTeX Font Info:    Trying to load font information for U+ntxsym on input line 41.
  (c:/texlive/2025/texmf-dist/tex/latex/newtx/untxsym.fd
 File: untxsym.fd 2023/08/16 Fontinst v1.933 font definitions for U/ntxsym.
 )
 LaTeX Font Info:    Font shape `U/ntxsym/m/n' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxsym/m/n' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxsym/m/n' will be
-(Font)              scaled to size 6.6pt on input line 38.
-LaTeX Font Info:    Trying to load font information for U+ntxsyc on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
+LaTeX Font Info:    Trying to load font information for U+ntxsyc on input line 41.
  (c:/texlive/2025/texmf-dist/tex/latex/newtx/untxsyc.fd
 File: untxsyc.fd 2012/04/12 Fontinst v1.933 font definitions for U/ntxsyc.
 )
 LaTeX Font Info:    Font shape `U/ntxsyc/m/n' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxsyc/m/n' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxsyc/m/n' will be
-(Font)              scaled to size 6.6pt on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxexa/m/n' will be
-(Font)              scaled to size 12.0pt on input line 38.
+(Font)              scaled to size 12.0pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxexa/m/n' will be
-(Font)              scaled to size 8.8pt on input line 38.
+(Font)              scaled to size 8.8pt on input line 41.
 LaTeX Font Info:    Font shape `U/ntxexa/m/n' will be
-(Font)              scaled to size 6.6pt on input line 38.
+(Font)              scaled to size 6.6pt on input line 41.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 8.8pt on input line 47.
+(Font)              scaled to size 8.8pt on input line 50.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 6.6pt on input line 47.
+(Font)              scaled to size 6.6pt on input line 50.
 
 
 [1{c:/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{c:/texlive/2025/texmf-dist/fonts/enc/dvips/newtx/ntx-ot1-tlf.enc}{c:/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc}]
-Package hyperref Info: bookmark level for unknown algorithm defaults to 0 on input line 94.
+Package hyperref Info: bookmark level for unknown algorithm defaults to 0 on input line 99.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
 
 
 [2]
 
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+
 [3]
 
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+
 [4]
-Overfull \hbox (38.69319pt too wide) in paragraph at lines 240--241
+Overfull \hbox (38.69319pt too wide) in paragraph at lines 248--249
 []\OT1/minntx/m/n/12 Evolutionary: \OT1/pcr/m/n/12 pop_size=30\OT1/minntx/m/n/12 , \OT1/pcr/m/n/12 generations=100\OT1/minntx/m/n/12 , \OT1/pcr/m/n/12 crossover_rate=0.8\OT1/minntx/m/n/12 , \OT1/pcr/m/n/12 mutation_rate=0.05\OT1/minntx/m/n/12 ,
  []
 
 
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
 
 [5]
-<../DrawingScript/figures/fig1_heuristic_scaling.pdf, id=120, 570.47063pt x 353.7993pt>
+<../DrawingScript/figures/fig1_heuristic_scaling.pdf, id=123, 570.47063pt x 353.7993pt>
 File: ../DrawingScript/figures/fig1_heuristic_scaling.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig1_heuristic_scaling.pdf>
-Package pdftex.def Info: ../DrawingScript/figures/fig1_heuristic_scaling.pdf  used on input line 306.
+Package pdftex.def Info: ../DrawingScript/figures/fig1_heuristic_scaling.pdf  used on input line 316.
 (pdftex.def)             Requested size: 412.80157pt x 256.01476pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-Overfull \hbox (13.181pt too wide) in paragraph at lines 315--316
+
+[6]
+Overfull \hbox (13.181pt too wide) in paragraph at lines 325--326
 []\OT1/minntx/m/n/12 Batch set-ting (map1--map5): \OT1/pcr/m/n/12 mc_sim=75 \OT1/minntx/m/n/12 (sce-nar-ios per greedy step), \OT1/pcr/m/n/12 candidate_pool_size=1000
  []
 
@@ -861,67 +869,33 @@ Overfull \hbox (13.181pt too wide) in paragraph at lines 315--316
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-LaTeX Warning: `h' float specifier changed to `ht'.
+LaTeX Warning: Reference `tab:evo_old' on page 7 undefined on input line 363.
 
 
-Overfull \hbox (40.97316pt too wide) in paragraph at lines 353--354
+Overfull \hbox (40.97316pt too wide) in paragraph at lines 365--366
 []\OT1/pcr/m/n/12 pop_size=30\OT1/minntx/m/n/12 , \OT1/pcr/m/n/12 generations=100\OT1/minntx/m/n/12 , \OT1/pcr/m/n/12 crossover_rate=0.8\OT1/minntx/m/n/12 , \OT1/pcr/m/n/12 mutation_rate=0.05\OT1/minntx/m/n/12 , \OT1/pcr/m/n/12 elitism=2\OT1/minntx/m/n/12 . 
  []
 
 
 
-[6]
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-<../DrawingScript/figures/fig5_evolutionary_extended.pdf, id=129, 570.53024pt x 353.7993pt>
+[7 <../DrawingScript/figures/fig1_heuristic_scaling.pdf>]
+<../DrawingScript/figures/fig5_evolutionary_extended.pdf, id=188, 570.53024pt x 353.7993pt>
 File: ../DrawingScript/figures/fig5_evolutionary_extended.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig5_evolutionary_extended.pdf>
-Package pdftex.def Info: ../DrawingScript/figures/fig5_evolutionary_extended.pdf  used on input line 379.
+Package pdftex.def Info: ../DrawingScript/figures/fig5_evolutionary_extended.pdf  used on input line 391.
 (pdftex.def)             Requested size: 438.60315pt x 271.99982pt.
 
-LaTeX Warning: `h' float specifier changed to `ht'.
-
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<../DrawingScript/figures/fig4_evolutionary_highprob.pdf, id=130, 859.55063pt x 353.7993pt>
+<../DrawingScript/figures/fig4_evolutionary_highprob.pdf, id=189, 859.55063pt x 353.7993pt>
 File: ../DrawingScript/figures/fig4_evolutionary_highprob.pdf Graphic file (type pdf)
 <use ../DrawingScript/figures/fig4_evolutionary_highprob.pdf>
-Package pdftex.def Info: ../DrawingScript/figures/fig4_evolutionary_highprob.pdf  used on input line 409.
+Package pdftex.def Info: ../DrawingScript/figures/fig4_evolutionary_highprob.pdf  used on input line 421.
 (pdftex.def)             Requested size: 438.60315pt x 180.53242pt.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-
-
-[7 <../DrawingScript/figures/fig1_heuristic_scaling.pdf>]
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-<../DrawingScript/figures/fig3_evaluator_convergence.pdf, id=188, 857.50772pt x 353.7993pt>
-File: ../DrawingScript/figures/fig3_evaluator_convergence.pdf Graphic file (type pdf)
-<use ../DrawingScript/figures/fig3_evaluator_convergence.pdf>
-Package pdftex.def Info: ../DrawingScript/figures/fig3_evaluator_convergence.pdf  used on input line 550.
-(pdftex.def)             Requested size: 516.0pt x 212.89664pt.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
@@ -929,24 +903,18 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 [8]
 
-[9 <../DrawingScript/figures/fig5_evolutionary_extended.pdf>]
-<../DrawingScript/figures/fig6_sa_adaptive_effect.pdf, id=252, 573.33852pt x 354.25497pt>
-File: ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf Graphic file (type pdf)
-<use ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf>
-Package pdftex.def Info: ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf  used on input line 571.
-(pdftex.def)             Requested size: 387.0pt x 239.128pt.
-
+[9 <../DrawingScript/figures/fig5_evolutionary_extended.pdf> <../DrawingScript/figures/fig4_evolutionary_highprob.pdf>]
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 
-[10 <../DrawingScript/figures/fig4_evolutionary_highprob.pdf>]
-<../DrawingScript/figures/fig2_speedup_comparison.pdf, id=310, 860.03119pt x 380.49841pt>
-File: ../DrawingScript/figures/fig2_speedup_comparison.pdf Graphic file (type pdf)
-<use ../DrawingScript/figures/fig2_speedup_comparison.pdf>
-Package pdftex.def Info: ../DrawingScript/figures/fig2_speedup_comparison.pdf  used on input line 584.
-(pdftex.def)             Requested size: 516.0pt x 228.29498pt.
+[10]
+<../DrawingScript/figures/fig3_evaluator_convergence.pdf, id=314, 857.50772pt x 353.7993pt>
+File: ../DrawingScript/figures/fig3_evaluator_convergence.pdf Graphic file (type pdf)
+<use ../DrawingScript/figures/fig3_evaluator_convergence.pdf>
+Package pdftex.def Info: ../DrawingScript/figures/fig3_evaluator_convergence.pdf  used on input line 568.
+(pdftex.def)             Requested size: 516.0pt x 212.89664pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
@@ -954,8 +922,28 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 [11]
+<../DrawingScript/figures/fig6_sa_adaptive_effect.pdf, id=323, 573.33852pt x 354.25497pt>
+File: ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf Graphic file (type pdf)
+<use ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf>
+Package pdftex.def Info: ../DrawingScript/figures/fig6_sa_adaptive_effect.pdf  used on input line 589.
+(pdftex.def)             Requested size: 387.0pt x 239.128pt.
 
-[12] (./project 1 report [Yanqiao Chen].bbl
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+
+[12 <../DrawingScript/figures/fig3_evaluator_convergence.pdf>]
+<../DrawingScript/figures/fig2_speedup_comparison.pdf, id=384, 860.03119pt x 380.49841pt>
+File: ../DrawingScript/figures/fig2_speedup_comparison.pdf Graphic file (type pdf)
+<use ../DrawingScript/figures/fig2_speedup_comparison.pdf>
+Package pdftex.def Info: ../DrawingScript/figures/fig2_speedup_comparison.pdf  used on input line 602.
+(pdftex.def)             Requested size: 516.0pt x 228.29498pt.
+
+
+[13 <../DrawingScript/figures/fig6_sa_adaptive_effect.pdf> <../DrawingScript/figures/fig2_speedup_comparison.pdf>]
+
+[14] (./project 1 report [Yanqiao Chen].bbl
 LaTeX Font Info:    Font shape `OT1/minntx/m/n' will be
 (Font)              scaled to size 9.0pt on input line 25.
 LaTeX Font Info:    Font shape `OT1/minntx/m/n' will be
@@ -990,31 +978,31 @@ LaTeX Font Info:    Font shape `U/ntxexa/m/n' will be
 (Font)              scaled to size 5.5pt on input line 25.
 )
 
-[13]
-
-[14 <../DrawingScript/figures/fig3_evaluator_convergence.pdf> <../DrawingScript/figures/fig6_sa_adaptive_effect.pdf>]
-
-[15 <../DrawingScript/figures/fig2_speedup_comparison.pdf>] (./project 1 report [Yanqiao Chen].aux)
+[15] (./project 1 report [Yanqiao Chen].aux)
  ***********
 LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2020/03/25>
  ***********
+
+
+LaTeX Warning: There were undefined references.
+
 Package rerunfilecheck Info: File `"project 1 report [Yanqiao Chen]".out' has not changed.
 (rerunfilecheck)             Checksum: F990534B3388CE252DE5A8FE4994FAF3;3236.
  ) 
 Here is how much of TeX's memory you used:
- 17077 strings out of 468872
- 265648 string characters out of 5451976
- 680088 words of memory out of 5000000
- 45258 multiletter control sequences out of 15000+600000
- 709605 words of font info for 189 fonts, out of 8000000 for 9000
+ 17097 strings out of 468872
+ 265950 string characters out of 5451976
+ 672349 words of memory out of 5000000
+ 45274 multiletter control sequences out of 15000+600000
+ 711875 words of font info for 193 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
- 75i,10n,117p,897b,560s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,10n,117p,1053b,560s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txexs.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsym.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb><c:/texlive/2025/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
-Output written on "project 1 report [Yanqiao Chen].pdf" (15 pages, 288837 bytes).
+Output written on "project 1 report [Yanqiao Chen].pdf" (15 pages, 290223 bytes).
 PDF statistics:
- 591 PDF objects out of 1000 (max. 8388607)
- 248 compressed objects within 3 object streams
+ 597 PDF objects out of 1000 (max. 8388607)
+ 254 compressed objects within 3 object streams
  68 named destinations out of 1000 (max. 500000)
  167 words of extra memory for PDF output out of 10000 (max. 10000000)
 
