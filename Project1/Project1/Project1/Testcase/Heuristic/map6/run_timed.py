@@ -128,42 +128,44 @@ def run_with_timing():
 
         total_time = time.perf_counter() - start_global
 
-        # 解析结果
+        # 显示完整输出
         full_output = ''.join(stdout_lines)
-        solve_time = None
-        eval_time = None
-        score = None
-
-        for line in full_output.split('\n'):
-            if 'solve=' in line.lower():
-                try:
-                    solve_time = float(line.split('solve=')[1].split()[0].replace('s', ''))
-                except:
-                    pass
-            elif 'eval=' in line.lower():
-                try:
-                    eval_time = float(line.split('eval=')[1].split()[0].replace('s', ''))
-                except:
-                    pass
-            elif 'score=' in line.lower():
-                try:
-                    score = float(line.split('score=')[1].split()[0])
-                except:
-                    pass
+        full_stderr = ''.join(stderr_lines)
 
         print("\n" + "=" * 70)
-        print("Final Timing Results")
+        print("Full Output")
         print("=" * 70)
+        if full_output.strip():
+            print(full_output)
+        else:
+            print("(No stdout output)")
 
-        if solve_time and eval_time:
-            print(f"  Solve time:   {solve_time:.4f}s")
-            print(f"  Eval time:    {eval_time:.4f}s")
-            print(f"  Algorithm:    {solve_time + eval_time:.4f}s")
+        if full_stderr.strip():
+            print("\n" + "-" * 70)
+            print("Stderr:")
+            print("-" * 70)
+            print(full_stderr)
+
+        # 尝试读取结果文件
+        print("\n" + "=" * 70)
+        print("Result File Content")
+        print("=" * 70)
+        if os.path.exists(OUTPUT_FILE):
+            try:
+                with open(OUTPUT_FILE, 'r') as f:
+                    content = f.read()
+                    print(f"File: {OUTPUT_FILE}")
+                    print("-" * 40)
+                    print(content)
+            except Exception as e:
+                print(f"Error reading {OUTPUT_FILE}: {e}")
+        else:
+            print(f"Result file not found: {OUTPUT_FILE}")
+
+        print("\n" + "=" * 70)
+        print("Timing Summary")
+        print("=" * 70)
         print(f"  Total time:   {total_time:.4f}s")
-
-        if score:
-            print(f"  Score:        {score:.4f}")
-
         print(f"  Return code:  {return_code}")
         print("=" * 70)
 

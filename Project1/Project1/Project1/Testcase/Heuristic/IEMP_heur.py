@@ -541,14 +541,14 @@ def main():
     parser.add_argument(
         "--max-iter",
         type=int,
-        default=200,
-        help="Maximum IMRank self-consistency iterations (default: 200)",
+        default=250,
+        help="Maximum IMRank self-consistency iterations (default: 250)",
     )
     parser.add_argument(
         "--candidate-size",
         type=int,
-        default=500,
-        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 500)",
+        default=400,
+        help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 400)",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
 

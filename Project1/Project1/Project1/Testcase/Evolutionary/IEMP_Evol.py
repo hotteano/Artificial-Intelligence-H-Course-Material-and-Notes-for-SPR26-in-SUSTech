@@ -8,7 +8,6 @@ This version upgrades the evolutionary solver with pymoo's GA pipeline:
 2. Custom repair keeps solutions feasible and sparse-search friendly.
 3. pymoo GA handles population evolution, crossover, mutation, and selection.
 4. Fitness is still Monte Carlo balanced exposure (same evaluator objective).
-5. Optional simulated annealing refines the best GA chromosome locally.
 
 Primary objective:
 maximize E[ |V - (r1 XOR r2)| ]
@@ -177,10 +176,6 @@ class IEMPEvolutionary:
         elitism: int = 2,
         mc_coarse: int = 30,
         mc_fine: int = 200,
-        use_sa: bool = True,
-        sa_steps: int = 200,
-        sa_t0: float = 1.0,
-        sa_alpha: float = 0.985,
         seed: int | None = None,
     ):
         self.data = data
@@ -192,10 +187,6 @@ class IEMPEvolutionary:
         self.elitism = elitism
         self.mc_coarse = mc_coarse
         self.mc_fine = mc_fine
-        self.use_sa = use_sa
-        self.sa_steps = sa_steps
-        self.sa_t0 = sa_t0
-        self.sa_alpha = sa_alpha
         self.seed = seed
 
         # Special logic: if extremely high probability network (e.g. p=1.0),
@@ -204,7 +195,6 @@ class IEMPEvolutionary:
             print("[INFO] High probability network detected (p >= 0.95). Reducing MC simulations to 1.")
             self.mc_coarse = 3
             self.mc_fine = 1
-            self.use_sa = False  # SA isn't worth it on a purely deterministic dense graph
 
         self.n_available = len(data.available_nodes)
         self.chromosome_length = 2 * self.n_available
@@ -281,95 +271,6 @@ class IEMPEvolutionary:
         usage_ratio = total_size / self.budget if self.budget > 0 else 0.0
         return score + 20.0 * usage_ratio
 
-    def _opposite_position(self, pos: int) -> int:
-        """Return the mirrored campaign-bit position for the same available-node index."""
-        return pos + self.n_available if pos < self.n_available else pos - self.n_available
-
-    def _random_neighbor(self, chromosome: np.ndarray) -> np.ndarray:
-        """Generate one feasible neighbor with fixed budget usage."""
-        x = self.repair_chromosome(chromosome)
-
-        if self.n_available == 0:
-            return x
-
-        ones = np.flatnonzero(x == 1)
-        if ones.size == 0:
-            return x
-
-        # Move type A: switch one selected node to the opposite campaign.
-        if self.rng.random() < 0.35:
-            pos = int(self.rng.choice(ones))
-            opp = self._opposite_position(pos)
-            if x[opp] == 0:
-                x[pos] = 0
-                x[opp] = 1
-                return self.repair_chromosome(x)
-
-        # Move type B: replace one selected bit with another feasible zero bit.
-        pos_off = int(self.rng.choice(ones))
-        x[pos_off] = 0
-
-        zero_positions = np.flatnonzero(x == 0)
-        candidates = [
-            int(p)
-            for p in zero_positions
-            if p != pos_off and x[self._opposite_position(int(p))] == 0
-        ]
-
-        if not candidates:
-            x[pos_off] = 1
-            return self.repair_chromosome(x)
-
-        pos_on = int(self.rng.choice(candidates))
-        x[pos_on] = 1
-        return self.repair_chromosome(x)
-
-    def simulated_annealing_refine(self, start: np.ndarray) -> Tuple[np.ndarray, float]:
-        """Refine a GA solution using simulated annealing on coarse fitness."""
-        current = self.repair_chromosome(start)
-        current_f = self.coarse_fitness(current)
-
-        best = current.copy()
-        best_f = current_f
-
-        temperature = max(float(self.sa_t0), 1e-12)
-
-        for _ in range(self.sa_steps):
-            candidate = self._random_neighbor(current)
-            candidate_f = self.coarse_fitness(candidate)
-
-            delta = candidate_f - current_f
-            if delta >= 0:
-                accept = True
-            else:
-                accept_prob = np.exp(delta / max(temperature, 1e-12))
-                accept = self.rng.random() < accept_prob
-
-            if accept:
-                current = candidate
-                current_f = candidate_f
-                if current_f > best_f:
-                    best = current.copy()
-                    best_f = current_f
-
-            temperature *= self.sa_alpha
-
-        return best, best_f
-
-    def _should_use_sa(self) -> bool:
-        """根据图的边密度判断是否启用模拟退火。稠密图禁用 SA 以节省时间。"""
-        if not self.use_sa or self.sa_steps <= 0:
-            return False
-
-        # 计算平均度数（遍历边的结果）
-        avg_degree = self.data.n_edges / self.data.n_nodes if self.data.n_nodes > 0 else 0
-
-        # 阈值：平均度数 > 15 认为是稠密图，SA 开销大收益小，自动禁用
-        threshold = 15.0
-        should_enable = avg_degree <= threshold
-
-        return should_enable
-
     def evolve(self) -> Tuple[Set[int], Set[int]]:
         """Run pymoo GA and return best solution."""
         if not PYMOO_AVAILABLE:
@@ -379,9 +280,6 @@ class IEMPEvolutionary:
 
         if self.n_available == 0:
             return set(), set()
-
-        # 根据图的边密度决定是否启用 SA
-        effective_use_sa = self._should_use_sa()
 
         class _IEMPRepair(Repair):
             def __init__(self, solver: "IEMPEvolutionary"):
@@ -455,13 +353,6 @@ class IEMPEvolutionary:
 
         best_x = self.repair_chromosome(best_x)
 
-        if effective_use_sa and self.sa_steps > 0:
-            ga_coarse = self.coarse_fitness(best_x)
-            sa_x, sa_coarse = self.simulated_annealing_refine(best_x)
-
-            if sa_coarse > ga_coarse:
-                best_x = sa_x
-
         S1, S2 = self.decode_chromosome(best_x)
         self.evaluator.clear_cache()
 
@@ -475,7 +366,7 @@ def main():
     parser.add_argument("-b", "--balanced", required=True, help="Path to output balanced seed set file")
     parser.add_argument("-k", "--budget", type=int, required=True, help="Budget k")
 
-    parser.add_argument("--pop-size", type=int, default=30, help="Population size (default: 30)")
+    parser.add_argument("--pop-size", type=int, default=20, help="Population size (default: 20)")
     parser.add_argument("--generations", type=int, default=100, help="Number of generations (default: 100)")
     parser.add_argument("--crossover-rate", type=float, default=0.8, help="Crossover rate (default: 0.8)")
     parser.add_argument(
@@ -489,36 +380,13 @@ def main():
         "--mc-coarse",
         type=int,
         default=90,
-        help="MC simulations for evolution (default: 80)",
+        help="MC simulations for evolution (default: 90)",
     )
     parser.add_argument(
         "--mc-fine",
         type=int,
         default=100,
         help="MC simulations for final eval (default: 100)",
-    )
-    parser.add_argument(
-        "--no-sa",
-        action="store_true",
-        help="Disable simulated annealing refinement after GA",
-    )
-    parser.add_argument(
-        "--sa-steps",
-        type=int,
-        default=150,
-        help="Simulated annealing steps (default: 150)",
-    )
-    parser.add_argument(
-        "--sa-t0",
-        type=float,
-        default=1.0,
-        help="Initial temperature for simulated annealing (default: 1.0)",
-    )
-    parser.add_argument(
-        "--sa-alpha",
-        type=float,
-        default=0.985,
-        help="Temperature decay factor for simulated annealing (default: 0.985)",
     )
     parser.add_argument("--seed", type=int, default=3407, help="Random seed (default: 3407)")
 
@@ -532,12 +400,6 @@ def main():
         raise ValueError("Budget k must be a positive integer.")
     if args.mc_coarse <= 0 or args.mc_fine <= 0:
         raise ValueError("mc-coarse and mc-fine must be positive integers.")
-    if args.sa_steps < 0:
-        raise ValueError("sa-steps must be non-negative.")
-    if args.sa_t0 <= 0:
-        raise ValueError("sa-t0 must be positive.")
-    if not (0 < args.sa_alpha < 1):
-        raise ValueError("sa-alpha must be in (0, 1).")
     if not os.path.exists(args.network):
         raise FileNotFoundError(f"Network file not found: {args.network}")
     if not os.path.exists(args.initial):
@@ -557,10 +419,6 @@ def main():
         elitism=args.elitism,
         mc_coarse=args.mc_coarse,
         mc_fine=args.mc_fine,
-        use_sa=not args.no_sa,
-        sa_steps=args.sa_steps,
-        sa_t0=args.sa_t0,
-        sa_alpha=args.sa_alpha,
         seed=args.seed,
     )
 
