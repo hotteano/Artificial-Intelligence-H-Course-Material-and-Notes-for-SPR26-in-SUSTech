@@ -999,7 +999,11 @@ Here is how much of TeX's memory you used:
  430 hyphenation exceptions out of 8191
  75i,10n,117p,1053b,560s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txexs.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsym.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb><c:/texlive/2025/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><c:/texlive/2025/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
+<<<<<<< HEAD
 Output written on "project 1 report [Yanqiao Chen].pdf" (15 pages, 290373 bytes).
+=======
+Output written on "project 1 report [Yanqiao Chen].pdf" (15 pages, 290356 bytes).
+>>>>>>> 7646b8d753a026074505241da6e0c54d74c60a13
 PDF statistics:
  598 PDF objects out of 1000 (max. 8388607)
  254 compressed objects within 3 object streams
