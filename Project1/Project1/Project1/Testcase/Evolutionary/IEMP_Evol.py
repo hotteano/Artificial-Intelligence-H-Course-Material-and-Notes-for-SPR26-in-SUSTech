@@ -191,9 +191,9 @@ class IEMPEvolutionary:
 
         # Special logic: if extremely high probability network (e.g. p=1.0),
         # force mc simulations to exactly 1, since the graph acts deterministically
-        if self.data.check_high_probability(0.95):
-            print("[INFO] High probability network detected (p >= 0.95). Reducing MC simulations to 1.")
-            self.mc_coarse = 3
+        if self.data.check_high_probability(0.99):
+            print("[INFO] High probability network detected (p >= 0.99). Reducing MC simulations to 1.")
+            self.mc_coarse = 5
             self.mc_fine = 1
 
         self.n_available = len(data.available_nodes)

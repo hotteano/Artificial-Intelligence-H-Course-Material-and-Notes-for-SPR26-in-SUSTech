@@ -213,9 +213,9 @@ class IEMPMCHeuristic:
         self.workers = workers
         self.rng = np.random.default_rng(seed)
 
-        if self.data.check_high_probability(0.95):
+        if self.data.check_high_probability(0.99):
             print("[Warning] High probability graph detected (p>=0.95). Reducing MC simulations to 3.")
-            self.mc_simulations = 3
+            self.mc_simulations = 5
 
         # Cache adjacency as NumPy arrays for faster repeated simulation.
         self._mc_neighbors: List[np.ndarray] = []

@@ -15,12 +15,13 @@
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
 \newlabel{alg:eval}{{1}{3}{Monte Carlo IC Evaluation}{algorithm.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Algorithm B: MC-SAA Greedy with IMRank Screening}{3}{subsection.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Algorithm C: Binary Evolutionary Optimization with Simulated Annealing Refinement}{3}{subsection.2.3}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces MC-SAA Greedy with IMRank Candidate Pool}}{4}{algorithm.2}\protected@file@percent }
-\newlabel{alg:heu}{{2}{4}{MC-SAA Greedy with IMRank Candidate Pool}{algorithm.2}{}}
-\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces Binary GA + SA Refinement for IEM}}{4}{algorithm.3}\protected@file@percent }
-\newlabel{alg:evo}{{3}{4}{Binary GA + SA Refinement for IEM}{algorithm.3}{}}
-\@writefile{loa}{\contentsline {algorithm}{\numberline {4}{\ignorespaces Adaptive SA Activation by Graph Density}}{5}{algorithm.4}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces IMRank Influence Ranking}}{4}{algorithm.2}\protected@file@percent }
+\newlabel{alg:imrank}{{2}{4}{IMRank Influence Ranking}{algorithm.2}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces MC-SAA Greedy with IMRank Candidate Pool}}{4}{algorithm.3}\protected@file@percent }
+\newlabel{alg:heu}{{3}{4}{MC-SAA Greedy with IMRank Candidate Pool}{algorithm.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Algorithm C: Binary Evolutionary Optimization}{4}{subsection.2.3}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {4}{\ignorespaces Binary GA for IEM}}{5}{algorithm.4}\protected@file@percent }
+\newlabel{alg:evo}{{4}{5}{Binary GA for IEM}{algorithm.4}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {III}Experiment}{5}{section.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Environment and Settings}{5}{subsection.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Data Sources and Case Parameters}{6}{subsection.3.2}\protected@file@percent }
@@ -30,46 +31,42 @@
 \@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Evolutionary cases used by batch script}}{6}{table.caption.2}\protected@file@percent }
 \newlabel{tab:evo_cases}{{II}{6}{Evolutionary cases used by batch script}{table.caption.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Experimental Procedure (Batch Scripts)}{6}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Experimental Results}{7}{subsection.3.4}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Heuristic method runtime scaling across test cases (Old Machine). Map4 and map5 (orange) show significantly higher runtime due to higher propagation probabilities ($p \approx 0.5$) despite having fewer nodes than map2/map3.}}{7}{figure.caption.3}\protected@file@percent }
 \newlabel{fig:heuristic_scaling}{{1}{7}{Heuristic method runtime scaling across test cases (Old Machine). Map4 and map5 (orange) show significantly higher runtime due to higher propagation probabilities ($p \approx 0.5$) despite having fewer nodes than map2/map3}{figure.caption.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Experimental Results}{7}{subsection.3.4}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Heuristic runtime (solve+evaluate) and final score (Old Machine: Ultra 7 258V)}}{7}{table.caption.4}\protected@file@percent }
 \newlabel{tab:heur_old}{{III}{7}{Heuristic runtime (solve+evaluate) and final score (Old Machine: Ultra 7 258V)}{table.caption.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Heuristic runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Optimized)}}{8}{table.caption.5}\protected@file@percent }
 \newlabel{tab:heur_new}{{IV}{8}{Heuristic runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Optimized)}{table.caption.5}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Table B. Evolutionary runtime (solve+evaluate) and final score (Old Machine: Ultra 7 258V)}}{8}{table.caption.6}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Table B2. Evolutionary runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Optimized)}}{8}{table.caption.8}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Evolutionary method performance across all test cases including extended high-probability instances (map6/map7). The new machine (i7-14650HX) consistently outperforms the Old Machine across all cases.}}{9}{figure.caption.7}\protected@file@percent }
-\newlabel{fig:evolutionary_extended}{{2}{9}{Evolutionary method performance across all test cases including extended high-probability instances (map6/map7). The new machine (i7-14650HX) consistently outperforms the Old Machine across all cases}{figure.caption.7}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Impact of propagation probability on Evolutionary method performance (Old Machine). Map6 and map7 ($p=0.7$) show 2.7--3.1$\times $ higher runtime than map4/map5 ($p=0.5$), with final scores declining by approximately 19\% due to increased competition from initial seeds in high-probability diffusion.}}{9}{figure.caption.9}\protected@file@percent }
-\newlabel{fig:evolutionary_highprob}{{3}{9}{Impact of propagation probability on Evolutionary method performance (Old Machine). Map6 and map7 ($p=0.7$) show 2.7--3.1$\times $ higher runtime than map4/map5 ($p=0.5$), with final scores declining by approximately 19\% due to increased competition from initial seeds in high-probability diffusion}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Evaluator Staged Results (5000--60000 Simulations)}{8}{subsection.3.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Evolutionary method performance across all test cases including extended high-probability instances (map6/map7). The new machine (i7-14650HX) significantly outperforms the Old Machine for map2--map7 (23--32\% faster). Map1 shows different behavior due to its dense graph structure requiring more computational effort per fitness evaluation.}}{9}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:evolutionary_extended}{{2}{9}{Evolutionary method performance across all test cases including extended high-probability instances (map6/map7). The new machine (i7-14650HX) significantly outperforms the Old Machine for map2--map7 (23--32\% faster). Map1 shows different behavior due to its dense graph structure requiring more computational effort per fitness evaluation}{figure.caption.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Table B2. Evolutionary runtime (solve+evaluate) and final score (New Machine: i7-14650HX, Optimized)}}{9}{table.caption.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Discussion}{9}{section.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Impact of propagation probability on Evolutionary method performance. Map6 and map7 ($p=0.7$) show 3.0--3.2$\times $ higher runtime than map4/map5 ($p=0.5$) on the new machine, with final scores declining by approximately 20--21\% due to increased competition from initial seeds in high-probability diffusion.}}{10}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:evolutionary_highprob}{{3}{10}{Impact of propagation probability on Evolutionary method performance. Map6 and map7 ($p=0.7$) show 3.0--3.2$\times $ higher runtime than map4/map5 ($p=0.5$) on the new machine, with final scores declining by approximately 20--21\% due to increased competition from initial seeds in high-probability diffusion}{figure.caption.9}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {VII}{\ignorespaces Table C. Summary of results by method (Old Machine: Ultra 7 258V). \textbf  {Note:} Different graph instances are used; do not compare across methods.}}{10}{table.caption.10}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {VIII}{\ignorespaces Heuristic stress test on map\_spec (special extreme case with $p=1.0$)}}{10}{table.caption.11}\protected@file@percent }
-\newlabel{tab:heur_spec}{{VIII}{10}{Heuristic stress test on map\_spec (special extreme case with $p=1.0$)}{table.caption.11}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {IX}{\ignorespaces Summary of results by method (New Machine: i7-14650HX, Optimized). \textbf  {Note:} Different graph instances are used; do not compare across methods.}}{10}{table.caption.12}\protected@file@percent }
-\newlabel{tab:summary_new}{{IX}{10}{Summary of results by method (New Machine: i7-14650HX, Optimized). \textbf {Note:} Different graph instances are used; do not compare across methods}{table.caption.12}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {X}{\ignorespaces Machine comparison: Heuristic method (Ratio $<$1 means new machine is faster)}}{10}{table.caption.13}\protected@file@percent }
-\newlabel{tab:mach_heur}{{X}{10}{Machine comparison: Heuristic method (Ratio $<$1 means new machine is faster)}{table.caption.13}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {XI}{\ignorespaces Machine comparison: Evolutionary method (Ratio $<$1 means new machine is faster)}}{11}{table.caption.14}\protected@file@percent }
-\newlabel{tab:mach_evo}{{XI}{11}{Machine comparison: Evolutionary method (Ratio $<$1 means new machine is faster)}{table.caption.14}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Evaluator Staged Results (5000--60000 Simulations)}{11}{subsection.3.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {XII}{\ignorespaces Evaluator detailed results by simulation stage (map1/map2 separated, Old Machine: Ultra 7 258V)}}{11}{table.caption.15}\protected@file@percent }
-\newlabel{tab:eval_stages}{{XII}{11}{Evaluator detailed results by simulation stage (map1/map2 separated, Old Machine: Ultra 7 258V)}{table.caption.15}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {XIII}{\ignorespaces Evaluator results (New Machine: i7-14650HX, 5000 simulations, Optimized)}}{11}{table.caption.16}\protected@file@percent }
-\newlabel{tab:eval_new}{{XIII}{11}{Evaluator results (New Machine: i7-14650HX, 5000 simulations, Optimized)}{table.caption.16}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {IV}Discussion}{11}{section.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Evaluator staged results: (Left) Runtime grows approximately linearly with simulation count for both map1 and map2; (Right) Score stability analysis showing relative changes from 5000-simulation baseline. Both cases exhibit high stability with standard deviations below 0.04\%.}}{12}{figure.caption.17}\protected@file@percent }
-\newlabel{fig:evaluator_convergence}{{4}{12}{Evaluator staged results: (Left) Runtime grows approximately linearly with simulation count for both map1 and map2; (Right) Score stability analysis showing relative changes from 5000-simulation baseline. Both cases exhibit high stability with standard deviations below 0.04\%}{figure.caption.17}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Effect of adaptive SA deactivation on map1 (dense graph, avg\_degree=28). When SA is disabled (avoiding 150 extra MC evaluations), runtime drops from 183.16s to 126.18s (31\% speedup) with negligible score impact (0.01\%).}}{13}{figure.caption.18}\protected@file@percent }
-\newlabel{fig:sa_adaptive}{{5}{13}{Effect of adaptive SA deactivation on map1 (dense graph, avg\_degree=28). When SA is disabled (avoiding 150 extra MC evaluations), runtime drops from 183.16s to 126.18s (31\% speedup) with negligible score impact (0.01\%)}{figure.caption.18}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Cross-Machine Performance Analysis}{13}{subsection.4.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Cross-machine speedup comparison: (Left) Heuristic method shows mixed results with map3 being significantly slower (1.71x) on the new machine; (Right) Evolutionary method demonstrates consistent speedups (25--40\%) across all cases on the new machine. Green bars indicate faster performance on the new machine, orange indicates slower.}}{13}{figure.caption.19}\protected@file@percent }
-\newlabel{fig:speedup_comparison}{{6}{13}{Cross-machine speedup comparison: (Left) Heuristic method shows mixed results with map3 being significantly slower (1.71x) on the new machine; (Right) Evolutionary method demonstrates consistent speedups (25--40\%) across all cases on the new machine. Green bars indicate faster performance on the new machine, orange indicates slower}{figure.caption.19}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {V}Conclusion}{14}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Cross-Machine Performance Analysis}{10}{subsection.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {VIII}{\ignorespaces Summary of results by method (New Machine: i7-14650HX, Optimized). \textbf  {Note:} Different graph instances are used; do not compare across methods.}}{11}{table.caption.11}\protected@file@percent }
+\newlabel{tab:summary_new}{{VIII}{11}{Summary of results by method (New Machine: i7-14650HX, Optimized). \textbf {Note:} Different graph instances are used; do not compare across methods}{table.caption.11}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {IX}{\ignorespaces Machine comparison: Heuristic method (Ratio $<$1 means new machine is faster)}}{11}{table.caption.12}\protected@file@percent }
+\newlabel{tab:mach_heur}{{IX}{11}{Machine comparison: Heuristic method (Ratio $<$1 means new machine is faster)}{table.caption.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {X}{\ignorespaces Machine comparison: Evolutionary method (Ratio $<$1 means new machine is faster)}}{12}{table.caption.13}\protected@file@percent }
+\newlabel{tab:mach_evo}{{X}{12}{Machine comparison: Evolutionary method (Ratio $<$1 means new machine is faster)}{table.caption.13}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XI}{\ignorespaces Evaluator detailed results by simulation stage (map1/map2 separated, Old Machine: Ultra 7 258V)}}{12}{table.caption.14}\protected@file@percent }
+\newlabel{tab:eval_stages}{{XI}{12}{Evaluator detailed results by simulation stage (map1/map2 separated, Old Machine: Ultra 7 258V)}{table.caption.14}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Conclusion}{12}{section.5}\protected@file@percent }
 \bibdata{references}
 \bibcite{garimella2018balancinginformationexposuresocial}{1}
 \bibcite{cheng2014imrankinfluencemaximizationfinding}{2}
 \bibcite{wu2022budgetedinfluencemaximizationboost}{3}
 \bibstyle{IEEEtran}
-\@writefile{toc}{\contentsline {section}{References}{15}{section.5}\protected@file@percent }
-\gdef \@abspage@last{15}
+\@writefile{lot}{\contentsline {table}{\numberline {XII}{\ignorespaces Evaluator results (New Machine: i7-14650HX, 5000 simulations, Optimized)}}{13}{table.caption.15}\protected@file@percent }
+\newlabel{tab:eval_new}{{XII}{13}{Evaluator results (New Machine: i7-14650HX, 5000 simulations, Optimized)}{table.caption.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Evaluator staged results: (Left) Runtime grows approximately linearly with simulation count for both map1 and map2; (Right) Score stability analysis showing relative changes from 5000-simulation baseline. Both cases exhibit high stability with standard deviations below 0.04\%.}}{13}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:evaluator_convergence}{{4}{13}{Evaluator staged results: (Left) Runtime grows approximately linearly with simulation count for both map1 and map2; (Right) Score stability analysis showing relative changes from 5000-simulation baseline. Both cases exhibit high stability with standard deviations below 0.04\%}{figure.caption.16}{}}
+\@writefile{toc}{\contentsline {section}{References}{13}{section.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Cross-machine speedup comparison: (Left) Heuristic method shows consistent but modest improvements (1--8\% faster) on the new machine; (Right) Evolutionary method demonstrates significant speedups (23--32\% faster) for map2--map7, with only map1 being slower (18\%) on the new machine. Green bars indicate faster performance on the new machine, orange indicates slower.}}{14}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:speedup_comparison}{{5}{14}{Cross-machine speedup comparison: (Left) Heuristic method shows consistent but modest improvements (1--8\% faster) on the new machine; (Right) Evolutionary method demonstrates significant speedups (23--32\% faster) for map2--map7, with only map1 being slower (18\%) on the new machine. Green bars indicate faster performance on the new machine, orange indicates slower}{figure.caption.17}{}}
+\gdef \@abspage@last{14}

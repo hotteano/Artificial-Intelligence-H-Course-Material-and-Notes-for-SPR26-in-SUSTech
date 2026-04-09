@@ -184,7 +184,7 @@ class IEMEvaluator:
         
         # Check if the graph is purely deterministic/high probability
         # to avoid 5000+ deep graph traversals
-        if self.check_high_probability(0.95):
+        if self.check_high_probability(0.99):
             print(f"[INFO] High probability network detected (p >= 0.95). Reducing MC simulations from {n_simulations} to 5.")
             n_simulations = 5
             
