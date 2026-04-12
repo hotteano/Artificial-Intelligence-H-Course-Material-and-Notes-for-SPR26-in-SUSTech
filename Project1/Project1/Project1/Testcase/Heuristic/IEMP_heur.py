@@ -174,14 +174,6 @@ class IEMData:
             self.I1 = set(int(f.readline().strip()) for _ in range(n1))
             self.I2 = set(int(f.readline().strip()) for _ in range(n2))
 
-    def check_high_probability(self, threshold: float = 0.99) -> bool:
-        """Check if all edge probabilities equal or exceed a high threshold."""
-        for u in self.graph:
-            for v, p1, p2 in self.graph[u]:
-                if p1 < threshold or p2 < threshold:
-                    return False
-        return True
-
     def save_solution(self, filepath: str):
         """Save solution to file."""
         with open(filepath, "w") as f:
@@ -204,6 +196,11 @@ class IEMPMCHeuristic:
         candidate_pool_size: int = 0,
         seed: Optional[int] = None,
         workers: int = 1,
+        adaptive_mc: bool = True,
+        mc_sim_min: int = 20,
+        mc_sim_max: int = 120,
+        mc_threshold: float = 0.11,
+        mc_steepness: float = 10.0,
     ):
         self.data = data
         self.budget = budget
@@ -213,9 +210,13 @@ class IEMPMCHeuristic:
         self.workers = workers
         self.rng = np.random.default_rng(seed)
 
-        if self.data.check_high_probability(0.99):
-            print("[Warning] High probability graph detected (p>=0.95). Reducing MC simulations to 3.")
-            self.mc_simulations = 5
+        # 自适应 MC 采样：根据边概率方差特征调整
+        if adaptive_mc:
+            variance_score = self.estimate_graph_variance()
+            self.mc_simulations = self.get_mc_count_by_variance(
+                variance_score, mc_sim_min, mc_sim_max, mc_threshold, mc_steepness
+            )
+            print(f"[Adaptive MC] variance={variance_score:.6f}, mc={self.mc_simulations}")
 
         # Cache adjacency as NumPy arrays for faster repeated simulation.
         self._mc_neighbors: List[np.ndarray] = []
@@ -239,6 +240,61 @@ class IEMPMCHeuristic:
             self._mc_prob2.append(
                 np.fromiter((p2 for _, _, p2 in edges), dtype=np.float64, count=len(edges))
             )
+
+    def estimate_graph_variance(self) -> float:
+        """
+        基于边概率的方差特征估计。
+
+        边概率越接近 0.5，方差贡献越大（p*(1-p) 在 p=0.5 时最大为 0.25）。
+        返回归一化方差分数 [0, 1]，1 表示高方差（不确定图），0 表示低方差（确定图）。
+        """
+        total_variance = 0.0
+        n_probs = 0
+
+        for u in range(self.data.n_nodes):
+            for v, p1, p2 in self.data.graph[u]:
+                # 每条边的方差贡献（两个campaign分别计算）
+                var1 = p1 * (1 - p1)
+                var2 = p2 * (1 - p2)
+                total_variance += (var1 + var2) / 2
+                n_probs += 1
+
+        if n_probs == 0:
+            return 0.0
+
+        avg_variance = total_variance / n_probs
+        # 归一化：最大可能方差是 0.25（当 p=0.5 时）
+        normalized_variance = avg_variance / 0.25
+        return min(normalized_variance, 1.0)
+
+    def get_mc_count_by_variance(
+        self,
+        variance_score: float,
+        min_sim: int,
+        max_sim: int,
+        threshold: float = 0.1,
+        steepness: float = 10.0,
+    ) -> int:
+        """
+        S型单调递增映射：越不确定（方差大）→ 采样越多。
+
+        低方差（确定图）→ 快速下降到 min_sim
+        高方差（不确定图）→ 快速上升到 max_sim
+
+        Args:
+            threshold: 切换阈值（方差分数），默认 0.1
+            steepness: 曲线陡峭程度，越大切换越快，默认 10.0
+        """
+        import math
+
+        # 只有完全确定图（方差严格为0）才用最小采样
+        if variance_score == 0.0:
+            return min_sim
+
+        # Sigmoid: 在 threshold 处为 0.5
+        ratio = 1 / (1 + math.exp(-steepness * (variance_score - threshold)))
+
+        return int(min_sim + ratio * (max_sim - min_sim))
 
     def compute_weighted_degree_ranking(self, campaign_idx: int) -> List[int]:
         """Initialize ranking by weighted out-degree for one campaign."""
@@ -551,6 +607,42 @@ def main():
         help="IMRank candidate pool size; <=0 means evaluate all vertices (default: 400)",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument(
+        "--adaptive-mc",
+        action="store_true",
+        default=True,
+        help="Enable adaptive MC sampling based on graph variance (default: True)",
+    )
+    parser.add_argument(
+        "--no-adaptive-mc",
+        action="store_false",
+        dest="adaptive_mc",
+        help="Disable adaptive MC sampling",
+    )
+    parser.add_argument(
+        "--mc-sim-min",
+        type=int,
+        default=1,
+        help="Minimum MC simulations when using adaptive sampling (default: 1)",
+    )
+    parser.add_argument(
+        "--mc-sim-max",
+        type=int,
+        default=120,
+        help="Maximum MC simulations when using adaptive sampling (default: 120)",
+    )
+    parser.add_argument(
+        "--mc-threshold",
+        type=float,
+        default=0.11,
+        help="Sigmoid threshold for adaptive MC (default: 0.11)",
+    )
+    parser.add_argument(
+        "--mc-steepness",
+        type=float,
+        default=10.0,
+        help="Sigmoid steepness for adaptive MC (default: 10.0)",
+    )
 
     args = parser.parse_args()
 
@@ -567,8 +659,6 @@ def main():
     data.load_graph(args.network)
     data.load_initial_seeds(args.initial)
 
-    pass
-
     heuristic = IEMPMCHeuristic(
         data,
         budget=args.budget,
@@ -576,6 +666,11 @@ def main():
         mc_simulations=args.mc_sim,
         candidate_pool_size=args.candidate_size,
         seed=args.seed,
+        adaptive_mc=args.adaptive_mc,
+        mc_sim_min=args.mc_sim_min,
+        mc_sim_max=args.mc_sim_max,
+        mc_threshold=args.mc_threshold,
+        mc_steepness=args.mc_steepness,
     )
     heuristic.run()
 

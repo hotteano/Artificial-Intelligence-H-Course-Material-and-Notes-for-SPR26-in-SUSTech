@@ -10,10 +10,10 @@ import os
 import threading
 
 # 配置
-NETWORK_FILE = "dataset_tle"
+NETWORK_FILE = "dataset9"
 SEED_FILE = "seed"
 OUTPUT_FILE = "result.txt"
-BUDGET = 1
+BUDGET = 30
 
 # 启发式算法路径
 HEURISTIC_SCRIPT = "../IEMP_Heur.py"

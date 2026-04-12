@@ -119,6 +119,19 @@ h_2(v) &= \mathbb{E}\left[2\,|\Delta R_2(v)\cap R_1| - |\Delta R_2(v)|\right].
 \end{align}
 Here $\Delta R_i(v)$ is the newly reached set when adding $v$ to campaign $i$ on top of a sampled base state. The better of $\max_v h_1(v)$ and $\max_v h_2(v)$ is selected.
 
+\textbf{Adaptive Monte Carlo Sampling.} Rather than using a fixed number of MC scenarios per step, we adaptively determine $N$ based on the uncertainty level of the graph's edge probabilities. The intuition is that graphs with deterministic edges (probabilities close to 0 or 1) require fewer samples to estimate expected marginal gains accurately, while graphs with intermediate probabilities (around 0.5) exhibit higher variance and require more samples.
+
+We estimate graph uncertainty by computing the normalized variance of edge probabilities. For an edge with probability $p$, the Bernoulli variance is $p(1-p)$, which is maximized at $p=0.5$ with value $0.25$. The normalized variance score is:
+\begin{equation}
+\sigma_{\text{graph}} = \frac{1}{0.25 \cdot |E|} \sum_{(u,v)\in E} \frac{p_1(u,v)(1-p_1(u,v)) + p_2(u,v)(1-p_2(u,v))}{2} \in [0,1].
+\end{equation}
+
+The MC count $N$ is then determined via a sigmoid mapping:
+\begin{equation}
+N = N_{\min} + \frac{N_{\max} - N_{\min}}{1 + \exp\left(-s \cdot (\sigma_{\text{graph}} - \tau)\right)},
+\end{equation}
+where $N_{\min}=1$, $N_{\max}=120$, steepness $s=10.0$, and threshold $\tau=0.11$. This ensures: (1) completely deterministic graphs ($\sigma_{\text{graph}}=0$) use minimal sampling ($N=1$); (2) highly uncertain graphs ($\sigma_{\text{graph}} > 0.3$) use near-maximum sampling ($N \approx 100$); (3) moderate-uncertainty graphs such as map1 ($\sigma_{\text{graph}} \approx 0.15$) use approximately $N \approx 70$ samples, balancing accuracy and efficiency.
+
 To reduce candidate evaluation cost, IMRank \cite{cheng2014imrankinfluencemaximizationfinding} provides a ranked pool from both campaigns, then only top candidates are evaluated in each greedy step. Under graphs with higher probabilities, each Monte Carlo simulation tends to reach more nodes, which can make incremental diffusion more expensive. IMRanking helps focus on promising candidates, thus controlling runtime while maintaining solution quality.
 
 \textbf{IMRank Implementation.} IMRank is an influence ranking algorithm that estimates node importance based on the sum of in-degrees from its neighbors, weighted by edge probabilities. The rank score for each node is computed iteratively until convergence:
@@ -255,7 +268,7 @@ The computational complexity of the evolutionary method is $O(P \cdot G \cdot \t
 
 \textbf{Algorithmic settings (default in scripts).}
 \begin{itemize}
-        \item Heuristic: \texttt{mc\_sim=70} (scenarios per greedy step), \texttt{candidate\_pool\_size=400} (IMRank screening), \texttt{seed=3407}.
+        \item Heuristic: \texttt{adaptive\_mc=enabled}, \texttt{mc\_sim\_min=1}, \texttt{mc\_sim\_max=120}, \texttt{mc\_threshold=0.11}, \texttt{mc\_steepness=10.0}, \texttt{candidate\_pool\_size=400} (IMRank screening), \texttt{seed=3407}. The actual MC count per step is adaptively determined based on graph variance.
         \item Evolutionary: \texttt{pop\_size=20}, \texttt{generations=100}, \texttt{crossover\_rate=0.8}, \\ \texttt{mutation\_rate=0.05}, \texttt{mc\_coarse=90}, \texttt{seed=3407}.
         \item Evaluator: \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
@@ -331,7 +344,7 @@ Figure~\ref{fig:heuristic_scaling} demonstrates how propagation probability affe
 
 \textbf{Hyperparameters for Table~\ref{tab:heur_old} (Heuristic).}
 \begin{itemize}
-        \item Batch setting (map1--map5): \texttt{mc\_sim=75} (scenarios per greedy step), \texttt{candidate\_pool\_size=1000} (IMRank screening), \texttt{seed=None}.
+        \item Batch setting (map1--map5): Adaptive MC sampling with \texttt{mc\_sim\_min=1}, \texttt{mc\_sim\_max=120}, \texttt{mc\_threshold=0.11}, \texttt{mc\_steepness=10.0}; \texttt{candidate\_pool\_size=1000} (IMRank screening), \texttt{seed=None}. Resulting MC counts: map1 $\approx$72, map2/map3 $\approx$25, map4 $\approx$82, map5 $\approx$88.
         \item map3 uses initial seed file \texttt{map3/seed2}; evaluation uses Evaluator defaults \texttt{simulations=5000}, \texttt{seed=3407}.
 \end{itemize}
 
