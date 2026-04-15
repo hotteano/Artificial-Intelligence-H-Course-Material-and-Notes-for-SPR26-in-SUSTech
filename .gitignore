@@ -2,3 +2,4 @@ Project1/venv.*
 __pycache__/
 .ipynb_checkpoints/
 Lab6\MLDP_Credit Card Fraud Detection(1)\MLDP_Credit Card Fraud Detection\creditcard.csv 
+Lab7/SVM_Credit Card Fraud Detection(1)/SVM_Credit Card Fraud Detection/creditcard.csv
