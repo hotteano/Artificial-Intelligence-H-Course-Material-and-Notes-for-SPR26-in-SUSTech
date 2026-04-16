@@ -3,57 +3,7 @@ from typing import List
 import numpy as np
 from pathlib import Path
 import os
-from tqdm import tqdm
-
-
-class NNS:
-    def __init__(self, k=5):
-        """
-        Initialize the KNN with a specified value of k.
-
-        Parameters:
-        - k: Number of neighbors (default is 5).
-        """
-        self.k = k
-
-    def fit(self, X_train):
-        """
-        Fit the KNN to the repository data.
-
-        Parameters:
-        - X_train: Repository data.
-        """
-        self.X_train = X_train
-
-    def predict(self, X_test):
-        """
-        Find the IDs of the k repository data points that are closest to the test sample points.
-
-        Parameters:
-        - X_test: Repository data.
-
-        Returns:
-        - y_pred: IDs of the k repository data points that are closest to the test sample points.
-        """
-        y_pred = []
-        for x in X_test:
-            k_indices = self._predict(x)
-            y_pred.append(k_indices)
-        return np.array(y_pred)
-
-    def _predict(self, x):
-        """
-        Find the IDs of the k repository data points that are closest to the single test data point.
-
-        Parameters:
-        - x: Test data point.
-
-        Returns:
-        - k_indices: IDs of the k repository data points that are closest to the test sample point.
-        """
-        distances = [np.sum((x - x_train) ** 2) for x_train in self.X_train]
-        k_indices = np.argsort(distances)[:self.k]
-        return k_indices
+from sklearn.neighbors import NearestNeighbors
 
 
 class Retrieval:
@@ -66,9 +16,9 @@ class Retrieval:
 
         """
         root_path = os.path.dirname(os.path.abspath(__file__))
-        self.model = NNS(k=5)
+        self.model = NearestNeighbors(n_neighbors=5, algorithm='brute', metric='cosine', n_jobs=1)
         retrieval_repository_data = repository_data[:, 1:]
-        self.model.fit(X_train=retrieval_repository_data)
+        self.model.fit(X=retrieval_repository_data)
 
     def inference(self, X: np.array) -> np.array:
         """
@@ -82,4 +32,36 @@ class Retrieval:
             be seen as a matrix with size=ax5, each row of the matrix is the indices of the 5 images that are most
             similar to the given image in the repository.
         """
-        return self.model.predict(X)
+        distances, indices = self.model.kneighbors(X)
+        return indices
+
+
+def _load_data(file_name):
+    with open(file_name, 'rb') as f:
+        return pickle.load(f)
+
+
+def main():
+    print("Loading repository data...")
+    repository_data = _load_data("image_retrieval_repository_data.pkl")
+    print(f"Repository shape: {repository_data.shape}")
+
+    # Build retrieval model
+    retrieval = Retrieval(repository_data=repository_data)
+
+    # Test on first 1000 samples (same as demo notebook)
+    test_queries = repository_data[:1000, 1:]
+    print(f"Test queries shape: {test_queries.shape}")
+
+    import time
+    start = time.time()
+    results = retrieval.inference(test_queries)
+    elapsed = time.time() - start
+
+    print(f"Results shape: {results.shape}")
+    print(f"Inference time for 1000 queries: {elapsed:.4f}s")
+    print(f"First 5 results for query 0: {results[0]}")
+
+
+if __name__ == "__main__":
+    main()
