@@ -1,0 +1,22 @@
+\contentsline {section}{\numberline {1}Task 1}{2}{section.1}%
+\contentsline {section}{\numberline {2}Task 2}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Perceptron Model Training and Feature Selection}{3}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}Weight Update Rule}{3}{subsubsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.2}First Weight Update}{3}{subsubsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.2}Scenario Analysis}{4}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Scenario (i): $A + B > 8$}{4}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Scenario (ii): $A \in \{2,3\}$ and $B \in \{2,3\}$}{4}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}Scenario (iii): $A = B$}{4}{subsubsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.3}Visualization}{4}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Task 3}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Soft Margin SVM}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Role of the Regularization Parameter $C$}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Experimental Results}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Observation and Trade-off Analysis}{6}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Task 4}{7}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Decision Tree Construction}{7}{subsection.4.1}%
+\contentsline {subsubsection}{\numberline {4.1.1}Choosing Splitting Features}{8}{subsubsection.4.1.1}%
+\contentsline {subsubsection}{\numberline {4.1.2}Feature Importance}{9}{subsubsection.4.1.2}%
+\contentsline {subsection}{\numberline {4.2}Impact of Tree Depth}{9}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Pruning and Overfitting Prevention}{10}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Task 5}{11}{section.5}%
