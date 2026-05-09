@@ -14,7 +14,7 @@ class Retrieval:
         self.model = NearestNeighbors(n_neighbors=5, algorithm='brute', metric='cosine', n_jobs=1)
         root_path = os.path.dirname(os.path.abspath(__file__))
         retrieval_repository_data = repository_data[:, 1:]
-        self.model.fit(X_train=retrieval_repository_data)
+        self.model.fit(X=retrieval_repository_data)
 
     def inference(self, X: np.array) -> np.array:
         """
