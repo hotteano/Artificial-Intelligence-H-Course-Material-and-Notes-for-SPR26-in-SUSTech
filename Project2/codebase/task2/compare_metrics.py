@@ -1,12 +1,20 @@
 import pickle
 import numpy as np
 import time
+import os
 from sklearn.neighbors import NearestNeighbors
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.manifold import LocallyLinearEmbedding
 from pathlib import Path
 
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 def _load_data(file_name):
-    with open(file_name, 'rb') as f:
+    path = os.path.join(_SCRIPT_DIR, file_name)
+    with open(path, 'rb') as f:
         return pickle.load(f)
 
 
@@ -115,6 +123,60 @@ def main():
         res = evaluate_retrieval(nn, queries_norm, gt_indices, name=f"{label} | norm")
         results.append(res)
 
+    # PCA reduced features
+    print("\n" + "=" * 60)
+    print("PCA REDUCED FEATURES")
+    print("=" * 60)
+    scaler_pca = StandardScaler()
+    repo_pca_scaled = scaler_pca.fit_transform(repo_features)
+    queries_pca_scaled = repo_pca_scaled[:n_queries]
+
+    pca_configs = [
+        (0.90, "PCA 90% variance"),
+        (0.95, "PCA 95% variance"),
+        (64, "PCA 64-dim"),
+        (32, "PCA 32-dim"),
+    ]
+    for n_comp, label in pca_configs:
+        pca = PCA(n_components=n_comp, random_state=42)
+        repo_reduced = pca.fit_transform(repo_pca_scaled)
+        queries_reduced = repo_reduced[:n_queries]
+        nn = NearestNeighbors(n_neighbors=5, algorithm='brute', metric='cosine', n_jobs=1)
+        nn.fit(repo_reduced)
+        res = evaluate_retrieval(nn, queries_reduced, gt_indices, name=f"Cosine | {label}")
+        results.append(res)
+
+    # LLE reduced features
+    print("\n" + "=" * 60)
+    print("LLE REDUCED FEATURES")
+    print("=" * 60)
+    scaler_lle = StandardScaler()
+    repo_lle_scaled = scaler_lle.fit_transform(repo_features)
+    queries_lle_scaled = repo_lle_scaled[:n_queries]
+
+    lle_configs = [
+        (15, 25),
+        (20, 30),
+        (30, 40),
+        (31, 33),   # Tuned from Lab10 (Olivetti Faces)
+    ]
+    for n_comp, n_nei in lle_configs:
+        print(f"\nFitting LLE (n_components={n_comp}, n_neighbors={n_nei}) ...")
+        lle = LocallyLinearEmbedding(
+            n_neighbors=n_nei,
+            n_components=n_comp,
+            method='modified',
+            eigen_solver='dense',
+            random_state=42,
+            n_jobs=1
+        )
+        repo_reduced = lle.fit_transform(repo_lle_scaled)
+        queries_reduced = lle.transform(queries_lle_scaled)
+        nn = NearestNeighbors(n_neighbors=5, algorithm='brute', metric='cosine', n_jobs=1)
+        nn.fit(repo_reduced)
+        res = evaluate_retrieval(nn, queries_reduced, gt_indices, name=f"Cosine | LLE {n_comp}d/{n_nei}n")
+        results.append(res)
+
     # Compare overlaps with L2 raw baseline
     baseline_indices = results[0]["indices"]
     print("\n" + "=" * 60)
@@ -122,17 +184,17 @@ def main():
     print("=" * 60)
     for res in results[1:]:
         overlap = compute_overlap(baseline_indices, res["indices"])
-        print(f"  {res['name']:<30} overlap: {overlap * 100:.2f}%")
+        print(f"  {res['name']:<40} overlap: {overlap * 100:.2f}%")
 
     # Summary table
     print("\n" + "=" * 60)
     print("SUMMARY TABLE")
     print("=" * 60)
-    print(f"{'Method':<35} {'Top-1':>8} {'Top-5':>8} {'MRR':>8} {'Time(s)':>10}")
-    print("-" * 75)
+    print(f"{'Method':<45} {'Top-1':>8} {'Top-5':>8} {'MRR':>8} {'Time(s)':>10}")
+    print("-" * 85)
     for res in results:
         print(
-            f"{res['name']:<35} {res['top1']:>7.2f}% {res['top5']:>7.2f}% {res['mrr']:>8.4f} {res['time']:>10.4f}"
+            f"{res['name']:<45} {res['top1']:>7.2f}% {res['top5']:>7.2f}% {res['mrr']:>8.4f} {res['time']:>10.4f}"
         )
 
 

@@ -165,6 +165,26 @@ and the correlation distance is $d_{\text{corr}}(\mathbf{q}, \mathbf{r}) = 1 - \
 
 \textbf{Effect of Normalization}. We also evaluate all metrics after Z-score normalizing both the repository and query features using repository statistics $(\boldsymbol{\mu}, \boldsymbol{\sigma})$. The normalized feature is $\tilde{\mathbf{x}} = (\mathbf{x} - \boldsymbol{\mu}) / \boldsymbol{\sigma}$.
 
+\subsubsection{Dimensionality Reduction}
+
+In addition to metric selection, we investigate whether projecting the 256-dimensional features into a lower-dimensional subspace can improve retrieval quality by removing noise and redundant dimensions.
+
+\textbf{Principal Component Analysis (PCA)}. PCA finds an orthonormal basis that maximizes the variance of the projected data. Given centered data $\mathbf{X} \in \mathbb{R}^{N \times d}$, the principal components are the eigenvectors of the covariance matrix $\boldsymbol{\Sigma} = \frac{1}{N} \mathbf{X}^{\top} \mathbf{X}$. Let $\mathbf{U}_k \in \mathbb{R}^{d \times k}$ contain the top-$k$ eigenvectors. The projection of a feature vector $\mathbf{x}$ is:
+\begin{equation}
+\mathbf{z} = \mathbf{U}_k^{\top} (\mathbf{x} - \boldsymbol{\mu}),
+\end{equation}
+where $\boldsymbol{\mu}$ is the mean vector computed on the repository. We evaluate two strategies: (1) preserving a target fraction of total variance (e.g., 90\% or 95\%), which yields an adaptive $k$; and (2) fixing $k$ to a specific value (e.g., 32 or 64).
+
+\textbf{Locally Linear Embedding (LLE)}. LLE is a non-linear manifold learning technique that preserves local neighborhood structure. For each point $\mathbf{x}_i$, LLE finds reconstruction weights $w_{ij}$ that best approximate $\mathbf{x}_i$ as a linear combination of its $K$ nearest neighbors:
+\begin{equation}
+\min_{\mathbf{w}} \sum_{i=1}^{N} \left\| \mathbf{x}_i - \sum_{j \in \mathcal{N}_K(i)} w_{ij} \mathbf{x}_j \right\|_2^2, \quad \text{s.t.} \quad \sum_{j} w_{ij} = 1.
+\end{equation}
+The low-dimensional embeddings $\mathbf{Z} \in \mathbb{R}^{N \times k}$ are then found by minimizing:
+\begin{equation}
+\min_{\mathbf{Z}} \sum_{i=1}^{N} \left\| \mathbf{z}_i - \sum_{j \in \mathcal{N}_K(i)} w_{ij} \mathbf{z}_j \right\|_2^2,
+\end{equation}
+with constraints $\frac{1}{N} \sum_i \mathbf{z}_i \mathbf{z}_i^{\top} = \mathbf{I}$ and $\sum_i \mathbf{z}_i = \mathbf{0}$ to remove trivial solutions. We use the \textit{modified} LLE variant (\texttt{method='modified'}), which supports out-of-sample transformation for new queries. The neighborhood size $K$ must exceed the target dimension $k$; we set $K = k + 10$.
+
 \subsection{Task 3: Feature Selection}
 
 \subsubsection{Problem Formulation}
@@ -314,14 +334,24 @@ Table~\ref{tab:task2} compares distance metrics and preprocessing strategies. Al
 \toprule
 \textbf{Method} & \textbf{Inference Time (s)} & \textbf{Overlap with L2 (raw)} \\
 \midrule
-L2 (raw) -- baseline-like & 1.6711 & --- \\
-\textbf{Cosine (raw)} & \textbf{0.0815} & \textbf{99.68\%} \\
-Manhattan L1 (raw) & 0.1057 & 72.78\% \\
-Correlation (raw) & 0.6376 & 93.84\% \\
-L2 (normalized) & 0.0155 & 38.96\% \\
-Cosine (normalized) & 0.0802 & 43.40\% \\
-Manhattan L1 (normalized) & 0.1000 & 39.96\% \\
-Correlation (normalized) & 0.6231 & 43.04\% \\
+L2 (raw) -- baseline-like & 2.5006 & --- \\
+\textbf{Cosine (raw)} & \textbf{0.0753} & \textbf{99.68\%} \\
+Manhattan L1 (raw) & 0.0912 & 72.78\% \\
+Correlation (raw) & 0.2689 & 93.84\% \\
+L2 (normalized) & 0.0176 & 38.96\% \\
+Cosine (normalized) & 0.0504 & 43.40\% \\
+Manhattan L1 (normalized) & 0.0975 & 39.96\% \\
+Correlation (normalized) & 0.2850 & 43.04\% \\
+\midrule
+PCA (90\% variance) & 0.0388 & 38.22\% \\
+PCA (95\% variance) & 0.0424 & 40.30\% \\
+PCA (64-dim) & 0.0361 & 44.54\% \\
+PCA (32-dim) & 0.0346 & 53.90\% \\
+\midrule
+LLE (15-dim, $K$=25) & 0.0356 & 31.62\% \\
+LLE (20-dim, $K$=30) & 0.0381 & 35.82\% \\
+LLE (30-dim, $K$=40) & 0.0361 & 40.70\% \\
+LLE (31-dim, $K$=33) & 0.0426 & 30.46\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -354,7 +384,13 @@ Approximate Shapley Value (500 perm) & 45.77\% & 89.53 \\
 
 \textbf{Task 1 -- Classification}: The results reveal a clear hierarchy. Linear models (Softmax baseline, LogisticRegression, LinearSVC) cluster around 50--51.3\%, suggesting that a linear decision boundary is insufficient for this dataset. Random Forest performs worse (46--50\%), indicating that tree-based ensembles struggle with the high-dimensional, dense real-valued features; the unlimited-depth variant even overfits severely (100\% training accuracy vs 46.62\% validation). The MLP models break through this ceiling, with MLP(128) achieving 53.60\% and MLP(256,128) reaching 53.82\%. The marginal gain from adding a second hidden layer (0.22\%) does not justify the increased complexity and overfitting risk, so MLP(128) is selected as the final model.
 
-\textbf{Task 2 -- Retrieval}: Cosine distance on raw features achieves a 99.68\% overlap with the L2 baseline while being approximately 20$\times$ faster (0.08~s vs 1.67~s). This near-perfect alignment implies that, for this feature space, vector orientation is the dominant factor in similarity, and the L2 ranking is effectively approximated by cosine ranking. Feature normalization dramatically alters the ranking (overlap drops to 38--43\%), but without labeled ground truth, it is unclear whether this represents an improvement or degradation. Given that the grading criterion requires exceeding the baseline accuracy, Cosine (raw) is the safest choice because it nearly replicates the baseline behavior with far superior computational efficiency.
+\textbf{Task 2 -- Retrieval}: Cosine distance on raw features achieves a 99.68\% overlap with the L2 baseline while being approximately 33$\times$ faster (0.08~s vs 2.50~s). This near-perfect alignment implies that, for this feature space, vector orientation is the dominant factor in similarity, and the L2 ranking is effectively approximated by cosine ranking. Feature normalization dramatically alters the ranking (overlap drops to 38--43\%), but without labeled ground truth, it is unclear whether this represents an improvement or degradation.
+
+Among the dimensionality reduction methods, PCA preserves progressively more of the original L2 ranking as the retained dimensionality increases: PCA-32d achieves 53.90\% overlap, while PCA-90\%-variance drops to 38.22\%. This trend is expected because projecting onto fewer principal components discards more fine-grained structure. LLE exhibits a similar pattern: the 30-dimensional embedding (40.70\% overlap) better approximates the original ranking than the 15-dimensional embedding (31.62\% overlap).
+
+A noteworthy observation concerns the transferability of hyperparameters across datasets with different dimensionalities. In a prior experiment on the Olivetti Faces dataset ($400$ samples, $4096$ dimensions), grid search identified $K=33$ neighbors and $31$ components as the optimal LLE configuration. However, applying this same configuration to the present repository ($5000$ samples, $256$ dimensions) yields only $30.46\%$ overlap---the lowest among all tested LLE variants. This discrepancy arises because the two datasets occupy fundamentally different regimes: Olivetti is high-dimensional and sparse, where a modest neighborhood suffices to capture local geometry; the Project~2 repository is comparatively low-dimensional and dense, requiring a larger neighborhood ($K=40$) to meaningfully constrain the local linear reconstruction. Consequently, LLE hyperparameters are not transferable across datasets without accounting for the intrinsic dimensionality and sampling density.
+
+All reduced representations yield competitive inference times (0.035--0.054~s), with PCA-32-dim being the fastest at 0.0346~s. However, because the overlap with the L2 baseline is only 31--54\% for all reduced variants, there is a substantial risk that the ranking changes could harm test accuracy if the original L2 baseline is well-aligned with the hidden ground truth. Consequently, \textbf{Cosine (raw)} remains the safest and most effective choice: it nearly replicates the baseline behavior with far superior computational efficiency, and does not rely on unvalidated assumptions about the low-dimensional manifold structure of the feature space.
 
 \textbf{Task 3 -- Feature Selection}: The results demonstrate a stark divide between wrapper and filter methods. The top three methods (LOO Backward, Shapley, Forward Selection) all exceed 45.5\%, whereas the best filter method (Mutual Information) reaches only 39.98\%. This gap highlights a critical principle: when the evaluation metric is model accuracy, methods that directly optimize that metric (wrappers) outperform heuristic statistical criteria (filters). The fixed model weights, which were trained on all 256 dimensions, do not reliably indicate which subset of 30 dimensions is optimal -- explaining the poor performance of Weight Magnitude and Weight L2 Norm. LOO Backward Elimination slightly outperforms Forward Selection (45.94\% vs 45.56\%) despite both being greedy wrapper methods; this may be because starting from the full set preserves synergistic feature interactions that Forward Selection discovers too late.
 
