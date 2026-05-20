@@ -1,5 +1,4 @@
 import argparse
-import copy
 import importlib.util
 import math
 import os
@@ -9,6 +8,7 @@ from collections import defaultdict
 
 import numpy as np
 import torch
+from tqdm import tqdm
 from pytorch_lightning import seed_everything
 from sklearn.metrics import roc_auc_score
 
@@ -164,59 +164,61 @@ def run_single(kgrs_path, kg_path, label, data_splits, k=5, seed=1088,
     seed_everything(seed, workers=True)
     torch.set_num_threads(8)
 
-    start_time = time.time()
+    t0 = time.perf_counter()
 
     with open(kg_path, encoding="utf-8") as f:
         kg_lines = f.readlines()
 
     kgrs = KGRS(
-        train_pos=copy.deepcopy(train_pos),
-        train_neg=copy.deepcopy(train_neg),
+        train_pos=train_pos,
+        train_neg=train_neg,
         kg_lines=kg_lines,
     )
-    init_time = time.time() - start_time
+    t1 = time.perf_counter()
+    init_time = t1 - t0
 
     # Early stopping based on validation AUC
     best_val_auc = -1.0
     best_state = None
     no_improve = 0
 
-    train_start = time.time()
-    for epoch in range(1, max_epochs + 1):
+    for epoch in tqdm(range(1, max_epochs + 1), desc=f"{label} Training", leave=False):
         kgrs.model.train_TransE(epoch_num=1, output_log=False)
 
         # Validation
         if len(val_pos) > 0 and len(val_neg) > 0:
-            val_data = np.concatenate((copy.deepcopy(val_neg), copy.deepcopy(val_pos)), axis=0)
+            val_data = np.concatenate((val_neg, val_pos), axis=0)
             rng = np.random.default_rng(seed + epoch)
             rng.shuffle(val_data)
             val_labels = val_data[:, 2]
             val_data = val_data[:, :2]
             val_scores = kgrs.eval_ctr(val_data)
             val_auc = roc_auc_score(y_true=val_labels, y_score=val_scores)
-            print(f"  Epoch {epoch:02d} | Val AUC: {val_auc:.4f}")
+            tqdm.write(f"  Epoch {epoch:02d} | Val AUC: {val_auc:.4f}")
             if val_auc > best_val_auc:
                 best_val_auc = val_auc
-                best_state = copy.deepcopy(kgrs.model.state_dict())
+                best_state = {k: v.cpu().clone() for k, v in kgrs.model.state_dict().items()}
                 no_improve = 0
             else:
                 no_improve += 1
                 if no_improve >= patience:
-                    print(f"  Early stopping at epoch {epoch} (best val AUC: {best_val_auc:.4f})")
+                    tqdm.write(f"  Early stopping at epoch {epoch} (best val AUC: {best_val_auc:.4f})")
                     break
-    train_time = time.time() - train_start
+    t2 = time.perf_counter()
+    train_time = t2 - t1
 
     if best_state is not None:
         kgrs.model.load_state_dict(best_state)
 
     # ---- Test CTR ----
-    test_data = np.concatenate((copy.deepcopy(test_neg), copy.deepcopy(test_pos)), axis=0)
+    test_data = np.concatenate((test_neg, test_pos), axis=0)
     rng = np.random.default_rng(seed + 9999)
     rng.shuffle(test_data)
     test_labels = test_data[:, 2]
     test_data = test_data[:, :2]
     test_auc = evaluate_ctr(kgrs, test_data, test_labels)
-    ctr_time = time.time() - start_time - init_time - train_time
+    t3 = time.perf_counter()
+    ctr_time = t3 - t2
 
     # ---- Test Top-K ----
     train_user_pos = get_user_pos_items(train_pos)
@@ -224,8 +226,9 @@ def run_single(kgrs_path, kg_path, label, data_splits, k=5, seed=1088,
     # Only evaluate users that have test positive items
     eval_users = [u for u in test_user_pos if test_user_pos[u]]
     topk_metrics = evaluate_topk(kgrs, eval_users, test_user_pos, train_user_pos, k=k)
-    topk_time = time.time() - start_time - init_time - train_time - ctr_time
-    total_time = time.time() - start_time
+    t4 = time.perf_counter()
+    topk_time = t4 - t3
+    total_time = t4 - t0
 
     return {
         "label": label,

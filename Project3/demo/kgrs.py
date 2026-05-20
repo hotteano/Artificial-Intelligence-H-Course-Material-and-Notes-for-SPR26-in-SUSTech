@@ -202,7 +202,7 @@ class TransE(torch.nn.Module):
     def train_TransE(self, epoch_num: int, output_log=False):
         # Use Adam Optimizer
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
-        for epoch in tqdm(range(epoch_num)):
+        for epoch in tqdm(range(epoch_num), disable=True):
             train_batches = self.dataloader.get_training_batch()
             losses = []
             for batch in train_batches:
