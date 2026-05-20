@@ -1,3 +1,4 @@
+.worktrees/
 Project1/venv.*
 __pycache__/
 .ipynb_checkpoints/
