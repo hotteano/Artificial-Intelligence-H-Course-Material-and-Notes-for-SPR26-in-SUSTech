@@ -241,19 +241,25 @@ class DataStore:
             + 0.70 * _zscore(self.itemcf_all(user))
         )
 
+    def cold_start_all(self):
+        return _zscore(self.temporal_score[self.n_user])
+
 
 class MatrixFactorModel(torch.nn.Module):
-    def __init__(self, data: DataStore, dim=48, lr=2e-3, batch_size=4096):
+    def __init__(self, data: DataStore, dim=48, lr=2e-3, batch_size=4096, bpr_weight=0.7):
         super().__init__()
         self.data = data
         self.lr = lr
         self.batch_size = batch_size
+        self.bpr_weight = bpr_weight
         self.user_emb = torch.nn.Embedding(max(1, data.n_user), dim)
         self.item_emb = torch.nn.Embedding(max(1, data.n_item), dim)
         self.user_bias = torch.nn.Embedding(max(1, data.n_user), 1)
         self.item_bias = torch.nn.Embedding(max(1, data.n_item), 1)
         self.global_bias = torch.nn.Parameter(torch.zeros(1))
         self.trained_epochs = 0
+        self.user_neg_array = {user: np.asarray(sorted(items), dtype=np.int64) for user, items in data.user_neg.items()}
+        self.user_pos_array = {user: np.asarray(sorted(items), dtype=np.int64) for user, items in data.user_pos.items()}
         self._init_weights()
 
     def _init_weights(self):
@@ -273,9 +279,11 @@ class MatrixFactorModel(torch.nn.Module):
         if len(rows) == 0:
             return
         labels = rows[:, 2].astype(np.float32)
+        pos_rows = self.data.train_pos
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=1e-5)
         for _ in range(epoch_num):
             order = np.random.permutation(len(rows))
+            pos_order = np.random.permutation(len(pos_rows)) if len(pos_rows) else np.empty(0, dtype=np.int64)
             losses = []
             for start in range(0, len(rows), self.batch_size):
                 idx = order[start:start + self.batch_size]
@@ -283,7 +291,20 @@ class MatrixFactorModel(torch.nn.Module):
                 items = rows[idx, 1]
                 y = torch.as_tensor(labels[idx], dtype=torch.float32)
                 logits = self.forward(users, items)
-                loss = F.binary_cross_entropy_with_logits(logits, y)
+                bce_loss = F.binary_cross_entropy_with_logits(logits, y)
+
+                bpr_loss = torch.zeros((), dtype=torch.float32)
+                pos_idx = pos_order[start:start + self.batch_size]
+                if len(pos_idx) > 0:
+                    pos_batch = pos_rows[pos_idx]
+                    bpr_users = pos_batch[:, 0]
+                    bpr_pos_items = pos_batch[:, 1]
+                    bpr_neg_items = self._sample_bpr_negatives(bpr_users)
+                    pos_score = self.forward(bpr_users, bpr_pos_items)
+                    neg_score = self.forward(bpr_users, bpr_neg_items)
+                    bpr_loss = F.softplus(neg_score - pos_score).mean()
+
+                loss = bce_loss + self.bpr_weight * bpr_loss
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.parameters(), 5.0)
@@ -292,6 +313,25 @@ class MatrixFactorModel(torch.nn.Module):
             self.trained_epochs += 1
             if output_log and losses:
                 print("loss", float(np.mean(losses)))
+
+    def _sample_bpr_negatives(self, users):
+        neg_items = np.empty(len(users), dtype=np.int64)
+        for idx, user in enumerate(users):
+            user = int(user)
+            known_neg = self.user_neg_array.get(user)
+            if known_neg is not None and len(known_neg) > 0:
+                neg_items[idx] = int(known_neg[np.random.randint(len(known_neg))])
+                continue
+
+            known_pos = self.user_pos_array.get(user)
+            pos_set = set(known_pos.tolist()) if known_pos is not None else set()
+            item = int(np.random.randint(max(1, self.data.n_item)))
+            retry = 0
+            while item in pos_set and retry < 20:
+                item = int(np.random.randint(max(1, self.data.n_item)))
+                retry += 1
+            neg_items[idx] = item
+        return neg_items
 
     def score_pairs(self, pairs):
         out = np.zeros(len(pairs), dtype=np.float32)
@@ -350,7 +390,10 @@ class KGRS:
         result = []
         for user in users:
             user = int(user)
-            score = self.data.base_all(user) + 0.30 * _zscore(self.model.score_all(user))
+            if user not in self.data.user_pos and user not in self.data.user_neg:
+                score = self.data.cold_start_all().copy()
+            else:
+                score = self.data.base_all(user) + 0.50 * _zscore(self.model.score_all(user))
             known_pos = self.data.user_pos.get(user)
             if known_pos:
                 known = np.fromiter(known_pos, dtype=np.int64)

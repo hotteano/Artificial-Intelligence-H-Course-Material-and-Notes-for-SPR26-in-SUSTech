@@ -1,5 +1,6 @@
 import logging
 import time
+from collections import defaultdict
 from copy import deepcopy
 
 import math
@@ -34,12 +35,44 @@ def nDCG(sorted_items, pos_item, train_pos_item, k=5):
     return dcg / idcg
 
 
+def split_by_user(records, train_ratio=0.8, seed=1088):
+    rng = np.random.default_rng(seed)
+    user_records = defaultdict(list)
+    for row in records:
+        user_records[int(row[0])].append(row)
+
+    train_parts, remaining_parts = [], []
+    for rows in user_records.values():
+        rows = np.asarray(rows, dtype=records.dtype)
+        rng.shuffle(rows)
+
+        # Keep every user visible in training; split the remaining records globally
+        # so the final train size stays close to the requested 80%.
+        train_parts.append(rows[:1])
+        if len(rows) > 1:
+            remaining_parts.append(rows[1:])
+
+    empty = np.empty((0, 3), dtype=records.dtype)
+    reserved_train = np.vstack(train_parts) if train_parts else empty
+    remaining = np.vstack(remaining_parts) if remaining_parts else empty
+
+    rng.shuffle(remaining)
+    target_train_size = int(len(records) * train_ratio)
+    extra_train_size = max(0, min(len(remaining), target_train_size - len(reserved_train)))
+    train_extra = remaining[:extra_train_size]
+    test = remaining[extra_train_size:]
+    train = np.vstack([reserved_train, train_extra]) if len(train_extra) else reserved_train
+
+    rng.shuffle(train)
+    rng.shuffle(test)
+    return train, test
+
+
 def load_data():
-    train_pos, train_neg = np.load("../data/train_pos.npy"), np.load(
-        "../data/train_neg.npy")
-    train_pos_len, train_neg_len = int(len(train_pos)*0.8), int(len(train_neg)*0.8)
-    test_pos, test_neg = train_pos[train_pos_len:], train_neg[train_neg_len:]
-    train_pos, train_neg = train_pos[:train_pos_len], train_neg[:train_neg_len]
+    full_pos = np.load("../data/train_pos.npy")
+    full_neg = np.load("../data/train_neg.npy")
+    train_pos, test_pos = split_by_user(full_pos, train_ratio=0.8, seed=1088)
+    train_neg, test_neg = split_by_user(full_neg, train_ratio=0.8, seed=1089)
     return train_pos, train_neg, test_pos, test_neg
 
 
