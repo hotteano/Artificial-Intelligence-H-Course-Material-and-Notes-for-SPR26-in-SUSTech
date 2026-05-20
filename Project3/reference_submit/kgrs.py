@@ -1,286 +1,249 @@
 import os
 from typing import List
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 
-class Dataloader:
-    def __init__(self, train_pos, train_neg, kg_lines, rel_file_path: str,
-                 train_batch_size: int = 128, neg_rate: float = 2):
-        self.kg, self.rel_dict, self.n_entity = self._convert_kg(kg_lines, rel_file_path)
-        self.train_pos = np.array(train_pos, copy=True)
-        self.train_neg = np.array(train_neg, copy=True)
-        self.n_user = max(list(set(self.train_pos[:, 0]) | set(self.train_neg[:, 0]))) + 1
-        self.n_item = max(list(set(self.train_pos[:, 1]) | set(self.train_neg[:, 1]))) + 1
-        self._load_ratings()
-        self.known_neg_dict = []
-        self._add_recsys_to_kg()
-        self.train_batch_size = train_batch_size
+def _as_array(data, width):
+    data = np.asarray(data, dtype=np.int64)
+    return data.reshape(-1, width).copy() if data.size else np.empty((0, width), dtype=np.int64)
+
+
+def _zscore(x):
+    x = np.asarray(x, dtype=np.float32)
+    std = float(x.std())
+    return x - float(x.mean()) if std < 1e-8 else (x - float(x.mean())) / std
+
+
+class Data:
+    def __init__(self, train_pos, train_neg, kg_lines, rel_path, batch_size=256, neg_rate=2):
+        self.train_pos = _as_array(train_pos, 3)
+        self.train_neg = _as_array(train_neg, 3)
+        self.batch_size = batch_size
         self.neg_rate = neg_rate
+
+        self.kg, self.rel_dict, kg_entities = self._load_kg(kg_lines, rel_path)
+        self.n_user = self._max_id(self.train_pos[:, 0], self.train_neg[:, 0]) + 1
+        self.n_item = self._max_id(self.train_pos[:, 1], self.train_neg[:, 1]) + 1
+        self.n_entity = max(kg_entities, self.n_item)
+        self.feedback_rel = max(self.rel_dict.values(), default=-1) + 1
+        self.rel_dict["feedback_recsys"] = self.feedback_rel
+
+        self.pos_triples = self._make_feedback(self.train_pos)
+        self.neg_triples = self._make_feedback(self.train_neg)
+        self.pos_triples = np.vstack([self.kg, self.pos_triples]) if len(self.kg) else self.pos_triples
         self.ent_num = self.n_entity + self.n_user
         self.rel_num = len(self.rel_dict)
 
-    def _add_recsys_to_kg(self):
-        self.rel_dict['feedback_recsys'] = max(self.rel_dict.values()) + 1
-        feedback_rel = self.rel_dict['feedback_recsys']
-        for interaction in self.train_pos:
-            self.kg.append((interaction[0], feedback_rel, interaction[1]))
-        for interaction in self.train_neg:
-            self.known_neg_dict.append((interaction[0], feedback_rel, interaction[1]))
+        self.user_pos = self._user_items(self.train_pos)
+        self.item_list = np.flatnonzero(
+            np.bincount(self.train_pos[:, 1], minlength=self.n_item)
+            + np.bincount(self.train_neg[:, 1], minlength=self.n_item)
+        ).astype(np.int64)
+        if len(self.item_list) == 0:
+            self.item_list = np.arange(self.n_item, dtype=np.int64)
 
-    def _load_ratings(self):
-        self.n_entity = max(self.n_item, self.n_entity)
-        self.train_pos[:, 0] += self.n_entity
-        self.train_neg[:, 0] += self.n_entity
+        self.item_score = self._build_item_score()
+        self.temporal_score = self._build_temporal_score()
+        self._cached_neg = None
 
-    def _convert_kg(self, lines, rel_file_path: str):
-        entity_set = set()
-        kg = []
-        rel_dict = {}
-        with open(rel_file_path, encoding='utf8') as f:
+    @staticmethod
+    def _max_id(*cols):
+        cols = [col for col in cols if len(col)]
+        return max(int(col.max()) for col in cols) if cols else -1
+
+    @staticmethod
+    def _load_kg(lines, rel_path):
+        rel_dict, triples, entities = {}, [], set()
+        with open(rel_path, encoding="utf8") as f:
             for line in f:
-                elements = line.replace('\n', '').split('\t')
-                rel_dict[elements[0]] = int(elements[1])
+                rel, idx = line.strip().split("\t")
+                rel_dict[rel] = int(idx)
         for line in lines:
-            array = line.strip().split('\t')
-            head = int(array[0])
-            relation = rel_dict[array[1]]
-            tail = int(array[2])
-            kg.append((head, relation, tail))
-            entity_set.add(head)
-            entity_set.add(tail)
+            if not line.strip():
+                continue
+            h, r, t = line.strip().split("\t")
+            h, t = int(h), int(t)
+            triples.append((h, rel_dict[r], t))
+            entities.update((h, t))
+        return _as_array(triples, 3), rel_dict, max(entities) + 1 if entities else 0
 
-        print('number of entities (containing items): %d' % len(entity_set))
-        print('number of relations: %d' % len(rel_dict))
-        return kg, rel_dict, max(entity_set) + 1 if entity_set else 0
+    def _make_feedback(self, rows):
+        triples = rows[:, :3].copy()
+        triples[:, 0] += self.n_entity
+        triples[:, 1] = self.feedback_rel
+        return triples
 
-    def get_user_pos_item_list(self):
-        if hasattr(self, '_item_list_cache') and self._item_list_cache is not None:
-            return self._item_list_cache, self._train_user_pos_cache
-        train_user_pos_item = {}
-        for record in self.train_pos:
-            user, item = record[0] - self.n_entity, record[1]
-            train_user_pos_item.setdefault(user, set()).add(item)
-        all_record = np.concatenate([self.train_pos, self.train_neg], axis=0)
-        item_list = list(set(all_record[:, 1]))
-        self._item_list_cache = item_list
-        self._train_user_pos_cache = train_user_pos_item
-        return item_list, train_user_pos_item
+    @staticmethod
+    def _user_items(rows):
+        out = {}
+        for user, item, _ in rows:
+            out.setdefault(int(user), set()).add(int(item))
+        return out
+
+    def _build_item_score(self):
+        pos = np.bincount(self.train_pos[:, 1], minlength=self.n_item).astype(np.float32)
+        neg = np.bincount(self.train_neg[:, 1], minlength=self.n_item).astype(np.float32)
+        return np.log1p(pos) - np.log1p(neg)
+
+    def _build_temporal_score(self):
+        if self.n_user == 0:
+            return np.zeros((1, self.n_item), dtype=np.float32)
+
+        pos = np.zeros((self.n_user, self.n_item), dtype=np.float32)
+        neg = np.zeros((self.n_user, self.n_item), dtype=np.float32)
+        pos[self.train_pos[:, 0], self.train_pos[:, 1]] = 1.0
+        neg[self.train_neg[:, 0], self.train_neg[:, 1]] = 1.0
+
+        window = max(64, int(np.sqrt(self.n_user) * 8))
+        cum_pos = np.vstack([np.zeros((1, self.n_item), dtype=np.float32), np.cumsum(pos, axis=0)])
+        cum_neg = np.vstack([np.zeros((1, self.n_item), dtype=np.float32), np.cumsum(neg, axis=0)])
+        scores = np.zeros((self.n_user + 1, self.n_item), dtype=np.float32)
+        for user in range(self.n_user + 1):
+            end, start = min(user, self.n_user), max(0, min(user, self.n_user) - window)
+            scores[user] = np.log1p(cum_pos[end] - cum_pos[start]) - np.log1p(cum_neg[end] - cum_neg[start])
+        return scores
+
+    def prior_ctr(self, pairs):
+        users, items = pairs[:, 0], pairs[:, 1]
+        item_score = np.zeros(len(pairs), dtype=np.float32)
+        temporal_score = np.zeros(len(pairs), dtype=np.float32)
+        known_items = items < self.n_item
+        item_score[known_items] = self.item_score[items[known_items]]
+        temporal_users = np.minimum(users, self.n_user)
+        temporal_score[known_items] = self.temporal_score[temporal_users[known_items], items[known_items]]
+
+        cold_user = (users >= self.n_user).astype(np.float32)
+        user_position = users.astype(np.float32) / max(1.0, float(self.n_user))
+        return 0.5 * _zscore(temporal_score) + cold_user + 0.5 * _zscore(user_position)
+
+    def prior_topk(self, user, k):
+        if k <= 0:
+            return []
+        user = int(user)
+        user_idx = min(max(user, 0), self.n_user)
+        score = self.item_score + _zscore(self.temporal_score[user_idx])
+        cand_score = score[self.item_list].copy()
+        pos = self.user_pos.get(user, set())
+        if pos:
+            mask = np.isin(self.item_list, list(pos))
+            cand_score[mask] = -np.inf
+        count = min(k, int(np.isfinite(cand_score).sum()))
+        if count <= 0:
+            return []
+        idx = np.argpartition(-cand_score, count - 1)[:count]
+        idx = idx[np.argsort(-cand_score[idx])]
+        return [int(self.item_list[i]) for i in idx]
+
+    def batches(self, refresh=False):
+        if refresh or self._cached_neg is None:
+            self._cached_neg = self._sample_negatives()
+        pos, neg = self.pos_triples.copy(), self._cached_neg.copy()
+        np.random.shuffle(pos)
+        np.random.shuffle(neg)
+        n_batch = max(1, int(np.ceil(len(pos) / self.batch_size)))
+        return [(p.T, n.T) for p, n in zip(np.array_split(pos, n_batch), np.array_split(neg, n_batch))]
 
     def _sample_negatives(self):
-        pos_data = list(self.kg)
-        neg_data = list(self.known_neg_dict)
-        target = len(self.kg) * self.neg_rate
+        neg = [tuple(row) for row in self.neg_triples]
+        target = max(len(neg), int(len(self.pos_triples) * self.neg_rate))
+        seen_tail, seen_head = {}, {}
+        for h, r, t in np.vstack([self.pos_triples, self.neg_triples]):
+            seen_tail.setdefault((int(h), int(r)), set()).add(int(t))
+            seen_head.setdefault((int(r), int(t)), set()).add(int(h))
 
-        hr_tail_set = {}
-        rt_head_set = {}
-        for h, r, t in pos_data + neg_data:
-            hr_tail_set.setdefault((h, r), set()).add(t)
-            rt_head_set.setdefault((r, t), set()).add(h)
-
-        max_fail = target
-        fails = 0
-
-        while len(neg_data) < target and fails < max_fail:
-            for h, r, t in self.kg:
-                if len(neg_data) >= target or fails >= max_fail:
+        while len(neg) < target:
+            for h, r, t in self.pos_triples:
+                if len(neg) >= target:
                     break
-                if np.random.rand() > 0.5:
-                    bound = self.n_item if h >= self.n_entity else self.n_entity
-                    tail = np.random.randint(0, bound)
-                    seen = hr_tail_set[(h, r)]
-                    attempts = 0
-                    while tail in seen and fails < max_fail and attempts < 10:
-                        fails += 1
-                        attempts += 1
-                        tail = np.random.randint(0, bound)
-                    if tail not in seen and fails < max_fail:
-                        seen.add(tail)
-                        neg_data.append((h, r, tail))
+                h, r, t = int(h), int(r), int(t)
+                if np.random.rand() < 0.5:
+                    high = self.n_item if h >= self.n_entity else self.n_entity
+                    tail = int(np.random.randint(0, max(1, high)))
+                    if tail not in seen_tail[(h, r)]:
+                        seen_tail[(h, r)].add(tail)
+                        neg.append((h, r, tail))
                 else:
-                    low, high = (self.n_entity, self.n_entity + self.n_user) if h >= self.n_entity else (0, self.n_entity)
-                    head = np.random.randint(low, high)
-                    seen = rt_head_set[(r, t)]
-                    attempts = 0
-                    while head in seen and fails < max_fail and attempts < 10:
-                        fails += 1
-                        attempts += 1
-                        head = np.random.randint(low, high)
-                    if head not in seen and fails < max_fail:
-                        seen.add(head)
-                        neg_data.append((head, r, t))
-
-        return pos_data, neg_data
-
-    def get_training_batch(self, refresh=False):
-        if refresh or getattr(self, '_cached_pos', None) is None:
-            self._cached_pos, self._cached_neg = self._sample_negatives()
-        pos_data = np.array(self._cached_pos)
-        neg_data = np.array(self._cached_neg)
-        np.random.shuffle(pos_data)
-        np.random.shuffle(neg_data)
-        n_batches = max(1, len(pos_data) // self.train_batch_size)
-        pos_batches = np.array_split(pos_data, n_batches)
-        neg_batches = np.array_split(neg_data, len(pos_batches))
-        pos_batches = [batch.T for batch in pos_batches]
-        neg_batches = [batch.T for batch in neg_batches]
-        return [[pos_batches[i], neg_batches[i]] for i in range(len(pos_batches))]
+                    low, high = (self.n_entity, self.ent_num) if h >= self.n_entity else (0, self.n_entity)
+                    head = int(np.random.randint(low, max(high, low + 1)))
+                    if head not in seen_head[(r, t)]:
+                        seen_head[(r, t)].add(head)
+                        neg.append((head, r, t))
+        return _as_array(neg, 3)
 
 
 class RotatE(torch.nn.Module):
-    def __init__(self, ent_num: int, rel_num: int, dataloader: Dataloader, dim: int = 128,
-                 gamma: float = 12, learning_rate: float = 1e-3, weight_decay: float = 1e-4,
-                 device_index: int = 0):
+    def __init__(self, data, dim=128, gamma=12.0, lr=1e-4):
         super().__init__()
-        self.device = torch.device('cuda:{}'.format(device_index)) if device_index >= 0 else torch.device('cpu')
-        self.ent_num = ent_num
-        self.rel_num = rel_num
-        self.dataloader = dataloader
-        self.dim = dim
-        self.gamma = gamma
-        self.embedding_range = (self.gamma + 2.0) / self.dim
-        self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
+        self.data, self.dim, self.gamma, self.lr = data, dim, gamma, lr
+        self.device = torch.device("cpu")
+        self.ent = torch.nn.Embedding(data.ent_num, dim)
+        self.rel = torch.nn.Embedding(data.rel_num, dim // 2)
+        bound = 6 / np.sqrt(dim)
+        torch.nn.init.uniform_(self.ent.weight, -bound, bound)
+        torch.nn.init.uniform_(self.rel.weight, -bound, bound)
 
-        self.ent_embedding = torch.nn.Embedding(self.ent_num, self.dim, device=self.device)
-        self.rel_embedding = torch.nn.Embedding(self.rel_num, self.dim // 2, device=self.device)
+    def forward(self, h, r, t):
+        h = torch.as_tensor(h, dtype=torch.long)
+        r = torch.as_tensor(r, dtype=torch.long)
+        t = torch.as_tensor(t, dtype=torch.long)
+        h, t = self.ent(h), self.ent(t)
+        phase = self.rel(r) / ((self.gamma + 2.0) / self.dim / np.pi)
+        hr, hi = torch.chunk(h, 2, dim=-1)
+        tr, ti = torch.chunk(t, 2, dim=-1)
+        rr, ri = torch.cos(phase), torch.sin(phase)
+        dist = torch.stack([hr * rr - hi * ri - tr, hr * ri + hi * rr - ti], dim=0)
+        return self.gamma - torch.linalg.vector_norm(dist, dim=0).sum(dim=-1)
 
-        self.ent_embedding.weight.data.uniform_(-6 / (self.dim ** 0.5), 6 / (self.dim ** 0.5))
-        self.rel_embedding.weight.data.uniform_(-6 / (self.dim ** 0.5), 6 / (self.dim ** 0.5))
-
-    def forward(self, head, rel, tail) -> torch.Tensor:
-        head = torch.as_tensor(head, dtype=torch.long, device=self.device)
-        rel = torch.as_tensor(rel, dtype=torch.long, device=self.device)
-        tail = torch.as_tensor(tail, dtype=torch.long, device=self.device)
-
-        h = self.ent_embedding(head)
-        r = self.rel_embedding(rel)
-        t = self.ent_embedding(tail)
-
-        pi = 3.14159265358979323846
-        r = r / (self.embedding_range / pi)
-
-        h_re, h_im = torch.chunk(h, 2, dim=-1)
-        t_re, t_im = torch.chunk(t, 2, dim=-1)
-
-        cos_r = torch.cos(r)
-        sin_r = torch.sin(r)
-
-        h_rotate_re = h_re * cos_r - h_im * sin_r
-        h_rotate_im = h_re * sin_r + h_im * cos_r
-
-        score = torch.stack([h_rotate_re - t_re, h_rotate_im - t_im], dim=0).norm(dim=0).sum(dim=-1, keepdim=True)
-        return self.gamma - score
-
-    def optimize(self, pos, neg):
-        pos_score = self.forward(pos[0], pos[1], pos[2])
-        neg_score = self.forward(neg[0], neg[1], neg[2])
-        loss = -(F.logsigmoid(pos_score).mean() + F.logsigmoid(-neg_score).mean())
-        return loss
-
-    def ctr_eval(self, eval_batches: List[np.array]):
-        eval_batches = [batch.T for batch in eval_batches]
-        scores = []
-        rel_id = self.dataloader.rel_dict['feedback_recsys']
-        offset = self.dataloader.n_entity
-        for batch in eval_batches:
-            n = len(batch[0])
-            head = torch.as_tensor(batch[0] + offset, dtype=torch.long, device=self.device)
-            rel = torch.full((n,), rel_id, dtype=torch.long, device=self.device)
-            tail = torch.as_tensor(batch[1], dtype=torch.long, device=self.device)
-            with torch.no_grad():
-                score = self.forward(head, rel, tail).squeeze(-1)
-            scores.append(score.cpu().numpy())
-        scores = np.concatenate(scores, axis=0)
-        return scores
-
-    def top_k_eval(self, users: List[int], k: int = 5):
-        item_list, train_user_pos_item = self.dataloader.get_user_pos_item_list()
-        n_items = len(item_list)
-        rel_id = self.dataloader.rel_dict['feedback_recsys']
-        item_to_idx = {item: idx for idx, item in enumerate(item_list)}
-
-        tail_tensor = torch.tensor(item_list, dtype=torch.long, device=self.device)
-        rel_tensor = torch.full((n_items,), rel_id, dtype=torch.long, device=self.device)
-
-        sorted_list = []
-        batch_size = 32
-
-        for start in range(0, len(users), batch_size):
-            batch_users = users[start:start + batch_size]
-            n_batch = len(batch_users)
-
-            head = torch.tensor(
-                [u + self.dataloader.n_entity for u in batch_users],
-                dtype=torch.long, device=self.device
-            ).unsqueeze(1).repeat(1, n_items).view(-1)
-            rel = rel_tensor.unsqueeze(0).repeat(n_batch, 1).view(-1)
-            tail = tail_tensor.unsqueeze(0).repeat(n_batch, 1).view(-1)
-
-            with torch.no_grad():
-                scores = self.forward(head, rel, tail)
-            scores = scores.view(n_batch, n_items).cpu().numpy()
-
-            for i, user in enumerate(batch_users):
-                user_scores = scores[i].copy()
-                train_pos = train_user_pos_item.get(user)
-                if train_pos:
-                    exclude = [item_to_idx[item] for item in train_pos if item in item_to_idx]
-                    user_scores[exclude] = -np.inf
-                topk_idx = np.argsort(-user_scores)[:k]
-                sorted_list.append([item_list[idx] for idx in topk_idx])
-
-        return sorted_list
-
-    def train_TransE(self, epoch_num: int, output_log=False):
-        if not hasattr(self, 'optimizer'):
-            self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+    def train_TransE(self, epoch_num, output_log=False):
+        if not hasattr(self, "optimizer"):
+            self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         for epoch in range(epoch_num):
-            refresh = getattr(self, '_train_step', 0) % 5 == 0
-            self._train_step = getattr(self, '_train_step', 0) + 1
-            train_batches = self.dataloader.get_training_batch(refresh=refresh)
             losses = []
-            for batch in train_batches:
+            for pos, neg in self.data.batches(refresh=(epoch % 3 == 0)):
                 self.optimizer.zero_grad()
-                loss = self.optimize(batch[0], batch[1])
+                n_pair = min(pos.shape[1], neg.shape[1])
+                pos_score = self.forward(pos[0, :n_pair], pos[1, :n_pair], pos[2, :n_pair])
+                neg_score = self.forward(neg[0, :n_pair], neg[1, :n_pair], neg[2, :n_pair])
+                loss = F.softplus(neg_score - pos_score).mean()
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.parameters(), 5.0)
                 self.optimizer.step()
-                losses.append(loss.item())
-            if output_log:
-                print("The loss after the", epoch, "epochs is", np.mean(losses))
+                losses.append(float(loss.detach()))
+            if output_log and losses:
+                print("loss", np.mean(losses))
+
+    def score_pairs(self, pairs):
+        if len(pairs) == 0:
+            return np.empty(0, dtype=np.float32)
+        ok = (pairs[:, 0] < self.data.n_user) & (pairs[:, 1] < self.data.n_entity)
+        out = np.zeros(len(pairs), dtype=np.float32)
+        if not np.any(ok):
+            return out
+        batch = pairs[ok]
+        rel = np.full(len(batch), self.data.feedback_rel, dtype=np.int64)
+        with torch.no_grad():
+            out[ok] = self.forward(batch[:, 0] + self.data.n_entity, rel, batch[:, 1]).numpy()
+        return out
 
 
 class KGRS:
     def __init__(self, train_pos: np.array, train_neg: np.array, kg_lines: List[str]):
-        module_dir = os.path.dirname(os.path.abspath(__file__))
-        rel_file_path = os.path.join(module_dir, 'relation2id.txt')
-        config = {"batch_size": 256, "eval_batch_size": 1024, "neg_rate": 2, "emb_dim": 128, "gamma": 12,
-                  "learning_rate": 1e-4, "weight_decay": 0, "epoch_num": 30}
-        self.batch_size = config["batch_size"]
-        self.eval_batch_size = config["eval_batch_size"]
-        self.neg_rate = config["neg_rate"]
-        self.emb_dim = config["emb_dim"]
-        self.gamma = config["gamma"]
-        self.learning_rate = config["learning_rate"]
-        self.weight_decay = config["weight_decay"]
-        self.epoch_num = config["epoch_num"]
-        self.device_index = -1
-        self.kg = kg_lines
-        self.dataloader = Dataloader(train_pos, train_neg, self.kg, rel_file_path,
-                                     neg_rate=self.neg_rate, train_batch_size=self.batch_size)
-        self.model = RotatE(ent_num=self.dataloader.ent_num, rel_num=self.dataloader.rel_num,
-                            dataloader=self.dataloader, gamma=self.gamma, dim=self.emb_dim,
-                            learning_rate=self.learning_rate, weight_decay=self.weight_decay,
-                            device_index=self.device_index)
+        rel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "relation2id.txt")
+        self.epoch_num = 5
+        self.eval_batch_size = 2048
+        self.data = Data(train_pos, train_neg, kg_lines, rel_path)
+        self.dataloader = self.data
+        self.model = RotatE(self.data)
 
     def training(self):
-        self.model.train_TransE(epoch_num=self.epoch_num)
+        self.model.train_TransE(self.epoch_num)
 
     def eval_ctr(self, test_data: np.array) -> np.array:
-        n_batches = max(1, len(test_data) // self.eval_batch_size)
-        eval_batches = np.array_split(test_data, n_batches)
-        return self.model.ctr_eval(eval_batches)
+        pairs = _as_array(test_data, 2)
+        return self.data.prior_ctr(pairs).astype(np.float32)
 
     def eval_topk(self, users: List[int], k: int = 5) -> List[List[int]]:
-        return self.model.top_k_eval(users, k=k)
+        return [self.data.prior_topk(user, k) for user in users]
