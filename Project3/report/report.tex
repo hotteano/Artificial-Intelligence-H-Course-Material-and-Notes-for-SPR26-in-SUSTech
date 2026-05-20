@@ -332,6 +332,46 @@ Epochs & AUC & nDCG@5 & Training time (s) \\
 
 Increasing the number of epochs improves AUC steadily, but nDCG@5 peaks at 20 epochs and slightly decreases afterwards. This suggests that longer training improves pointwise discrimination but may start to overfit the ranking objective. Therefore, 20 epochs are used in the final implementation.
 
+\subsection{Comparison with a RotatE Variant}
+
+As an additional reference, a RotatE-style KG embedding variant was implemented and evaluated. In this variant, each user is treated as an extra entity with ID offset $|\mathcal{E}|$, each item remains its original KG entity, and user feedback is represented by an additional relation $r_{\mathrm{fb}}$. The RotatE score is
+\begin{equation}
+    s_{\mathrm{RotatE}}(h,r,t)
+    =
+    \gamma
+    -
+    \left\|
+    \mathbf{e}_h \circ \mathbf{r}_r
+    -
+    \mathbf{e}_t
+    \right\|,
+\end{equation}
+where $\mathbf{r}_r$ is a complex-valued rotation with $|\mathbf{r}_r|=1$. The training objective combines BCE, BPR, and a lightweight KG link-prediction regularizer:
+\begin{equation}
+    \mathcal{L}_{\mathrm{RotatE}}
+    =
+    \mathcal{L}_{\mathrm{BCE}}
+    +
+    0.7\mathcal{L}_{\mathrm{BPR}}
+    +
+    0.05\mathcal{L}_{\mathrm{KG}}.
+\end{equation}
+
+\begin{table}[h]
+\centering
+\caption{Comparison between the final MF+BPR model and the RotatE variant}
+\begin{tabular}{lrrrr}
+\toprule
+Model & AUC & nDCG@5 & Training time (s) & Top-5 time (s) \\
+\midrule
+MF+BPR hybrid & 0.7606 & 0.1456 & 1.65 & 3.70 \\
+RotatE variant & 0.7527 & 0.1401 & 13.45 & 33.16 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The RotatE variant is theoretically more expressive for KG link prediction, but it is less effective in this recommendation setting. It requires scoring all candidate items through a complex-valued relation transformation during top-5 evaluation, which substantially increases CPU inference time. Moreover, the target task is user--item ranking rather than pure KG completion, so the simpler matrix factorization component trained with BCE+BPR provides a more direct inductive bias. Therefore, the final submitted system keeps the MF+BPR model and uses KG information through sparse content profiles.
+
 \section{Discussion}
 
 The main advantage of the proposed system is that it combines heterogeneous evidence sources. Popularity and local temporal priors are robust for sparse or cold-start cases. KG content profiles exploit semantic item attributes and make recommendations less dependent on exact co-occurrence. Item-based collaborative filtering captures neighborhood-level preference transfer. Matrix factorization adds a trainable latent representation, and the BPR term directly encourages positive items to be ranked above negative items.

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.6)  20 MAY 2026 22:34
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.4.6)  20 MAY 2026 22:43
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -710,13 +710,13 @@ File: ot1ntxtlf.fd 2021/05/24 v1.0 font definition file for OT1/ntx/tlf
 )
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 12.0pt on input line 31.
-
-No file report.aux.
+ (./report.aux)
 \openout1 = `report.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/ntxmi/m/it on input line 31.
 LaTeX Font Info:    Trying to load font information for OML+ntxmi on input line
  31.
+
 (c:/texlive/2026/texmf-dist/tex/latex/newtx/omlntxmi.fd
 File: omlntxmi.fd 2015/08/25 Fontinst v1.933 font definitions for OML/ntxmi.
 )
@@ -858,6 +858,8 @@ e
 \c@mv@tabular=\count351
 \c@mv@boldtabular=\count352
 Package hyperref Info: Link coloring OFF on input line 31.
+
+(./report.out) (./report.out)
 \@outlinefile=\write3
 \openout3 = `report.out'.
 
@@ -984,17 +986,17 @@ Package rerunfilecheck Warning: File `report.out' has changed.
 (rerunfilecheck)                or use package `bookmark'.
 
 Package rerunfilecheck Info: Checksums for `report.out':
-(rerunfilecheck)             Before: <no file>
-(rerunfilecheck)             After:  172204A681281F68CB5C50DB3FE39F8D;2234.
+(rerunfilecheck)             Before: 172204A681281F68CB5C50DB3FE39F8D;2234
+(rerunfilecheck)             After:  AECF401C2B1C062B210BECBF3E275D1B;2464.
  ) 
 Here is how much of TeX's memory you used:
- 17028 strings out of 468830
- 262338 string characters out of 5454208
- 670712 words of memory out of 5000000
- 45571 multiletter control sequences out of 15000+600000
+ 17057 strings out of 468830
+ 262729 string characters out of 5454208
+ 670781 words of memory out of 5000000
+ 45590 multiletter control sequences out of 15000+600000
  706337 words of font info for 184 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 75i,8n,117p,755b,489s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,8n,117p,755b,492s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2026/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><c:/texlive/
 2026/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><c:/texlive/2026/texmf-di
 st/fonts/type1/public/newtx/txexs.pfb><c:/texlive/2026/texmf-dist/fonts/type1/p
@@ -1003,10 +1005,10 @@ ym.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/newtx/txsys.pfb><c:/texli
 ve/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb><c:/texlive/2026/texmf-di
 st/fonts/type1/public/newtx/ztmb.pfb><c:/texlive/2026/texmf-dist/fonts/type1/pu
 blic/newtx/ztmr.pfb>
-Output written on report.pdf (6 pages, 162327 bytes).
+Output written on report.pdf (6 pages, 165463 bytes).
 PDF statistics:
- 134 PDF objects out of 1000 (max. 8388607)
- 106 compressed objects within 2 object streams
- 49 named destinations out of 1000 (max. 500000)
- 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 187 PDF objects out of 1000 (max. 8388607)
+ 159 compressed objects within 2 object streams
+ 53 named destinations out of 1000 (max. 500000)
+ 129 words of extra memory for PDF output out of 10000 (max. 10000000)
 
