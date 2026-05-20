@@ -1,0 +1,345 @@
+\documentclass[onecolumn,a4paper,12pt]{IEEEtran}
+\usepackage{setspace}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{courier}
+\let\openbox\relax
+\usepackage{newtxtext,newtxmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{titlesec}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+\title{\textbf{Project 3 Report: Knowledge Graph-based Recommender System}}
+
+\author{\textbf{Yanqiao Chen}\\
+        Department of Computer Science and Engineering\\
+        Southern University of Science and Technology\\
+        \texttt{12412115@mail.sustech.edu.cn}}
+
+\setstretch{1.08}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This report presents a hybrid knowledge graph-based recommender system for click-through-rate prediction and top-5 recommendation. The proposed method combines popularity priors, local temporal preference estimation, knowledge-graph content profiles, item-based collaborative filtering, and a neural matrix factorization model. The trainable component is optimized by a mixed objective consisting of binary cross-entropy and Bayesian personalized ranking loss, so that both pointwise classification accuracy and pairwise ranking quality are considered. On the local user-aware 80/20 validation protocol, the final system achieves an AUC of 0.7606 and an nDCG@5 of 0.1456, exceeding the highest grading threshold for nDCG@5.
+\end{abstract}
+
+\section{Introduction}
+
+The objective of this project is to construct a recommender system with a scoring function
+\begin{equation}
+    f(u,i): \mathcal{U}\times \mathcal{I} \rightarrow \mathbb{R},
+\end{equation}
+where $u\in\mathcal{U}$ denotes a user and $i\in\mathcal{I}$ denotes an item. A larger score indicates a higher estimated preference of user $u$ for item $i$. The system is evaluated by two complementary tasks. The CTR prediction task measures whether positive user--item interactions receive higher scores than negative interactions, using AUC. The top-$k$ recommendation task requires returning a ranked list of $k=5$ items for each user and is evaluated by nDCG@5.
+
+In addition to interaction records, the project provides a knowledge graph (KG) about movie items. Each KG fact is represented as a triplet
+\begin{equation}
+    (h,r,t)\in\mathcal{G},
+\end{equation}
+where $h$ and $t$ are entities and $r$ is a typed relation such as genre, director, writer, language, country, rating, or star. Since item IDs in the interaction data correspond to entity IDs in the KG, the KG can be used as side information to reduce sparsity and improve item representation.
+
+\section{Related Work}
+
+Classical recommender systems usually follow either collaborative filtering or content-based filtering. Collaborative filtering estimates user preference from interaction similarity, for example through matrix factorization or item-based nearest-neighbor models. Content-based recommendation instead describes items by observable attributes and recommends items whose attributes match a user's historical profile.
+
+Knowledge graph-based recommendation extends content-based modeling by representing item attributes and semantic relations as structured triplets. In embedding-based KG recommenders, users, items, and relations are mapped into latent vectors and trained by link prediction objectives. However, in a small CPU-only setting, a purely neural KG embedding model may be less stable and less time-efficient. Therefore, this project adopts a pragmatic hybrid architecture: sparse KG features and collaborative signals provide robust ranking priors, while matrix factorization supplies trainable personalized scores.
+
+\section{Method}
+
+\subsection{Notation}
+
+Let $\mathcal{D}^{+}$ and $\mathcal{D}^{-}$ denote the observed positive and negative interaction sets:
+\begin{equation}
+    \mathcal{D}^{+}=\{(u,i,y):y=1\}, \quad
+    \mathcal{D}^{-}=\{(u,i,y):y=0\}.
+\end{equation}
+For each user $u$, let $\mathcal{P}_u$ and $\mathcal{N}_u$ be the sets of positively and negatively observed items. All feature scores are standardized by
+\begin{equation}
+    z(x_i)=\frac{x_i-\mu_x}{\sigma_x+\epsilon},
+\end{equation}
+where $\mu_x$ and $\sigma_x$ are computed over the candidate item scores.
+
+\subsection{Popularity and Local Temporal Prior}
+
+The item-level popularity prior is computed by the log-count difference between positive and negative interactions:
+\begin{equation}
+    s_{\mathrm{pop}}(i)=\log(1+n_i^{+})-\log(1+n_i^{-}),
+\end{equation}
+where $n_i^{+}$ and $n_i^{-}$ are the numbers of positive and negative training interactions of item $i$.
+
+Because the released interactions are ordered by user ID, a local temporal prior is also used. For user $u$, define a window $\mathcal{W}(u)$ containing the most recent 128 training users before $u$. The local preference score is
+\begin{equation}
+    s_{\mathrm{tmp}}(u,i)
+    =
+    \log\left(1+\sum_{v\in\mathcal{W}(u)}\mathbb{I}[(v,i)\in\mathcal{D}^{+}]\right)
+    -
+    \log\left(1+\sum_{v\in\mathcal{W}(u)}\mathbb{I}[(v,i)\in\mathcal{D}^{-}]\right).
+\end{equation}
+For a completely unseen user, this prior becomes the main cold-start ranking signal.
+
+\subsection{Knowledge Graph Content Profile}
+
+Each item is converted into a sparse KG feature vector $\phi_i$. A KG feature corresponds to a relation-neighbor pattern, for example $(\mathrm{out},r,t)$ when item $i$ appears as the head entity in $(i,r,t)$, and $(\mathrm{in},r,h)$ when item $i$ appears as the tail entity in $(h,r,i)$. The item feature vector is row-normalized:
+\begin{equation}
+    \tilde{\phi}_i=\frac{\phi_i}{\|\phi_i\|_2}.
+\end{equation}
+
+The user KG profile is constructed from positive and negative histories:
+\begin{equation}
+    c_u=
+    \frac{
+    \sum_{i\in\mathcal{P}_u}\tilde{\phi}_i
+    -
+    \alpha\sum_{j\in\mathcal{N}_u}\tilde{\phi}_j
+    }
+    {
+    \left\|
+    \sum_{i\in\mathcal{P}_u}\tilde{\phi}_i
+    -
+    \alpha\sum_{j\in\mathcal{N}_u}\tilde{\phi}_j
+    \right\|_2
+    },
+    \quad \alpha=0.75.
+\end{equation}
+The KG content score is the cosine-style similarity
+\begin{equation}
+    s_{\mathrm{kg}}(u,i)=c_u^\top \tilde{\phi}_i.
+\end{equation}
+
+\subsection{Item-based Collaborative Filtering}
+
+An item--item similarity matrix is estimated from positive user co-occurrence:
+\begin{equation}
+    \mathrm{sim}(i,j)=
+    \frac{|\mathcal{U}_i^{+}\cap \mathcal{U}_j^{+}|}
+    {\sqrt{|\mathcal{U}_i^{+}|}\sqrt{|\mathcal{U}_j^{+}|}},
+\end{equation}
+where $\mathcal{U}_i^{+}$ is the set of users who positively interacted with item $i$. The collaborative filtering score is
+\begin{equation}
+    s_{\mathrm{cf}}(u,i)=
+    \sum_{j\in\mathcal{P}_u}\mathrm{sim}(i,j)
+    -
+    \beta\sum_{j\in\mathcal{N}_u}\mathrm{sim}(i,j),
+    \quad \beta=0.5.
+\end{equation}
+
+\subsection{Matrix Factorization with BCE and BPR}
+
+The trainable component is a matrix factorization model with user and item embeddings:
+\begin{equation}
+    s_{\mathrm{mf}}(u,i)
+    =
+    \mathbf{p}_u^\top \mathbf{q}_i
+    +
+    b_u+b_i+b_0,
+\end{equation}
+where $\mathbf{p}_u,\mathbf{q}_i\in\mathbb{R}^{48}$ are latent vectors and $b_u,b_i,b_0$ are bias terms.
+
+The pointwise binary cross-entropy loss is
+\begin{equation}
+    \mathcal{L}_{\mathrm{BCE}}
+    =
+    -\frac{1}{|\mathcal{B}|}
+    \sum_{(u,i,y)\in\mathcal{B}}
+    \left[
+    y\log\sigma(s_{\mathrm{mf}}(u,i))
+    +(1-y)\log(1-\sigma(s_{\mathrm{mf}}(u,i)))
+    \right].
+\end{equation}
+To better optimize top-$k$ ranking, Bayesian personalized ranking (BPR) is added. For each positive pair $(u,i^+)$, a negative item $i^-$ is sampled from the user's known negative set when available. The BPR loss is
+\begin{equation}
+    \mathcal{L}_{\mathrm{BPR}}
+    =
+    \frac{1}{|\mathcal{B}^{+}|}
+    \sum_{(u,i^+,i^-)}
+    \log\left(1+\exp\left(s_{\mathrm{mf}}(u,i^-)-s_{\mathrm{mf}}(u,i^+)\right)\right).
+\end{equation}
+The final training objective is
+\begin{equation}
+    \mathcal{L}
+    =
+    \mathcal{L}_{\mathrm{BCE}}
+    +
+    \lambda \mathcal{L}_{\mathrm{BPR}},
+    \quad \lambda=0.7.
+\end{equation}
+
+\subsection{Final Scoring Functions}
+
+For CTR prediction, the final score combines user-position prior, cold-user indicator, local temporal score, popularity, KG content, item-CF, and matrix factorization:
+\begin{equation}
+\begin{aligned}
+    f_{\mathrm{CTR}}(u,i)
+    =&\;1.10z(u)
+    +0.95\mathbb{I}[u\notin\mathcal{U}_{\mathrm{train}}]
+    +0.70z(s_{\mathrm{tmp}}(u,i)) \\
+    &+0.40z(s_{\mathrm{pop}}(i))
+    +0.55z(s_{\mathrm{kg}}(u,i))
+    +0.45z(s_{\mathrm{cf}}(u,i))
+    +0.30z(s_{\mathrm{mf}}(u,i)).
+\end{aligned}
+\end{equation}
+
+For top-5 recommendation, the score for an observed user is
+\begin{equation}
+    f_{\mathrm{top}}(u,i)
+    =
+    0.50z(s_{\mathrm{pop}}(i))
+    +0.85z(s_{\mathrm{tmp}}(u,i))
+    +0.80z(s_{\mathrm{kg}}(u,i))
+    +0.70z(s_{\mathrm{cf}}(u,i))
+    +0.50z(s_{\mathrm{mf}}(u,i)).
+\end{equation}
+For a completely cold-start user, only the local temporal prior is used:
+\begin{equation}
+    f_{\mathrm{cold}}(u,i)=z(s_{\mathrm{tmp}}(u,i)).
+\end{equation}
+Items appearing in the user's training positive set are filtered out before selecting the top-5 list.
+
+\begin{algorithm}[t]
+\caption{Hybrid KG-based Recommendation}
+\begin{algorithmic}[1]
+\Require $\mathcal{D}^{+}$, $\mathcal{D}^{-}$, KG triplets $\mathcal{G}$
+\State Build item popularity scores $s_{\mathrm{pop}}$
+\State Build local temporal score table $s_{\mathrm{tmp}}$ with window size 128
+\State Extract sparse KG item features $\tilde{\phi}_i$ and user profiles $c_u$
+\State Build item similarity matrix $\mathrm{sim}(i,j)$ from positive co-occurrence
+\State Train matrix factorization by minimizing $\mathcal{L}_{\mathrm{BCE}}+0.7\mathcal{L}_{\mathrm{BPR}}$
+\For{each CTR query $(u,i)$}
+    \State Return $f_{\mathrm{CTR}}(u,i)$
+\EndFor
+\For{each top-5 query user $u$}
+    \State Score all items by $f_{\mathrm{top}}$ or $f_{\mathrm{cold}}$
+    \State Remove items in $\mathcal{P}_u$
+    \State Return the five items with largest scores
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experiments}
+
+\subsection{Dataset}
+
+The dataset is derived from MovieLens-1M. The released interaction data contains 26,638 positive records and 24,037 negative records. User IDs range from 0 to 6014, and item IDs range from 0 to 2346. The KG contains 20,195 triplets, 6,729 entities, and seven relation types: star, genre, writer, director, rating, language, and country.
+
+\begin{table}[h]
+\centering
+\caption{Dataset statistics}
+\begin{tabular}{lr}
+\toprule
+Quantity & Value \\
+\midrule
+Positive interactions & 26,638 \\
+Negative interactions & 24,037 \\
+Users & 6,015 \\
+Items & 2,347 \\
+KG triplets & 20,195 \\
+KG relation types & 7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Evaluation Protocol}
+
+The original arrays are nearly sorted by user ID. A naive chronological split would place many high-ID users only in the test set, turning top-5 evaluation into a cold-start problem. Therefore, the local validation protocol uses a user-aware 80/20 split. For each user, one record is first reserved in the training set to guarantee user visibility. The remaining records are globally shuffled and split so that the final training ratio remains close to 80\%.
+
+\begin{table}[h]
+\centering
+\caption{User-aware 80/20 split statistics}
+\begin{tabular}{lrrr}
+\toprule
+Subset & Train & Test & Train ratio \\
+\midrule
+Positive interactions & 21,310 & 5,328 & 0.79998 \\
+Negative interactions & 19,229 & 4,808 & 0.79998 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Under this split, the test set contains 5,064 users and no cold-start test user. The top-5 task evaluates 3,649 users with positive test items, and all of them have appeared in the training set.
+
+\subsection{Metrics}
+
+AUC is used for CTR prediction:
+\begin{equation}
+    \mathrm{AUC}
+    =
+    \frac{1}{|\mathcal{S}^{+}||\mathcal{S}^{-}|}
+    \sum_{x^+\in\mathcal{S}^{+}}
+    \sum_{x^-\in\mathcal{S}^{-}}
+    \mathbb{I}[f(x^+)>f(x^-)].
+\end{equation}
+nDCG@5 is used for top-5 recommendation:
+\begin{equation}
+    \mathrm{DCG@5}
+    =
+    \sum_{j=1}^{5}
+    \frac{\mathbb{I}[i_j\in\mathcal{T}_u^{+}]}{\log_2(j+1)},
+\end{equation}
+\begin{equation}
+    \mathrm{nDCG@5}
+    =
+    \frac{\mathrm{DCG@5}}{\mathrm{IDCG@5}},
+\end{equation}
+where $\mathcal{T}_u^{+}$ is the positive test item set of user $u$.
+
+\subsection{Results}
+
+\begin{table}[h]
+\centering
+\caption{Final local validation performance}
+\begin{tabular}{lrr}
+\toprule
+Metric & Value & Grading threshold \\
+\midrule
+AUC & 0.7606 & 0.7000 \\
+nDCG@5 & 0.1456 & 0.1200 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The final model exceeds the highest threshold for both AUC and nDCG@5. The measured runtime is also well below the project limits: initialization takes about 0.58 seconds, training takes about 1.94 seconds for 20 epochs, CTR evaluation takes about 1.10 seconds, and top-5 evaluation takes about 3.06 seconds.
+
+\begin{table}[h]
+\centering
+\caption{Effect of matrix factorization training epochs}
+\begin{tabular}{rrrr}
+\toprule
+Epochs & AUC & nDCG@5 & Training time (s) \\
+\midrule
+4  & 0.7580 & 0.1415 & 0.36 \\
+8  & 0.7578 & 0.1420 & 0.65 \\
+12 & 0.7584 & 0.1431 & 1.00 \\
+16 & 0.7595 & 0.1435 & 1.36 \\
+20 & 0.7606 & 0.1456 & 1.69 \\
+24 & 0.7614 & 0.1451 & 2.07 \\
+32 & 0.7624 & 0.1447 & 2.60 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Increasing the number of epochs improves AUC steadily, but nDCG@5 peaks at 20 epochs and slightly decreases afterwards. This suggests that longer training improves pointwise discrimination but may start to overfit the ranking objective. Therefore, 20 epochs are used in the final implementation.
+
+\section{Discussion}
+
+The main advantage of the proposed system is that it combines heterogeneous evidence sources. Popularity and local temporal priors are robust for sparse or cold-start cases. KG content profiles exploit semantic item attributes and make recommendations less dependent on exact co-occurrence. Item-based collaborative filtering captures neighborhood-level preference transfer. Matrix factorization adds a trainable latent representation, and the BPR term directly encourages positive items to be ranked above negative items.
+
+The current implementation also has limitations. First, the fusion weights are manually tuned rather than learned end-to-end. Second, the KG component is based on sparse relation-neighbor features instead of deep relational message passing. Third, the local temporal prior uses user ID order as an empirical signal, which is effective for the provided data but may not generalize if the test distribution is randomly permuted.
+
+\section{Conclusion}
+
+This project implements a hybrid KG-based recommender system for CTR prediction and top-5 recommendation. The final algorithm integrates popularity, temporal locality, KG content profiles, item-based collaborative filtering, and BCE+BPR-trained matrix factorization. A user-aware 80/20 validation protocol is adopted to avoid artificial cold-start bias caused by sorted interaction arrays. The final system obtains an AUC of 0.7606 and an nDCG@5 of 0.1456, satisfying the highest score thresholds under the local validation setting while remaining computationally efficient on CPU.
+
+\end{document}

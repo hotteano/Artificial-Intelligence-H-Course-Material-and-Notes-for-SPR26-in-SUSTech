@@ -362,7 +362,7 @@ class KGRS:
         self.data = DataStore(train_pos, train_neg, kg_lines, rel_path)
         self.dataloader = self.data
         self.model = MatrixFactorModel(self.data)
-        self.epoch_num = 8
+        self.epoch_num = 20
 
     def training(self):
         self.model.train_TransE(self.epoch_num)
