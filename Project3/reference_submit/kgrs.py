@@ -359,31 +359,121 @@ class MatrixFactorModel(torch.nn.Module):
 class KGRS:
     def __init__(self, train_pos: np.array, train_neg: np.array, kg_lines: List[str]):
         rel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "relation2id.txt")
+        self.rel_path = rel_path
+        self.kg_lines = list(kg_lines)
         self.data = DataStore(train_pos, train_neg, kg_lines, rel_path)
         self.dataloader = self.data
         self.model = MatrixFactorModel(self.data)
         self.epoch_num = 20
+        self.ctr_weights = np.asarray([1.00, 0.40, 0.35, 0.30, 0.25], dtype=np.float32)
+        self.ctr_bias = 0.0
+        self.ctr_mean = np.zeros(len(self.ctr_weights), dtype=np.float32)
+        self.ctr_std = np.ones(len(self.ctr_weights), dtype=np.float32)
+        self.use_learned_ctr = False
 
     def training(self):
         self.model.train_TransE(self.epoch_num)
+        self._fit_ctr_fusion()
+
+    @staticmethod
+    def _auc_score(labels, scores):
+        labels = np.asarray(labels, dtype=np.float32)
+        scores = np.asarray(scores, dtype=np.float32)
+        pos = labels > 0.5
+        neg = ~pos
+        pos_num, neg_num = int(pos.sum()), int(neg.sum())
+        if pos_num == 0 or neg_num == 0:
+            return 0.5
+        order = np.argsort(scores, kind="mergesort")
+        ranks = np.empty(len(scores), dtype=np.float32)
+        ranks[order] = np.arange(1, len(scores) + 1, dtype=np.float32)
+        return float((ranks[pos].sum() - pos_num * (pos_num + 1) / 2.0) / (pos_num * neg_num))
+
+    @staticmethod
+    def _split_for_fusion(rows, rng, train_ratio=0.8):
+        rows = _as_array(rows, 3)
+        if len(rows) < 5:
+            return rows, np.empty((0, 3), dtype=np.int64)
+        order = rng.permutation(len(rows))
+        cut = int(len(rows) * train_ratio)
+        cut = min(max(cut, 1), len(rows) - 1)
+        return rows[order[:cut]], rows[order[cut:]]
+
+    @staticmethod
+    def _feature_matrix(data, model, pairs):
+        return np.vstack([
+            model.score_pairs(pairs),
+            data.temporal_pairs(pairs),
+            data.content_pairs(pairs),
+            data.itemcf_pairs(pairs),
+            data.popularity_pairs(pairs),
+        ]).T.astype(np.float32)
+
+    def _default_ctr_score(self, pairs):
+        return (
+            1.00 * _zscore(self.model.score_pairs(pairs))
+            + 0.40 * _zscore(self.data.temporal_pairs(pairs))
+            + 0.35 * _zscore(self.data.content_pairs(pairs))
+            + 0.30 * _zscore(self.data.itemcf_pairs(pairs))
+            + 0.25 * _zscore(self.data.popularity_pairs(pairs))
+        ).astype(np.float32)
+
+    def _fit_ctr_fusion(self):
+        rng = np.random.default_rng(2027)
+        base_pos, tune_pos = self._split_for_fusion(self.data.train_pos, rng)
+        base_neg, tune_neg = self._split_for_fusion(self.data.train_neg, rng)
+        if len(tune_pos) == 0 or len(tune_neg) == 0:
+            return
+
+        tune_rows = np.vstack([tune_pos, tune_neg])
+        rng.shuffle(tune_rows)
+        pairs = tune_rows[:, :2]
+        labels = tune_rows[:, 2].astype(np.float32)
+
+        base_data = DataStore(base_pos, base_neg, self.kg_lines, self.rel_path)
+        base_model = MatrixFactorModel(base_data)
+        base_model.train_TransE(max(6, self.epoch_num // 2))
+        features = self._feature_matrix(base_data, base_model, pairs)
+
+        mean = features.mean(axis=0).astype(np.float32)
+        std = features.std(axis=0).astype(np.float32)
+        std[std < 1e-6] = 1.0
+        x = (features - mean) / std
+
+        x_tensor = torch.as_tensor(x, dtype=torch.float32)
+        y_tensor = torch.as_tensor(labels, dtype=torch.float32)
+        weight = torch.zeros(x.shape[1] + 1, dtype=torch.float32, requires_grad=True)
+        with torch.no_grad():
+            weight[1:] = torch.as_tensor(self.ctr_weights, dtype=torch.float32)
+
+        optimizer = torch.optim.Adam([weight], lr=0.05)
+        for _ in range(300):
+            logits = weight[0] + x_tensor.matmul(weight[1:])
+            loss = F.binary_cross_entropy_with_logits(logits, y_tensor) + 0.01 * (weight[1:] ** 2).mean()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        learned_weight = weight.detach().numpy().astype(np.float32)
+        learned_score = learned_weight[0] + x.dot(learned_weight[1:])
+        default_score = sum(self.ctr_weights[i] * _zscore(features[:, i]) for i in range(features.shape[1]))
+        if self._auc_score(labels, learned_score) >= self._auc_score(labels, default_score):
+            self.ctr_bias = float(learned_weight[0])
+            self.ctr_weights = learned_weight[1:]
+            self.ctr_mean = mean
+            self.ctr_std = std
+            self.use_learned_ctr = True
 
     def eval_ctr(self, test_data: np.array) -> np.array:
         pairs = _as_array(test_data, 2)
         if len(pairs) == 0:
             return np.empty(0, dtype=np.float32)
 
-        user_position = pairs[:, 0].astype(np.float32) / max(1.0, float(self.data.n_user))
-        cold_user = (pairs[:, 0] >= self.data.n_user).astype(np.float32)
+        if not self.use_learned_ctr:
+            return self._default_ctr_score(pairs)
 
-        score = (
-            1.10 * _zscore(user_position)
-            + 0.95 * cold_user
-            + 0.70 * _zscore(self.data.temporal_pairs(pairs))
-            + 0.40 * _zscore(self.data.popularity_pairs(pairs))
-            + 0.55 * _zscore(self.data.content_pairs(pairs))
-            + 0.45 * _zscore(self.data.itemcf_pairs(pairs))
-            + 0.30 * _zscore(self.model.score_pairs(pairs))
-        )
+        features = self._feature_matrix(self.data, self.model, pairs)
+        score = self.ctr_bias + ((features - self.ctr_mean) / self.ctr_std).dot(self.ctr_weights)
         return score.astype(np.float32)
 
     def eval_topk(self, users: List[int], k: int = 5) -> List[List[int]]:
