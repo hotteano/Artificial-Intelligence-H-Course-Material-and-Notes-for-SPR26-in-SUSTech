@@ -1,0 +1,438 @@
+Artificial Intelligence (CS303)
+    Lecture 12: Knowledge Graph
+
+
+
+
+                                  0
+Hints for this lecture
+
+• A less rigorous (but more practical) way to represent and utilize
+ knowledge.
+
+
+
+
+                                                                      1
+Outline of this lecture
+• Overview of Knowledge Graph (KG).
+
+• How to construct KG?
+
+
+
+
+                                      2
+I. Overview of knowledge graph
+
+
+
+
+                                 3
+What is Knowledge Graph?
+• To make a knowledge base (KB) of practical significance, we need to:
+   • Set a proper boundary for “knowledge”, which means:
+       • bound the scope of the KB (and thus its representation)
+       • bound the utility (application) of the KB
+
+
+
+
+• In 2012, Google introduced the term knowledge graph (KG).
+• The idea of KG stems from WordNet, Semantic Network...
+   • Knowledge Graph: Large-scale semantic network
+
+
+                                                                         4
+What is Knowledge Graph?
+• SN/KG uses vertexes and edges to represent knowledge graphically.
+   • Vertexes: entities and concepts
+   • Edges: relations and properties
+
+
+
+
+                                                                      5
+Why Knowledge Graph
+• Most human knowledge is expressed in natural language.
+• It is more intuitive for human is to remember relationship between entities.
+• In some (but significant) applications, we care more about entities, but not knowledge.
+    • Recommender System
+    • Q&A System
+    • Information Retrieval
+
+
+
+
+                                                                                            6
+Why Knowledge Graph
+Represent KB with Logic
+• What is commonsense knowledge?
+• Hard (even for human) to write the KB
+• hard to express hidden knowledge.
+
+
+
+
+                                          Represent KB with KG
+                                          • Narrow down the definition of “commonsense knowledge”
+                                          • Can represent hidden knowledge.
+                                          • Applications in multi-domains.
+                                                                                             7
+II. How to construct Knowledge Graph？
+
+
+
+
+                                        8
+KG as a Heterogeneous Directed Graph
+• Heterogeneous directed graphs.
+   •   The KG can be represented as a graph 𝒢 = 𝑉, 𝐸 , 𝑉 is vertex set, 𝐸 is the edge set.
+   •   𝑉 is also the entities set. 𝐸 is also the relation set.
+• RDF：Resource Description Framework, an XML Document standard from W3C
+   •   use relation triplet < head entity, relation type, tail entity > to describe a relation.
+        •   Head entity: the subject of this relation
+        •   Relation type: the category of this relation
+        •   Tail entity: the object of this relation
+
+
+
+        head        relation type         tail
+        entity                           entity
+
+
+
+                                                                                                  9
+Construct a KG
+• Suppose we have a lot of document written in natural language (text).
+• Having experts manually identify all the entities of interest and annotate the relations
+  between them.
+    •   Easier than writing a sentence in propositional/first-order logic
+    •   But still non-trivial
+
+
+• (Semi-)Automate the construction of KG from documents?
+    •   Entity Recognition (Vertex set of the graph?)
+    •   Relation Extraction (Edge set of the graph?)
+    •   Automatic Annotation
+
+
+                                                                                             10
+The General (Semi-)Automatic Viewpoint
+•   Human expert write rules (template) to identify the entities and relations
+     •   e.g., use vocabulary/dictionary
+•   Is there any method to further automatically discover rules?
+                                                                                          Corpus
+                                                     Using rule in base
+                           Rule base                  get a KG from
+                                                          corpus
+
+
+                   Add correct                                            Mining new rules from
+                  rules into the                                               corpus according
+                      rule base`                                                          to KG
+
+
+
+                                                                                         New Rules
+                                           Sending the new rules to experts
+                            Experts                                                                  11
+Automatic Entity Recognition
+
+• Identify meaningful entities across various texts.
+
+• Input: Documents (text)
+
+• Output: A set of entities
+
+
+
+
+                                                       12
+Automatic Entity Recognition
+• Identify meaningful entities based on the statistical metrics of
+  vocabulary across various texts.
+   • TF-IDF (Term Frequency–Inverse Document Frequency):
+      • If a word appears frequently in one document but infrequently in others, it
+        is more likely to be a meaningful entity.
+
+
+
+
+                                                                                 13
+Automatic Entity Recognition
+• Identify meaningful entities based on the statistical metrics of
+  vocabulary across various texts.
+   • Entropy:
+      •   If a word has a rich variety of neighboring words, it is likely be a meaningful entity.
+                              𝐻 𝑢 = − ) 𝑝 𝑥 log 𝑝(𝑥)
+                                         !∈𝒳
+           •   𝑝(𝑥) is the probability of a certain left neighbor (right neighbor) word, 𝒳 is the
+               set of all left neighbor (right neighbor) characters of 𝑢.
+           •   The larger 𝐻(𝑢) is, more abundant the set of 𝑢's neighbors is.
+
+
+
+                                                                                                14
+Automatic Entity Recognition
+• Using machine learning techniques, model the Entity Recognition
+  process as a Sequence Labeling problem.
+   • It’s also called as NER (Named Entity Recognition)
+   • Supervised Learning
+• Input is a sentence. Output is the label of each word in the sentence.
+     Input        Zihan      Zhang       will          join   the     ICPC
+    Output      B-People    I-People      O             O     O     B-Contest
+
+
+
+                                 People: Zihan Zhang
+                                 Contest: ICPC
+                                                                                15
+Automatic Entity Recognition
+• NER task can be solved by the following technologies:
+
+
+
+
+      CRF (Conditional Random Field)
+
+
+
+
+                                            Transformer
+
+
+      RNN (Recurrent Neural Network)                      16
+Automatic Relation Extraction
+• Using machine learning techniques, model the Relation
+  Extraction process as a Text Classification Problem.
+   • It’s also a supervised learning task.
+• Input is a sentence that contains 2 entities. Output is the
+  category of the relation that the sentence express.
+   • Input: Zihan Zhang will join the ICPC.
+   • Output: participate in
+
+
+
+                                                                17
+Automatic Relation Extraction
+• Relation extraction task can be solved by the following
+  technologies:
+   • RNN
+   • Transformer
+   • …
+
+
+
+
+                                                            18
+Completing KG based on an initial KG
+• KGC (Knowledge Graph Completion) task is also a
+  method to assist KG construction.
+   •   Finding missing relations in an existing KG.
+• Why we need KGC?
+                                                                           Knowledge
+                                                                       !
+   •   It’s too expensive to build a thorough rule base. KGC can       "   Graph
+                                                                       #   Completion
+       reduce the cost of rule base building.                          $
+                                                                       %
+                                                                       &
+   •   Current relation extraction technology cannot extract all the
+       relation.
+   •   The knowledge contained in textual data used to describe
+       relationships is itself not complete.
+
+
+                                                                                 19
+Completing KG based on an initial KG
+• There are two kinds of methods for knowledge graph
+  completion tasks.
+
+  • Path-based method
+
+
+  • Embedding-based method
+
+
+
+
+                                                       20
+Completing KG based on an initial KG
+• Path-based methods take the path between two entities in the KG
+  as the feature of this pair of entities.
+
+• Path is a sequence of relation types.
+• E.g. In a KG, there is a relations chain between entities Qikun Xue and China:
+                   $%&' ()             *%+(), ()              -,*%./0 )%               -,*%./0 )%
+       Qikun Xue             SUSTech               Shenzhen                Guangdong                China
+   •    We can extract a path < 𝑤𝑜𝑟𝑘 𝑎𝑡, 𝑙𝑜𝑐𝑎𝑡𝑒 𝑎𝑡, 𝑏𝑒𝑙𝑜𝑛𝑔𝑠 𝑡𝑜, 𝑏𝑒𝑙𝑜𝑛𝑔𝑠 𝑡𝑜 >
+   •    There could be multiple paths between two entities.
+
+
+• Path-based methods determine the existence and type of relation between
+  two entities based on the paths between them.
+                                                                                                            21
+Completing KG based on an initial KG
+• Embedding-based methods represent the entities and relation types in the KG
+  as a low-dimensional real value vector (also called embedding).
+
+
+• Design a score function 𝑔(𝒉, 𝒓, 𝒕). Get suitable embedding for entities and
+  relation types.
+   •   𝒉, 𝒓, and 𝒕 are embeddings of head entity ℎ, relation type 𝑟, and tail entity 𝑡 respectively.
+   •   Higher 𝑔(𝒉, 𝒓, 𝒕) means that the relation ℎ, 𝑟, 𝑡 is more possible to be true.
+
+
+
+
+                                                                                                 22
+Completing KG based on an initial KG
+• How to get suitable embedding for entities and relation types?
+
+
+• All the relations in the KG should have higher score than any relation that is
+  not in the KG.
+• We can get an objective function:
+                  min    3            3           𝑔 ℎ6 , 𝑟 6 , 𝑡 6 − 𝑔 ℎ, 𝑟, 𝑡   7
+                        0,1,2 ∈𝒢 0- ,1- ,2 - ∉𝒢
+
+
+
+• Get suitable embedding by gradient descent.
+
+                                                                                     23
+III. KG-Based Recommender System
+
+
+
+
+                                   24
+The Need for Side Information
+• In the construction of the recommender system:
+   • The core data is the historical user-item interaction records.
+   • Additional side information is also needed.
+
+
+
+• The additional side information is used to describe users and items.
+   • Sometimes, there is no enough interaction records.
+   • Additional side information can provide more prior information would be appreciated.
+
+
+
+
+                                                                                            25
+Use KG as Side Information
+• KG serve as a structured description of additional side (prior) information.
+   • An intuitive example:胡服骑射à赵武灵王
+   • Both KG and interaction data are represented as graph.
+       • It is easy to integration the information in KG and interaction record.
+
+
+
+
+                                                                                   26
+Problem Formulation
+• Input:
+   • Historical user-item interaction records.
+   • A KG that is used to describe items or
+     users (always items).
+• Output:
+   • A function used to predict how likely a
+     user would interact with a target.
+
+
+
+
+                                                 27
+The key is also the Score Function
+• Similar to the conventional recommender system, the key to a KG-based
+  recommender system is also the score function.
+• How to calculate the score?
+   • Getting the feature of the user and item from historical user-item interaction
+     records and KG.
+   • Calculating score by a well-designed model according to the feature of the user
+     and item.
+
+
+
+
+                                                                                 28
+Recommender System under Graph view
+• Interaction records can be seen as a
+  bipartite graph.
+
+
+• The score function 𝑓 𝑢, 𝑤 predicts how
+  probably there is an edge between
+  the user 𝑢 and item 𝑤, or the value of
+  the edge between the user 𝑢 and
+  item 𝑤.
+
+
+
+
+                                           29
+Mix KG and Interaction Records
+• Interaction records is a bipartite
+  graph.
+
+
+• KG is a heterogeneous directed
+  graph.
+
+
+• Mixing KG and interaction records will
+  get a new graph.
+
+
+
+                                           30
+Mix KG and Interaction Records
+• We can get the feature of the user
+  and item from the new graph that is
+  mixed by KG and interaction records.
+
+
+• As the content in RS and KG, the
+  features we can get contain:
+   •   Paths between users and items.
+   •   Correlation among users or items.
+   •   Embeddings of users and items.
+
+
+
+                                           31
+Constrain the feature of user/item
+• We can represent the user/item as an embedding vector
+  according to the interaction records.
+  • There may simultaneously exist multiple representations that conform to
+    the interaction records.
+
+
+• We also can get correlations among users or items according to
+  the KG or the mixed graph.
+  • We can add a constraint that the embeddings of users/items should be
+    consistent with the correlation among them.
+
+                                                                           32
+Get Embedding from Mixed Graph
+• We can represent the user/item as an embedding vector
+  according to the mixed graph.
+• A typical method is GNN (Graph Neural Network):
+  • There is an initial embedding for each node in the graph.
+  • The final embedding of each node is calculated by the embeddings of
+    its neighborhood.
+  • Result of 𝑓 𝑢, 𝑤 is calculated according to the final embeddings of user
+    𝑢 and item 𝑤 by a model 𝑀, such as MLP or matrix multiplication.
+
+
+                                                                           33
+The End of the Knowledge and Reasoning Section
+
+
+
+
+                                                 34
+

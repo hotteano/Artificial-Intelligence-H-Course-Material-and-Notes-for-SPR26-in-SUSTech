@@ -1,0 +1,540 @@
+           BP-CRL: Bachelier-Penalized Constrained Reinforcement Learning
+                   via Epistemic Uncertainty for Tail-Aware Safety
+
+                                                      Anonymous submission
+
+
+
+
+                            Abstract                                constraining the expected discounted cumulative cost:
+                                                                                               "∞                  #
+  Safe reinforcement learning must contend with a fundamen-                                      X
+  tal gap: a policy satisfying an expected-cost budget can still          max Jr (π) = Eτ ∼π        γ t r(st , at )                (1)
+                                                                            π
+  produce catastrophic trajectories with non-negligible proba-                                      t=0
+  bility—mean safety does not imply tail safety. Existing tail-                                    "∞                #
+  risk methods address this through Monte-Carlo CVaR gradi-
+                                                                                                    X
+                                                                                                           t
+                                                                           s.t.   Jc (π) = Eτ ∼π          γ c(st , at ) ≤ Clim .   (2)
+  ent estimators, which suffer from high variance caused by dis-
+                                                                                                    t=0
+  continuous tail-indicator functions, or through distributional
+  quantile critics, which introduce multi-head architectures and
+                                                                    Yet satisfying Eq. (2) provides no guarantee on tail behavior:
+  quantile-crossing pathologies.
+  We propose BP-CRL, a lightweight tail-aware constrained                    Jc (π) ≤ Clim ⇏ P(C(τ ) > Ksafe ) ≈ 0.
+  RL algorithm built on a different premise: instead of fit-
+  ting the full cost distribution, we model the epistemic un-       A policy that is cost-free in 95% of rollouts but catas-
+  certainty of a bootstrapped ensemble cost critic. Under a lo-
+                                                                    trophic in 5% can still satisfy an expected-cost limit when-
+  cal Gaussian surrogate over critic disagreement, the Bachelier
+  expected-excess formula yields a closed-form, infinitely dif-     ever Kcatastrophe is finite. In settings where tail events corre-
+  ferentiable actor-side tail penalty, free of indicator-function   spond to collisions, hardware damage, or financial ruin, this
+  sampling variance. The penalty is decoupled from cost-critic      gap is not a theoretical curiosity—it is a deployment blocker.
+  learning via gradient detachment, and a globally active anti-
+  windup PID Lagrangian controller separately enforces the          The CVaR tension. Conditional Value-at-Risk (CVaR) is
+  mean cost budget.                                                 the canonical measure for tail cost: CVaRα (C) = E[C |
+  We establish three analytical properties of this design: (i)      C ≥ VaRα (C)]. However, optimizing CVaR via policy
+  closed-form smoothness and bounded local sensitivity of           gradients requires estimating which trajectories fall in the
+  the Bachelier penalty; (ii) a formal connection between the       worst-(1 − α) tail. The standard estimator involves an indi-
+  penalty and CVaR excess under the Gaussian surrogate; and         cator function 1[C ≥ ẑα ] applied to rollout costs, produc-
+  (iii) scale-equivariance of branch-normalized hybrid advan-       ing gradients that are zero almost everywhere for the major-
+  tages.                                                            ity of trajectories and high-variance for the few tail
+                                                                                                                        trajec-
+  We use a matched Safety-Gymnasium and MuJoCo eval-                tories. Gradient variance scales as O (1 − α)−1 , becom-
+  uation protocol against PPO-Lagrangian, CPPO-style con-           ing severe at the confidence levels most relevant for safety
+  strained PPO, MC-CVaR-PPO, and QR-PPO baselines, re-              (α ≥ 0.95). Distributional RL methods (Dabney et al. 2017,
+  porting return, mean cost, CVaR@95, safety rate, and worst-       2018) sidestep sampling variance by fitting the full cost dis-
+  gap metrics. The empirical results characterize the return–
+                                                                    tribution with quantile networks, but at the cost of multi-
+  tail-risk trade-off induced by the Bachelier penalty and show
+  that BP-CRL provides a conservative tail-aware operating          head architectures, quantile-crossing artifacts, and substan-
+  point while remaining compatible with standard PPO-style          tially increased compute.
+  training.
+                                                                    Our approach. BP-CRL takes a different path: model the
+                                                                    epistemic uncertainty of the cost critic, not the full cost dis-
+                        Introduction                                tribution. An ensemble of M independently trained action-
+                                                                    conditioned cost critics provides a mean µc (s, a) and a stan-
+The tail-safety problem. Deploying reinforcement learn-             dard deviation σc (s, a) over cost predictions. This disagree-
+ing in safety-critical systems—autonomous driving, robot            ment captures how confident the model is about cost out-
+manipulation, medical treatment planning—demands more               comes in a given state-action region—precisely the regions
+than reward maximization: it demands that harmful out-              most likely to generate tail events during exploration. Under
+comes are rare. The constrained Markov decision process             a local Gaussian surrogate, the Bachelier expected-excess
+(CMDP) (Altman 1999) provides the standard framework,               formula (Bachelier 1900) gives a closed-form positive-part
+tail penalty:                                                     Tail-risk constrained RL. Tail-aware safe RL has been
+                                                                  studied since at least Mihatsch and Neuneier (2002), who
+ RB (s, a) = E[(Qc − K)+ ]                                        applied exponential utility, and Tamar, Glassner, and Man-
+                                                    µc − K        nor (2014), who provided the first CVaR policy gradient via
+            = (µc − K)Φ(d) + σc ϕ(d),          d=          .      importance-weighted tail sampling. Tamar et al. (2015) ex-
+                                                      σc
+                                                                  tended this to the broader class of coherent risk measures.
+This expression is infinitely differentiable in (µc , σc ), re-   Chow et al. (2017) developed CVaR-constrained dynamic
+quires no trajectory sorting, no quantile heads, and no in-       programming with formal convergence analysis. More re-
+dicator functions. Detached before entering the actor up-         cently, WCSAC (Yang et al. 2021) models safety costs as
+date, it shapes policy gradients toward tail-safe actions with-   Gaussian and extracts a closed-form CVaR to constrain a
+out contaminating the cost critics’ TD targets. A PID La-         soft actor-critic. A key distinction from BP-CRL: WCSAC
+grangian controller with anti-windup clipping enforces the        applies a Gaussian model to the aleatoric return distribu-
+global mean cost budget.                                          tion of the full cost signal, while BP-CRL applies a Gaus-
+Contributions.                                                    sian model to the epistemic disagreement among ensemble
+                                                                  cost-critic predictions—a different modeling target with dif-
+1. Epistemic-uncertainty tail proxy. We introduce the use         ferent gradient properties and a different placement in the
+   of ensemble cost-critic disagreement as a Gaussian surro-      algorithm (constraint vs. detached actor penalty). Yang et al.
+   gate for actor-side tail risk in constrained RL (Section ).    (2023) extend WCSAC with IQN-based distributional safety
+2. Bachelier actor penalty. We adapt the Bachelier                critics. Our MC-CVaR-PPO baseline follows the sampling-
+   expected-excess formula (Bachelier 1900) to produce a          based lineage of Tamar, Glassner, and Mannor (2014): it
+   smooth, closed-form actor-side tail penalty, with a for-       demonstrates in-practice that tail-indicator variance is a gen-
+   mal connection to CVaR excess under a Gaussian surro-          uine obstacle at α ≥ 0.95.
+   gate (Section , Propositions 1–2).
+3. Decoupled architecture. Risk shaping and expected-             Distributional RL. C51 (Bellemare, Dabney, and Munos
+   cost estimation are strictly separated: cost critics learn     2017) introduced categorical return distributions; QR-
+   from pure TD targets; the Bachelier term enters only the       DQN (Dabney et al. 2017) replaced fixed atoms with quan-
+   detached actor advantage (Section ).                           tile regression; IQN (Dabney et al. 2018) parameterized
+4. Anti-windup PID dual controller. We extend PID La-             continuous quantile functions enabling risk-sensitive distor-
+   grangian control (Stooke, Achiam, and Abbeel 2020)             tions. These methods support tail objectives by construc-
+   with anti-windup saturation logic that prevents integral       tion, but they require multi-head critics whose output di-
+   wind-up during extended constraint violations (Section ).      mensionality scales with quantile resolution, and quantile
+                                                                  crossing—where learned quantile functions lose monotonic-
+5. Empirical evaluation. We provide a matched, repro-             ity—is a known failure mode (Zhou, Wang, and Feng 2020)
+   ducible evaluation over Safety-Gymnasium and MuJoCo            that the non-crossing QR architecture addresses at the cost
+   environments with constrained and tail-aware baselines,        of additional constraints. Our QR-PPO baseline demon-
+   reporting CVaR@95, safety rate, and worst-gap metrics          strates these trade-offs in the cost-constrained on-policy set-
+   alongside standard return–cost trade-offs (Section ).          ting. BP-CRL achieves tail awareness with a two-number
+                                                                  summary (µc , σc ) from a standard ensemble, incurring no
+                      Related Work                                distributional-head overhead.
+Expectation-based constrained RL. The CMDP (Alt-
+man 1999) framework has generated a rich literature on            Uncertainty-based safe RL. Separating epistemic and
+expectation-based constraint satisfaction. CPO (Achiam            aleatoric uncertainty in RL was formalized by Depeweg
+et al. 2017) enforces linearized constraints within trust-        et al. (2018) and scaled by deep ensembles (Lakshmi-
+region updates but requires expensive Fisher-matrix com-          narayanan, Pritzel, and Blundell 2017) and PETS (Chua
+putations. PPO-Lagrangian and TRPO-Lagrangian (Ray,               et al. 2018). RACER (Stachowicz and Levine 2024) com-
+Achiam, and Amodei 2019) replace second-order solvers             bines ensemble epistemic uncertainty with distributional
+with primal-dual relaxation at the cost of dual-variable          aleatoric uncertainty for risk-sensitive autonomous driving,
+oscillation. PID Lagrangian methods (Stooke, Achiam,              demonstrating that ensemble cost-critic disagreement corre-
+and Abbeel 2020) reduce oscillation using proportional–           lates with actual unsafe outcomes—motivating our choice
+integral–derivative dual updates; BP-CRL builds on this           of ensemble disagreement as a tail-risk proxy. As et al.
+design and adds anti-windup saturation. FOCOPS (Zhang,            (2022) use Bayesian world models to propagate constraint
+Vuong, and Ross 2020) achieves first-order simplicity             uncertainty; unlike that model-based approach, BP-CRL is
+via non-parametric policy projections; PCPO (Yang et al.          model-free. Ensemble critics have also been used for con-
+2020) maintains feasibility through explicit projection steps;    servative value estimation in offline RL (An et al. 2021) and
+CVPO (Liu et al. 2022) takes a variational inference view;        for exploration (Lee et al. 2021). BP-CRL studies a com-
+Saute RL (Sootla et al. 2022) augments the state with the         plementary design point: deriving a closed-form Bachelier
+safety budget to target almost-sure satisfaction. Despite their   expected-excess penalty from ensemble cost-critic disagree-
+diversity, all these methods regulate mean cost—leaving the       ment and using it as a detached on-policy actor-side safety
+cost distribution tail uncontrolled.                              signal.
+                       Background                                  Ensemble Cost Critics and Epistemic Uncertainty
+Constrained Markov Decision Processes                              BP-CRL trains M independently initialized, bootstrapped
+                                                                                                       (m)
+A CMDP is a tuple M = ⟨S, A, P, r, c, γ, Clim ⟩, where S           action-conditioned cost critics {Qc (s, a)}M  m=1 . For a
+and A are state and action spaces, P (s′ | s, a) is the transi-    given (s, a), the ensemble mean and variance are:
+tion kernel, r : S×A → R is the reward, c : S×A → R≥0 is
+                                                                                              M
+the safety cost, γ ∈ (0, 1) is a discount factor, and Clim ≥ 0                        1 X (m)
+is the cumulative cost budget. The standard objective is                  µc (s, a) =      Q (s, a),                         (4)
+                                                                                      M m=1 c
+Eqs. (1)–(2). In our implementation, Clim is calibrated on
+the per-step/batch-mean cost scale, not the episode sum, to                                M                       2
+                                                                                        1 X  (m)
+avoid mismatch between episode length and dual-controller                σc2 (s, a) =         Qc (s, a) − µc (s, a) .        (5)
+                                                                                        M m=1
+scale across environments.
+
+Value-at-Risk and Conditional Value-at-Risk                        We interpret σc (s, a) as an epistemic uncertainty proxy. To
+                                                                   prevent numerical collapse when all critics converge, we en-
+Definition 1. For a random variable X and confidence level         force σc ← max(σc , σmin ) with σmin = 10−6 .
+α ∈ (0, 1):
+           VaRα (X) = inf{z : P(X ≤ z) ≥ α},                       Bachelier Tail Penalty
+          CVaRα (X) = E[X | X ≥ VaRα (X)].                         Under the local Gaussian surrogate Qc (s, a) ∼ N (µc , σc2 ),
+   CVaR is a coherent risk measure (Tamar et al. 2015):            we define an uncertainty-inflated robust strike price:
+convex, monotone, translation-equivariant, and sub-additive.        K(s, a) = µc (s, a) + c0 σc (s, a),      c0 = Φ−1 (α) + κ,
+For Gaussian X ∼ N (µ, σ 2 ), both quantities have closed                                                                   (6)
+forms: VaRα = µ + Φ−1 (α)σ and CVaRα = µ +                         where α ∈ (0, 1) is a confidence level and κ ≥ 0 is a safety
+σϕ(Φ−1 (α))/(1 − α).                                               inflation coefficient that adds conservatism beyond the VaR
+                                                                   level. Thus, c0 combines the Gaussian VaR quantile and the
+Bachelier Expected Excess                                          safety margin. The Bachelier tail penalty is:
+Definition 2 (Bachelier Call Value). For X ∼ N (µ, σ 2 ) and
+strike K ∈ R, the positive-part expected excess (Bachelier                  RB (s, a) = Call(K; µc , σc )
+call value) is                                                                        = (µc − K)Φ(dκ ) + σc ϕ(dκ ),          (7)
+          Call(K; µ, σ) = E[(X − K)+ ]                                             dκ = −c0 = −Φ      −1
+                                                                                                           (α) − κ.
+                         = (µ − K)Φ(d) + σϕ(d),
+                                                          (3)      Note that dκ is constant given α and κ, which means Φ(dκ )
+                            µ−K
+                       d=           .                              and ϕ(dκ ) are fixed scalars during training. Substituting
+                               σ                                   Eq. (6) gives the implemented one-dimensional form
+Eq. (3) admits partial derivatives ∂Call/∂µ = Φ(d) ∈ [0, 1]                                                         
+and ∂Call/∂σ = ϕ(d) ≤ ϕ(0) ≈ 0.399, which are the                          RB (s, a) = σc (s, a) ϕ(−c0 ) − c0 Φ(−c0 ) .   (8)
+building blocks of the theoretical results in Section .
+                                                                   The actor-side tail signal therefore responds to epistemic
+                                                                   spread, while the mean-cost branch and PID multiplier han-
+                   BP-CRL: Method                                  dle the expected-cost level.
+Design Principle: Epistemic Uncertainty as Tail
+Proxy                                                              Gradient detachment. Before entering the actor update,
+                                                                   RB is detached from the computation graph: RB (s, a) =
+BP-CRL is motivated by the observation that, in model-free         stopgrad(RB (s, a)). This ensures that gradients from the
+RL, the cost critic does not know the true cost value func-        actor loss do not flow back into the ensemble cost critics,
+tion—it knows only what it has seen during training. When          preserving the purity of TD learning.
+the policy visits novel or rarely-seen state-action pairs, indi-
+vidual critics in a bootstrapped ensemble will disagree with       Pure-TD Cost Critic Learning
+one another. This epistemic disagreement signals precisely
+the regions where cost outcomes are poorly understood: the         All ensemble critics are trained with standard TD targets,
+regions most likely to produce tail events. We therefore use       independent of the Bachelier penalty:
+ensemble disagreement as a structured proxy for tail risk,
+without fitting any distributional output head.                            yt = ct + γ(1 − dt ) Vbc (st+1 ),                 (9)
+                                                                                 1     X                           2
+                                                                         (m)
+Pipeline summary. An ensemble of action-conditioned                     Lcost =                 Q(m)
+                                                                                                  c (st , at ) − yt    .    (10)
+cost critics produces (µc , σc ) for each state-action pair. The                |B|
+                                                                                        (st ,at )∈B
+Bachelier expected-excess formula converts the epistemic
+spread σc into a smooth actor-side tail penalty. This penalty      Here dt ∈ {0, 1} is the episode termination flag, Vbc is a
+is detached before entering the branch-normalized actor ad-        target network cost value estimate, and |B| is the batch size.
+vantage, while a separate anti-windup PID controller adjusts       All M critics use the same TD target yt but are initialized
+λ from the batch-mean cost error to enforce Clim .                 independently and receive no shared gradient signal.
+Actor Update with Branch-Normalized Hybrid                       Algorithm 1 BP-CRL Update Step
+Advantage                                                         1: Input: Policy πθ ; value networks Vr , Vc ; critics
+Let Ar and Ac denote the reward and cost advan-                          (m)
+                                                                     {Qc }M  m=1 ; PID state; multiplier λ
+tages estimated via Generalized Advantage Estimation              2: Collect rollout batch B = {(st , at , rt , ct , st+1 , dt )} un-
+(GAE) (Schulman et al. 2018). BP-CRL constructs a                    der πθ
+branch-normalized hybrid advantage:                               3: Compute Ar , Ac via GAE; compute V̂c (st+1 ) for TD
+     ABP = norm(Ar ) − λ · norm(Ac + β RB ),             (11)        targets
+                                                                  4: Update dual: ek ← mean(ct )−Clim ; apply Eq. (13) with
+where norm(·) denotes batch zero-mean unit-variance nor-
+                                                                     anti-windup logic
+malization, λ ≥ 0 is the Lagrange multiplier, and β > 0 is
+                                                                  5: for each critic m = 1, . . . , M do
+the tail penalty weight. The two branches are normalized in-
+                                                                  6:    Compute TD target yt via Eq. (9)
+dependently: this prevents the reward-advantage scale from                           (m)
+washing out the safety-risk signal when reward magnitudes         7:    Minimize Lcost via Eq. (10)
+are large. The actor is updated with the PPO clipped surro-       8: end for
+gate (Schulman et al. 2017):                                      9: Compute µc , σc via Eqs. (4)–(5); clamp σc ←
+                                                                     max(σc , 10−6 )
+ Lactor = −E[min(ρt ABP , clip(ρt , 1 − ϵ, 1 + ϵ)ABP )] ,        10: Compute robust strike K via Eq. (6); compute Bachelier
+                                                     (12)            penalty RB via Eq. (7)
+where ρt = πθ (at | st )/πθold (at | st ).                       11: Detach: RB ← stopgrad(RB )
+                                                                 12: Construct ABP via Eq. (11)
+Anti-Windup PID Lagrangian Controller                            13: Minimize Lactor via Eq. (12) for Kπ epochs
+The dual variable λ is updated every rollout/update cycle.
+Let ek = mean(ct ∈ Bk ) − Clim be the batch-mean cost
+error. The projected PID update is:                              so ∂RB /∂µ = 0 and ∂RB /∂σ = h(c0 ), a finite constant
+             k
+             X                                                   for fixed (α, κ).
+      Ik =         ei ,
+             i=1
+                                                                 Proof. The fixed-strike derivatives follow by differentiat-
+                                                         (13)    ing (µ − K)Φ(d) + σϕ(d) with d = (µ − K)/σ and us-
+     uk = λk + KP ek + KI Ik + KD (ek − ek−1 ),                  ing ϕ′ (d) = −dϕ(d); all terms involving ∂d/∂µ or ∂d/∂σ
+   λk+1 = Π[0,λmax ] (uk ).                                      cancel. For the robust strike, K = µ + c0 σ implies d =
+Standard integral wind-up occurs when λ saturates at             (µ − K)/σ = −c0 and
+[0, λmax ] while the integral term continues accumulating—a             RB = (−c0 σ)Φ(−c0 ) + σϕ(−c0 ) = σh(c0 ).
+common failure mode in Lagrangian-based safe RL. BP-
+CRL applies anti-windup: when projection saturates and the       The stated derivatives then follow immediately.
+current error would push the integral further into saturation,   Remark 1. Proposition 1 is deliberately stated for the quan-
+the integral accumulation is frozen; it resumes only when        tity used by BP-CRL. It supports the claim that BP-CRL
+the error reverses sign. We set λmax = 50.                       uses a smooth closed-form actor-side signal without tail in-
+Implementation summary. Default hyperparameters:                 dicators or sorting. It should not be read as a convergence
+M = 5 critics, α = 0.95, β = 0.15, κ = 0.15, ϵ = 0.2             theorem for CMDPs or as a proof of exact trajectory-level
+(PPO clip), λmax = 50. Algorithm 1 provides the full             CVaR optimization.
+update step.                                                     Proposition 2 (Connection to CVaR Excess Under Gaussian
+                                                                 Surrogate). Under the local Gaussian surrogate Qc (s, a) ∼
+                   Theoretical Properties                        N (µc , σc2 ), when κ = 0 (i.e., the strike equals VaRα ):
+We establish three analytical properties of the BP-CRL ac-          RB κ=0 = E[(Qc − VaRα )+ ]
+tor update. These results characterize the structure of the                                                                    (14)
+Bachelier penalty and justify design choices; they are not                     = (1 − α) CVaRα (Qc ) − VaRα (Qc ) .
+end-to-end convergence guarantees for the full CMDP opti-        For κ > 0, the strike is shifted above VaRα , so the expected
+mization.                                                        excess is smaller than the VaR-strike excess while measuring
+Proposition 1 (Closed-Form Smoothness and Bounded Lo-            exceedance beyond a more conservative threshold.
+cal Sensitivity). Let Call(K; µ, σ) denote the Bachelier
+                                                                 Proof sketch. By definition,
+expected-excess term in Eq. (3) with σ > 0. For a fixed strike                              Z ∞
+K, its partial derivatives are
+                                                                      E[(X − VaRα )+ ] =        (x − VaRα )f (x) dx
+  ∂Call                        ∂Call                                                             VaRα
+         = Φ(d) ∈ [0, 1],             = ϕ(d) ≤ (2π)−1/2 .
+   ∂µ                            ∂σ                                                         = (1 − α) CVaRα (X)
+For the robust strike used by BP-CRL, K = µ + c0 σ with                                       − (1 − α) VaRα (X).
+c0 = Φ−1 (α) + κ, the penalty reduces to                         The monotonicity in κ follows from ∂Call(K; µ, σ)/∂K =
+ RB (µ, σ) = σ h(c0 ),       h(c0 ) = ϕ(−c0 ) − c0 Φ(−c0 ),      −Φ((µ − K)/σ) ≤ 0.
+Remark 2. BP-CRL does not claim to impose an exact                CPPO-style reconstruction, whose higher return comes with
+trajectory-level CVaR constraint. Proposition 2 only shows        elevated CVaR95 and a lower safety rate. On Swimmer-
+that the Bachelier term is connected to CVaR excess under         v4, all methods are effectively safe; BP-CRL occupies a
+a local Gaussian critic surrogate. With κ > 0, it becomes         conservative, stable operating point rather than dominating
+a conservative-threshold expected-excess proxy rather than        the return–risk frontier. On Hopper-v4, BP-CRL reaches
+an overestimate of the VaR-strike CVaR excess.                    high return while keeping CVaR95 low and safety rate at
+Proposition 3 (Scale-Equivariance of Branch-Normalized            1.00, giving the strongest observed return–tail-risk trade-off
+Advantage). Let ABP = norm(Ar )−λ·norm(Ac +βRB ).                 among the reported core tasks.
+For any positive scalars c1 > 0 and c2 > 0, norm(c1 Ar ) =
+norm(Ar ) and norm(c2 (Ac +βRB )) = norm(Ac +βRB ).               Diagnostic Ablation Axes
+Consequently, ABP is invariant to independent rescaling of        Component ablations. The controlled variants isolate
+the reward and cost-risk branches, and the Lagrange weight        each design choice: (a) w/o Bachelier (β = 0): re-
+λ retains a dimensionless interpretation as a relative prior-     moves tail penalty, degenerates to PID-Lagrangian; (b) w/o
+ity between branches.                                             branch norm: removes independent branch normalization,
+                                                                  collapses to a single-scale advantage; (c) w/o anti-windup:
+Proof. Batch normalization norm(x) = (x − x̄)/σ̂x satis-          replaces PID with simple gradient ascent on λ.
+fies norm(cx) = norm(x) for any positive constant scalar
+c and norm(x + b) = norm(x) for constant offset b. Both           Sensitivity analysis. Hyperparameter sensitivity is as-
+identities follow immediately from the definitions of sample      sessed by sweeping β ∈ {0.05, 0.10, 0.15, 0.25, 0.40}, κ ∈
+mean and sample standard deviation.                               {0, 0.1, 0.15, 0.3}, α ∈ {0.90, 0.95, 0.99}, and ensemble
+                                                                  size M ∈ {1, 3, 5, 10}, reporting Worst Gap, CVaR@95,
+Remark 3. Without branch normalization, large reward ad-          and Return as primary outcomes.
+vantages would dominate Eq. (11), and the safety signal
+would require a correspondingly large λ to remain effec-          Uncertainty placement. The uncertainty-placement diag-
+tive. Proposition 3 formalizes why branch normalization is        nostic compares: (i) epistemic uncertainty as actor-side tail
+not merely a heuristic but a structural guarantee: it decou-      penalty (BP-CRL); (ii) uncertainty as an exploration reward
+ples the relative priority λ from the absolute scales of reward   bonus; and (iii) no uncertainty signal. This isolates whether
+and cost signals across environments.                             epistemic uncertainty is more useful for shaping safe behav-
+                                                                  ior or for driving exploration.
+                      Experiments
+Setup                                                                                     Discussion
+Environments. We report three core benchmarks span-               What BP-CRL is and is not. BP-CRL is a practical tail-
+ning navigation and locomotion: SafetyPointGoal1 (Safety-         aware safe RL algorithm, not an exact trajectory-level CVaR
+Gymnasium navigation), Swimmer-v4 (MuJoCo loco-                   optimizer. Its tail signal is a local actor-side proxy derived
+motion with cost wrapper), and Hopper-v4 (higher-                 from ensemble epistemic uncertainty, grounded by Proposi-
+dimensional locomotion under a tighter cost budget).              tion 2 but not equivalent to directly constraining trajectory
+                                                                  CVaR. Whether the proxy translates to empirical tail-safety
+Baselines. We compare five constrained or tail-aware al-          improvements is an empirical question; the results in Sec-
+gorithms in a shared PPO-style framework: (1) PPO-                tion characterize this on the reported core benchmarks.
+Lagrangian (Ray, Achiam, and Amodei 2019); (2) CPPO-
+style—a constrained PPO path implemented in the shared            Limitations. The Gaussian surrogate over critic disagree-
+framework; (3) CVaR-PPO-MC—sampling-based CVaR                    ment is a simplifying assumption. In regions of multimodal
+policy optimization; (4) QR-PPO—a quantile-regression             or heavy-tailed cost outcomes, the approximation may un-
+distributional baseline; (5) BP-CRL—the proposed method.          derestimate tail risk. Future work may replace bootstrapped
+                                                                  ensembles with randomized prior functions (RPF) (Os-
+Metrics. We report episodic Return, batch-mean Cost,              band, Aslanides, and Cassirer 2018) or normalizing-flow
+Safety Rate (P(episode cost ≤ Clim )), CVaR@95 (es-               uncertainty models for better-calibrated surrogates. The hy-
+timated from evaluation episode costs), Worst Gap =               perparameters {β, κ, α, KP , KI , KD } require environment-
+ \ 0.95 − Clim (negative ⇒ tail safely under budget), and
+CVaR                                                              specific tuning; the sensitivity protocol therefore treats them
+Violation Rate.                                                   as primary diagnostic axes rather than fixed universal con-
+Protocol. Unless otherwise noted, reported results use            stants. Finally, the Bachelier penalty is architecturally or-
+300k environment steps and three random seeds. Rollout            thogonal to distributional RL; combining it with a QR-PPO
+length is 256, minibatch size is 64, and evaluation uses 20       or IQN cost critic could yield stronger tail control but would
+episodes every 10k environment steps.                             sacrifice the lightweight design goal.
+
+Main Results                                                                             Conclusion
+Table 1 summarizes the core benchmark results. On Safe-           We have introduced BP-CRL, a tail-aware constrained RL
+tyPointGoal1, BP-CRL does not achieve the highest re-             algorithm that reframes the tail-safety problem through
+turn, but it maintains a substantially lower tail cost than the   the lens of epistemic uncertainty. By modeling ensemble
+Table 1: Core main results at 300k environment steps over three seeds. Each cell reports Return mean±std on the first line
+and Cost / CVaR95 / Safety Rate on the second line. Higher Return and Safety Rate are better; lower Cost and CVaR95 are
+better.
+
+Environment              BP-CRL                   PPO-Lag                CPPO-style             CVaR-PPO-MC                  QR-PPO
+
+                       15.70±5.22               18.91±1.62               19.18±1.63               13.00±11.29               9.97±7.79
+SafetyPointGoal1
+                   0.0997 / 0.2055 / 1.00   0.0774 / 0.2218 / 1.00   0.2074 / 0.9487 / 0.88   0.1270 / 0.3116 / 1.00   0.1956 / 0.4818 / 0.97
+
+                       31.74±15.31              33.80±2.74               38.40±10.32              36.03±10.89              39.46±8.42
+Swimmer-v4
+                   0.0125 / 0.0141 / 1.00   0.0154 / 0.0155 / 1.00   0.0138 / 0.0141 / 1.00   0.0130 / 0.0131 / 1.00   0.0125 / 0.0126 / 1.00
+
+                      530.32±195.44            499.65±133.83            406.80±53.06             541.38±181.72            380.89±208.95
+Hopper-v4
+                   0.0087 / 0.0091 / 1.00   0.0069 / 0.0077 / 1.00   0.0064 / 0.0067 / 1.00   0.0092 / 0.0097 / 1.00   0.0126 / 0.0136 / 1.00
+
+
+
+
+cost-critic disagreement under a Gaussian surrogate, the                   Dabney, W.; Ostrovski, G.; Silver, D.; and Munos, R. 2018.
+Bachelier expected-excess formula yields a smooth, closed-                 Implicit Quantile Networks for Distributional Reinforce-
+form actor-side tail penalty—without sorting trajectories, fit-            ment Learning. arXiv:1806.06923.
+ting quantile heads, or introducing indicator-function vari-               Dabney, W.; Rowland, M.; Bellemare, M. G.; and Munos, R.
+ance. Three analytical properties establish gradient bound-                2017. Distributional Reinforcement Learning with Quantile
+edness, a formal connection to CVaR excess, and the scale-                 Regression. arXiv:1710.10044.
+equivariance of branch-normalized advantages. An anti-
+windup PID Lagrangian controller enforces the global mean                  Depeweg, S.; Hernández-Lobato, J. M.; Doshi-Velez, F.; and
+cost budget. Together, these components define a PPO-style                 Udluft, S. 2018. Decomposition of Uncertainty in Bayesian
+path toward practical tail-aware safe RL: the method is sim-               Deep Learning for Efficient and Risk-sensitive Learning.
+ple enough to implement in standard actor–critic code, yet                 arXiv:1710.07283.
+structured enough to expose tail risk, dual dynamics, and                  Lakshminarayanan, B.; Pritzel, A.; and Blundell, C. 2017.
+uncertainty placement as measurable quantities. This work                  Simple and Scalable Predictive Uncertainty Estimation us-
+broadens the toolkit for safe RL by demonstrating that fi-                 ing Deep Ensembles. arXiv:1612.01474.
+nancial mathematics, epistemic uncertainty, and constrained                Lee, K.; Laskin, M.; Srinivas, A.; and Abbeel, P. 2021. SUN-
+policy optimization can be combined in a principled and                    RISE: A Simple Unified Framework for Ensemble Learning
+practical way.                                                             in Deep Reinforcement Learning. arXiv:2007.04938.
+                                                                           Liu, Z.; Cen, Z.; Isenbaev, V.; Liu, W.; Wu, Z. S.; Li, B.; and
+                           References                                      Zhao, D. 2022. Constrained Variational Policy Optimization
+Achiam, J.; Held, D.; Tamar, A.; and Abbeel, P. 2017. Con-                 for Safe Reinforcement Learning. arXiv:2201.11927.
+strained Policy Optimization. arXiv:1705.10528.                            Mihatsch, O.; and Neuneier, R. 2002. Risk-Sensitive Rein-
+Altman, E. 1999. Constrained Markov Decision Processes.                    forcement Learning. Machine Learning, 49(2–3): 267–290.
+Chapman and Hall/CRC.                                                      Osband, I.; Aslanides, J.; and Cassirer, A. 2018. Ran-
+An, G.; Moon, S.; Kim, J.-H.; and Song, H. O. 2021.                        domized Prior Functions for Deep Reinforcement Learning.
+Uncertainty-Based Offline Reinforcement Learning with Di-                  arXiv:1806.03335.
+versified Q-Ensemble. arXiv:2110.01548.                                    Ray, A.; Achiam, J.; and Amodei, D. 2019. Benchmarking
+                                                                           Safe Exploration in Deep Reinforcement Learning. OpenAI
+As, Y.; Usmanova, I.; Curi, S.; and Krause, A. 2022. Con-
+                                                                           Technical Report.
+strained Policy Optimization via Bayesian World Models.
+arXiv:2201.09802.                                                          Schulman, J.; Moritz, P.; Levine, S.; Jordan, M.; and Abbeel,
+                                                                           P. 2018. High-Dimensional Continuous Control Using Gen-
+Bachelier, L. 1900. Théorie de la Spéculation. Annales sci-              eralized Advantage Estimation. arXiv:1506.02438.
+entifiques de l’École Normale Supérieure, 17: 21–86.
+                                                                           Schulman, J.; Wolski, F.; Dhariwal, P.; Radford, A.; and
+Bellemare, M. G.; Dabney, W.; and Munos, R. 2017.                          Klimov, O. 2017. Proximal Policy Optimization Algorithms.
+A Distributional Perspective on Reinforcement Learning.                    arXiv:1707.06347.
+arXiv:1707.06887.
+                                                                           Sootla, A.; Cowen-Rivers, A. I.; Jafferjee, T.; Wang, Z.;
+Chow, Y.; Ghavamzadeh, M.; Janson, L.; and Pavone, M.                      Mguni, D.; Wang, J.; and Bou-Ammar, H. 2022. Saute RL:
+2017. Risk-Constrained Reinforcement Learning with Per-                    Almost Surely Safe Reinforcement Learning Using State
+centile Risk Criteria. arXiv:1512.01629.                                   Augmentation. arXiv:2202.06558.
+Chua, K.; Calandra, R.; McAllister, R.; and Levine, S. 2018.               Stachowicz, K.; and Levine, S. 2024. RACER: Epis-
+Deep Reinforcement Learning in a Handful of Trials using                   temic Risk-Sensitive RL Enables Fast Driving with Fewer
+Probabilistic Dynamics Models. arXiv:1805.12114.                           Crashes. arXiv:2405.04714.
+Stooke, A.; Achiam, J.; and Abbeel, P. 2020. Responsive              Monotonicity in κ follows because K increases with κ,
+Safety in Reinforcement Learning by PID Lagrangian Meth-             while
+ods. arXiv:2007.03964.                                                                  ∂Call
+                                                                                              = −Φ(d) ≤ 0.
+Tamar, A.; Chow, Y.; Ghavamzadeh, M.; and Mannor,                                        ∂K
+S. 2015. Policy Gradient for Coherent Risk Measures.                 Thus the call value decreases as the conservative strike in-
+arXiv:1502.03919.                                                    creases.
+Tamar, A.; Glassner, Y.; and Mannor, S. 2014. Optimizing
+the CVaR via Sampling. arXiv:1404.3862.
+                                                                      Bachelier Formula: Derivation and Financial
+                                                                                    Interpretation
+Yang, Q.; Simão, T. D.; Tindemans, S. H.; and Spaan, M.
+T. J. 2021. WCSAC: Worst-Case Soft Actor Critic for                  The Bachelier model (Bachelier 1900) was the first formal
+Safety-Constrained Reinforcement Learning. Proceedings               mathematical model for option pricing, assuming arithmetic
+of the AAAI Conference on Artificial Intelligence, 35(12):           (additive) Brownian motion for the underlying price pro-
+10639–10646.                                                         cess, as opposed to the later geometric Brownian motion
+                                                                     assumption of Black-Scholes. The expected payoff of a Eu-
+Yang, Q.; Simão, T. D.; Tindemans, S. H.; and Spaan, M.             ropean call option under arithmetic Brownian motion with
+T. J. 2023. Safety-Constrained Reinforcement Learning with           XT ∼ N (µ, σ 2 ) is exactly Eq. (3). In BP-CRL we repur-
+a Distributional Safety Critic. Machine Learning, 112: 859–          pose this formula for a different domain: rather than mod-
+887.                                                                 eling option payoffs, we model the expected excess of an
+Yang, T.-Y.; Rosca, J.; Narasimhan, K.; and Ramadge, P. J.           uncertain cost estimate over a conservative threshold. The
+2020. Projection-Based Constrained Policy Optimization.              “strike price” K in Eq. (6) plays the role of a safety thresh-
+arXiv:2010.03152.                                                    old, and the Bachelier call value quantifies how much the
+Zhang, Y.; Vuong, Q.; and Ross, K. W. 2020. First                    uncertain cost is expected to exceed that threshold.
+Order Constrained Optimization in Policy Space.
+arXiv:2002.06506.                                                          Extended Theoretical Diagnostics and
+Zhou, F.; Wang, J.; and Feng, X. 2020. Non-Crossing Quan-                          Robustness Profiles
+tile Regression for Distributional Reinforcement Learning.           This section provides rigorous math extensions for the
+In Larochelle, H.; Ranzato, M.; Hadsell, R.; Balcan, M. F.;          remaining systemic attributes of BP-CRL. To guarantee
+and Lin, H., eds., Advances in Neural Information Process-           consistency, we maintain strict notation: RB (s, a) for the
+ing Systems, volume 33, 15909–15919. Curran Associates,              Bachelier penalty, norm(·) for batch normalization, and
+Inc.                                                                 c0 = Φ−1 (α) + κ for the robust strike multiplier.
+
+                                                                     Error Propagation and Generalization Profiles
+                           Appendix                                  Assumption 1 (Bounded and Lipschitz Critic Function
+                 Proofs of Propositions                              Space). The exact (oracle) critic ensemble statistics (µ∗c , σc∗ )
+                                                                     and the empirical learned statistics (µ̂c , σ̂c ) are uniformly
+Proof of Proposition 1                                               bounded over the compact state-action space S × A. That is,
+For fixed K, differentiating Eq. (3) gives ∂Call/∂µ = Φ(d)           max(∥µ∗c ∥∞ , ∥µ̂c ∥∞ ) ≤ Qmax and σmin ≤ min(σc∗ , σ̂c ) ≤
+and ∂Call/∂σ = ϕ(d) after cancellation of the terms con-             σmax .
+taining ∂d. For the implemented strike K = µ + c0 σ,                 Proposition 4 (Lipschitz Error Propagation from Critic
+d = −c0 and RB = σ[ϕ(−c0 ) − c0 Φ(−c0 )], so the sen-                Approximation). Under Assumption 1, let critic errors be
+sitivity to µ is zero and the sensitivity to σ is the fixed scalar   bounded by ∥µ̂c − µ∗c ∥ ≤ ϵµ and ∥σ̂c − σc∗ ∥ ≤ ϵσ . Under
+h(c0 ).                                                              the robust strike K = µc + c0 σc , the propagation of critic
+                                                                     error into the Bachelier penalty satisfies
+Proof of Proposition 2
+                                                                                      |RB (µ̂c , σ̂c ) − RB (µ∗c , σc∗ )|
+For X ∼ N (µ, σ 2 ):                                                                                                              (15)
+                                                                                           ≤ Lµ ϵµ + Lσ ϵσ ,
+                         Z ∞
+E[(X − VaRα )+ ] =              (x − VaRα )f (x) dx                  where Lµ = 0 and Lσ = h(c0 ) ≜ ϕ(−c0 ) − c0 Φ(−c0 ).
+                          VaR
+                         Z ∞α                                        Proof. Substituting K = µc + c0 σc into the Bachelier for-
+                     =         x f (x) dx                            mula yields RB (µc , σc ) = σc h(c0 ), where h(c0 ) is a fixed
+                          VaRα                                       positive scalar for constant (α, κ). The total differential with
+                                 Z ∞
+                                                                     respect to (µc , σc ) gives
+                         − VaRα         f (x) dx
+                                   VaRα                                                       ∂RB
+                     = (1 − α) CVaRα (X) − VaRα (1 − α)                                           = 0,
+                                                                                              ∂µc
+                     = (1 − α) CVaRα (X)                                                      ∂RB
+                                                                                                  = h(c0 ).
+                       − (1 − α) VaRα (X).                                                    ∂σc
+Applying the Mean Value Theorem on the convex domain             Statistical Concentration and Epistemic Alignment
+of critic outputs,                                               Assumption 3 (Independent Bootstrap Sampling). The en-
+                                                                                      (m)
+                |RB (µ̂c , σ̂c ) − RB (µ∗c , σc∗ )|              semble critics {Qc }M    m=1 are trained on independently
+                                                                 sampled mini-batches or with distinct random seeds, yield-
+                      ∂RB          ∂RB
+                   ≤          ϵµ +     ϵσ                        ing i.i.d. estimates bounded in [−Qmax , Qmax ].
+                      ∂µc          ∂σc
+                                                                 Proposition 6 (Finite-Sample Concentration of σc ). Under
+                   = h(c0 )ϵσ .                                  Assumption 3, for any δ ∈ (0, 1), the empirical disagreement
+Setting Lµ = 0 and Lσ = h(c0 ) completes the proof. Since        concentrates as
+c0 ≥ 0, h(c0 ) ≤ (2π)−1/2 .
+                                                                                          r
+                                                                          (M )     true      2Var(Qc ) log(2/δ)
+                                                                    P σc − σ c          ≥
+Remark 4 (Structural Decoupling). Proposition 4 reveals                                                M
+a structural advantage: the Bachelier penalty is invariant to                                                  !         (17)
+mean-cost critic errors (Lµ = 0). It depends solely on epis-                                 2Qmax log(2/δ)
+                                                                                          +                       ≤ δ.
+temic disagreement σc , guaranteeing that actor-side risk op-                                        3M
+timization remains stable even during early training when
+µ̂c is poorly calibrated.                                        Proof. Follows directly from Bernstein’s inequality applied
+                                                                                  second√momentpof bounded i.i.d. variables,
+                                                                 to the empirical √
+Dual Dynamics and Control Stability                              combined with | A − B| ≤ |A − B|.
+Assumption 2 (Local Monotonicity of Cost Response).              Remark 6. Validates σc as a distribution-free epistemic
+Within a local optimization epoch, the mapping from the          proxy.√ As M → ∞, estimation error collapses at
+dual variable λ to the execution error ek (λ) = Eπθ(λ) [c] −
+Clim is monotonically decreasing and locally Lipschitz:          O(1/ M ), ensuring safety robustness even under non-
+∂ek /∂λ ≤ −γ0 < 0.                                               Gaussian critic disagreement.
+Proposition 5 (Fixed-Point Stability under Anti-Windup           Regret Decomposition and Safety Guarantees
+Saturation). Under Assumption 2, when the anti-windup            Assumption 4 (Linear Function Approximation). The en-
+mechanism freezes the integral (δk = 0 due to saturation         vironment admits a linear MDP structure with feature map-
+at λmax ), the dual update reduces to a projected PD con-        ping ψ(s, a) such that ∥ψ(s, a)∥2 ≤ 1, and costs/rewards
+troller:                                                         are linear in ψ.
+    λk+1 = Π[0,λmax ] (λk + KP ek + KD (ek − ek−1 )) .           Proposition 7 (Regret Decomposition under Uncertain-
+                                                                 ty-Aware Penalty). Under Assumption 4, the cumulative re-
+This operator admits a locally unique contraction fixed point                      PT
+λ∗ satisfying                                                    ward regret VT = t=1 [Jr (π ∗ ) − Jr (πt )] decomposes as
+                                                                                   q                  
+|λk+1 −λ∗ | ≤ ρ|λk −λ∗ |,         ρ = |1−γ0 (KP +KD )| < 1.                VT ≤ O     d3 T log2 (T /δ)
+                                                       (16)
+                                                                                                H
+                                                                                              T X                            (18)
+Proof. During integral freezing, the dynamics collapse to                                     X
+the PD form. Subtracting the equilibrium λ∗ , where e∗ = 0,                       + βh(c0 )             σc (st,h , at,h ),
+                                                                                              t=1 h=1
+and invoking the non-expansiveness of projection ∥Π(x) −
+Π(y)∥ ≤ ∥x − y∥,                                                 where d is feature dimension and H is horizon.
+                                                                                                             P If the state
+                                                                 space is sufficiently explored, limT →∞ T −1 σc = 0, pre-
+        |λk+1 − λ∗ | ≤ (λk − λ∗ ) + KP (ek − e∗ )                serving sublinear asymptotic regret.
+
+                            + KD (ek − ek−1 ) .                      √ Standard UCB-Lagrangian analysis yields the
+                                                                 Proof.
+                                                                 O( T ) baseline. The detached Bachelier penalty acts
+Using the linearization ek − e∗ ≈ −γ0 (λk − λ∗ ) and assum-      as an additive conservative shift. Summing over T and
+ing local stationarity ek−1 ≈ e∗ ,                               applying Proposition 4 (RB = σc h(c0 )) extracts the
+                                                                 risk overhead. By the Ellipsoidal Potential Lemma,
+      |λk+1 − λ∗ | ≤ |1 − γ0 (KP + KD )| |λk − λ∗ |.             PT                          √
+                                                                    t=1 σc (st , at ) = O( dT log T ), ensuring sublinear
+Choosing gains such that 0 < KP + KD < 2/γ0 ensures              growth.
+ρ < 1, yielding local exponential stability.                                                                              √
+                                                                 Remark 7. Confirms that BP-CRL preserves the O( T )
+Remark 5 (Scope of Stability). This proves local asymp-          regret rate of standard RL under linear function approxi-
+totic stability of the dual multiplier specifically when anti-   mation. The multiplier β explicitly acts as a tunable safety
+windup is active. It guarantees structural prevention of dual    knob without inducing asymptotic performance deficits. As
+windup during persistent violations, avoiding the violent os-    α → 1, RB → 0 smoothly attenuates to prevent gradient ex-
+cillations typical of standard Lagrangian ascent. It does not    plosion, shifting tail enforcement to the globally stable PID
+claim global non-convex CMDP convergence.                        controller.
+               Implementation Details
+Ensemble critics. All M = 5 critics share the same MLP
+architecture (two hidden layers of 256 units, ELU activa-
+tions) but are initialized with different random seeds and up-
+dated independently. No gradient sharing, parameter tying,
+or diversification loss is applied.
+Numerical stability. σc is clamped to σmin = 10−6 . The
+ratio dκ = (µc − K)/σc is clipped to [−10, 10] before pass-
+ing to Φ and ϕ to avoid numerical underflow.
+PID controller. Anti-windup is implemented by freezing
+the integral term when the projected dual variable is satu-
+rated and the current error would drive it deeper into satura-
+tion; when the error reverses, the integral term is allowed to
+unwind. The default PID gains used in the experiments are
+KP = 0.2, KI = 0.02, and KD = 0.05.
+Cost limit calibration. All Clim values are specified in
+per-step cost units and applied directly to the batch-mean
+cost mean(ct ∈ Bk ) in the PID error signal, avoiding
+episode-length dependence.

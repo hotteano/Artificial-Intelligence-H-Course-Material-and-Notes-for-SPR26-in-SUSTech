@@ -1,0 +1,316 @@
+Artificial Intelligence (CS303)
+Lecture 5: Supervised Learning Methods
+
+
+
+
+                                         0
+Hints for this lecture
+• Technically, learning tasks are tackled by optimizing a (partially pre-defined)
+ model with respect to a user-defined evaluation (objective) function.
+
+
+
+
+                                                                               1
+Recap
+• We mainly use classification problem as an example:
+    • Classification is a sufficiently abstract and have numerous applications.
+    • It has so far led to many successful applications of machine learning and AI.
+
+
+• Given a set of class labels and a set of training data, usually represented by a set of features,
+  to achieve a classifier that (ideally) assigns the correct label to any previous unseen data.
+
+
+                                      ID      Height     Weight
+                                      John    1.75米      80KG
+                                      Mike    1.8米       75KG
+
+                                                                                              2
+Outline of this lecture
+• Preliminary Notes
+
+• From Linear Regression to Support Vector Machines
+
+• Artificial Neural Networks
+
+• Decision Trees
+
+
+
+                                                      3
+Linear Discriminant Analysis
+• Linear Discriminant Analysis: Viewing each datum to lie in a Euclidean space, find a straight
+  line (a linear function) in the space (recall the example used in the last lecture).
+
+• In linearly separable case, there are more than one optimal hyperplane
+
+
+
+
+                                                                                            4
+Support Vector Machines
+• Basic idea: margin maximization
+Ø the minimum distance between a data point to the decision boundary is maximized
+Ø intuitively, the safest and most robust
+Ø support vectors: datapoints the margin pushes up
+
+
+
+
+                                                                                    5
+Support Vector Machines
+                Ø decision boundary: w, x +b = 0
+
+                Ø plus-plane: hyperplane touching some positive
+                  examples, parallel to the decision boundary
+
+
+                    w, x +b = c for some constant c
+
+
+                Ø minus-plane: hyperplane touching some negative
+                  examples, taking the form below since decision
+                  boundary is half way between plus and minus planes:
+                                      w, x +b = −c
+                                                                  6
+Support Vector Machines
+                                              2
+• Basic idea: margin maximization (margin=        )
+                                             ǁwǁ2
+
+
+
+
+                                                      Dual problem
+                                                                     7
+Kernel Trick
+• SVM only involves dot product between vectors, thus kernel function can be used to
+ introduce non-linearlity.
+
+
+
+
+                                                                                       8
+Soft Margin SVM
+• Even with kernel trick, it is hardly to guarantee that the training data are linearly
+  separable, thus a soft margin rather than hard margin is used in practice.
+
+
+
+
+                                                                                          9
+Artificial Neural Networks
+
+• Inspired by biological neural networks (fancy story).
+
+
+
+
+• In many AI literature, simply referred to neural networks.
+
+
+                                                               10
+Artificial Neural Networks
+
+• A highly nonlinear function that mimic the structure of biological NN.
+
+    Input
+       输入层Layer          隐层 Layer
+                      Hidden                                                 输出层Layer
+                                                                          Output
+
+                                 net11            y1     w21,1                         net 21             z1
+            w11,1     ∑                   f1                              ∑                       f2
+
+      x1                  b11                                                 b 21
+
+      x2                         net12            y2                                   net 22             z2
+                      ∑                   f   1
+                                                                          ∑                       f   2          Multi-Layer Perceptron
+      x3
+                          b12                                                 b 22
+      !!                                  !       !                                               !       !
+                                 net1s1           y s1                                 net 2s 2           z s2
+      xR
+           w1s1 , R   ∑                   f1                              ∑                       f2
+                                                              2
+                                                          w    s 2 , s1
+                          b1s1                                                b 2s 2
+
+
+                      y = f 1 ( W1x + b1 )                                z = f 2 (W 2y + b2 )
+
+
+                                                                                                                                          11
+Training NNs
+• Optimize weights to minimize the Loss function
+                                         -
+                                       1               1     ,
+                               𝐽 𝑤 =     ' 𝑦) − 𝑧) , =   𝐲−𝐳
+                                       2               2
+                                        )./
+
+
+
+• Training algorithm: gradient descent, with Back Propagation algorithm as a
+  representative example.
+
+                                             Chain rule
+                               𝜕𝐽                               𝜕𝐽   𝜕𝐽 𝜕𝑛𝑒𝑡)        𝜕𝑛𝑒𝑡)
+                  𝛻𝑤34 = −𝜂                                        =           = −𝛿)
+                              𝜕𝑤34                             𝜕𝑤)4 𝜕𝑛𝑒𝑡) 𝜕𝑤)4       𝜕𝑤)4
+Update weights between output and hidden layers           Update weights between input and hidden layers
+                                                                                                    12
+Back Propagation Algorithm
+   input: training examples:
+
+              D = (x1 , y1), (x2, y2), . . . , (xm, ym) , xi ∈ℝd, yi ∈ℝl
+              learning rate η
+
+   1.   while Optimality conditions are not satisfied do
+   2.       for all (xk, yk ) ∈D do
+   3.           calculate current outputs by current parameters
+   4.           calculate gradient for output-layer neurons
+   5.           calculate gradient for hidden-layer neurons
+   6.           update weights and thresholds
+   7.   end
+
+                                                                           13
+Convolutional Neural Networks
+
+
+
+
+                                14
+More Noteworthy Issues
+• Universal Approximation Theory (Google it by yourself).
+
+
+• According to UAT, in ideal case, one hidden layer is sufficient for most (if not all) problem.
+
+
+• Fully connected NN (MLP) with more than 1 hidden layer is very difficult to train.
+
+
+• CNN is basically a manually designed method for introducing sparsity into NN, such that it
+  can be trained more easily.
+
+
+
+
+                                                                                               15
+Nonmetric Data
+• In many cases, data are not represented as numerical values, e.g.,
+   • Color, taste of fruits
+   • DNA sequences (AGCTTCAGATTCCA)
+   • Gender, Nationality, place of birth
+
+
+
+• Such data can be treated as numerical values to make methods such as
+  SVM and ANN applicable, but the best way to represent (encode) them is
+  usually unknown, and it is hard to interpret the classification results.
+
+
+
+                                                                             16
+Decision Trees
+• A natural way to handle nonmetric data (also applicable to real-valued data).
+
+• Analogous to a search tree, but
+   • each leaf node corresponds to a class label
+   • the root node and each intermediate node corresponds to a decision rule.
+
+
+• For a given datum, the classification process starts from the root node and
+  eventually arrives a leaf node.
+
+• Potential advantages: classification results are interpretable.
+
+                                                                                17
+Decision Trees
+                                        Color？                          Top-Down
+                                                                       Classification        level 0
+
+               Green                        Yellow               Red
+
+                Size？                   Shape？                   Size？                       level 1
+
+
+                                        Round                                    Small
+  Big           Medium Small                       Long     Medium
+
+  Watermelon   Apple   Grape      Size？            Banana      Apple      Taste？             level 2
+
+
+                          Big              Small
+                                                                        甜                酸
+
+                               Pomelo     Lemon                         Cherry     Grape     level 3
+                                                                                                       18
+How to construct a DT?
+• Objective function: Impurity of the leaf nodes, i.e., how much training data
+  from different classes would fall into the same leaf node?
+
+• There are lots of choices to measure the impurity:
+
+
+Entropy
+
+Variance
+
+Misclassification rate
+
+
+                                                                                 19
+How to construct a DT?
+Training methods: Heuristic Search (Tree Search)
+
+1. Start from the root, keep searching for a rule to branch a node.
+
+2. At each node, select the rule that leads to the most significant decrease in
+   impurity (similar to gradient descent).
+
+
+
+3. When the process terminates, assign class label to the leaf nodes.
+   •   label a leaf node with the label of majority instances that fall into it.
+
+                                                                                   20
+Control the Model Complexity
+• The construction process will not terminate automatically unless each leaf
+  node only contains instances from 1 class, possibly only 1 instances.
+   • Overfitting
+
+
+• Thus complexity of the tree needs to be controlled, approaches include:
+   • Setting the maximum height of the tree (early stopping)
+   • Introduce the tree height (or any other complexity measure as a penalty)
+   • Fully grow the tree first, and then prune it (post processing)
+
+
+
+
+                                                                                21
+Summary
+• Learning approaches for 3 types of model representation.
+
+   • SVM – Quadratic Programming
+
+   • NN – Gradient Descent (Back Propagation Algorithm)
+
+   • DT – Heuristic Search (a specialized version)
+
+
+
+
+                                                             22
+To be continued
+
+
+
+
+                  23
+

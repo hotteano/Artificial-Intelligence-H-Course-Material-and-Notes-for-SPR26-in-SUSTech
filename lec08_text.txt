@@ -1,0 +1,237 @@
+Artificial Intelligence (CS303)
+  Lecture 8: Recommender System
+
+
+
+
+                                  0
+Hints for this lecture
+
+• Recommender systems infer the preference of users and
+ recommend relevant information to users, and are usually built
+ with machine learning techniques.
+
+
+
+
+                                                                  1
+Outline of this lecture
+• Overview of recommender system (RS)
+
+• How does RS do recommendation?
+
+• How to build a RS?
+
+
+
+
+                                        2
+Why we need a Recommender System?
+
+
+
+
+                                    3
+Services that deploy recommender system
+
+
+
+
+                                     4
+What is a Recommender System?
+• Recommender System recommend new items to its user.
+
+• Based on what can we recommend an item (to a user)?
+   • The items that the user has been interacted.
+   • The users who have been interacted with similar items.
+
+
+• The recommendation is personalized.
+
+• The key of Recommender System is a score function.
+   • Input: a user and an item.
+   • Return value: a score, indicating how likely the user would be interested in the item.
+                                                                                              5
+The key of RS is a score function
+• Suppose there is a function to score the combination of user and item.
+   •   RS basically estimate the probability of interaction between a user and an item,
+   •   The score function is essentially a model trained with data.
+
+
+
+
+                                                                                          6
+Recommendation based on score functions
+• In practice, the score function could be very complicated since
+   • The RS needs to be efficient (make recommendations in seconds)
+   • In many applications, we may have millions of users and items
+   • There is always a trade-off between efficiency and accuracy
+
+
+
+
+                                                                      7
+         How to build a RS?
+(How to get a suitable score function)
+
+
+
+
+                                         8
+Problem Formulation
+• Input: Historical user-item interaction records or additional side information (e.g. user’s social
+  relations, item’s knowledge, etc.)
+
+• Output: The score function
+
+
+
+
+                                                                                               9
+Typical methods
+• Content-based method
+   • The very basic idea: build a regression/classification model for each user
+       • Focusing on the side information of the items (i.e., attributes, features of items)
+       • Suggesting items by comparing their features to a user’s past behaviors
+
+
+• Collaborative Filtering method:
+   • Predicting user preferences based on the behaviors of other users.
+   • Based on the historical user-item interaction data
+
+
+• Hybrid method: Combination of CF-based and Content-based method
+
+                                                                                               10
+CF-based method
+• Attributes/features of users and items are not available,
+   • How to build the regression/classification model (as the score function)?
+   • Learning representation of users and items
+
+
+
+
+                                                                                 11
+Represented by correlation
+• Represent the user/item by its correlation with the other users/items.
+
+   • Users with similar historical interactions are likely to have the same preferences.
+
+   • Items that are interacted by similar users are likely to have hidden commonalities.
+
+
+
+
+• A user/item is represented by a vector that consists of all the correlation
+ between itself and all the users/items.
+
+
+
+                                                                                           12
+Represented by correlation
+• How to define the correlation between 2 users or items?
+
+   • Pearson Correlation Coefficient：a normalized measurement of the covariance
+
+
+                                           ∑)∈. 𝑟"#,) − 𝑟̅"#     𝑟"$,) − 𝑟̅"$
+                             𝑐"#"$ =
+                                                            /                       /
+                                        ∑)∈. 𝑟"#,) − 𝑟̅"#       ∑)∈. 𝑟"$,) − 𝑟̅"$
+
+
+
+    •   An example of user’s Pearson Correlation Coefficient
+    •   𝑀: The item set
+    •   𝑟𝑢,𝑖 : Interaction record between user 𝑢 and item 𝑖
+    •   𝑟̅𝑢 : Mean value of all the interaction records of user 𝑢
+                                                                                        13
+Represented by correlation
+• A user/item is represented by a vector that consists of all the correlation between itself and
+  all the users/items
+
+• Interaction probability of user 𝑢 and item 𝑖 can be calculated by a function 𝑓 𝑢, 𝑖 , some
+  simple example of 𝑓:
+
+    • 𝑓 𝑢, 𝑖 = ∑𝑢′ ∈𝑈 𝑐𝑢,𝑢′ 𝑟𝑢′ ,𝑖 , 𝑈 is user set, 𝑐𝑢,𝑢′ is the correlation coefficient between 𝑢 and 𝑢′ ,
+
+      𝑟𝑢′ ,𝑖 is the interaction record of 𝑢′ and 𝑖.
+
+    • 𝑓 𝑢, 𝑖 = ∑𝑖 ′ ∈𝑀 𝑐𝑖,𝑖 ′ 𝑟𝑢,𝑖 ′ , 𝑀 is item set, 𝑐𝑖,𝑖 ′ is the correlation coefficient between 𝑖 and 𝑖 ′ ,
+
+      𝑟𝑢,𝑖 ′ is the interaction record of 𝑢 and 𝑖 ′ .
+
+                                                                                                              14
+Represented by correlation
+• Represent the user/item by its correlation with the other users/items.
+
+• Advantage: high interpretability
+   • It is easy to explain why the system recommend the item to the user.
+
+• Disadvantage: low scalability
+
+   • What if there are millions of users and millions of items?
+
+   • High-dimensional, sparse feature representation
+
+
+
+                                                                            15
+Represent by matrix factorization
+• A matrix 𝑅 ∈ ℝ𝑛×𝑚 , it is approximate to the product of two matrix:
+                             𝑅 ≈ 𝑃𝑄T , 𝑃 ∈ ℝ𝑛×𝑑 , 𝑄 ∈ ℝ𝑚×𝑑
+
+• For a user-item interaction matrix 𝑅 ∈ ℝ𝑛×𝑚 , 𝑛 is the number of users, 𝑚 is the
+ number of items.
+
+• Representing the user and item as a 𝑑-dimension vector
+
+• Matrix 𝑃, 𝑄 consist of the representation vectors of all the users and items.
+
+• The low-dimension vector representation is also called as embedding vector.
+
+                                                                                     16
+Represent by matrix factorization
+• How to find a good representation of user and item?
+
+                                  min ∑𝑟        ∈𝑅′
+                                                      𝑟𝑢,𝑖 − 𝑃𝑢 𝑄𝑖T
+                                  𝑃,𝑄     𝑢,𝑖
+
+
+   • We can’t know all the elements in the 𝑅, 𝑅′ is the set of the known elements in the 𝑅.
+
+   • 𝑟𝑢𝑖 is an interaction record of user 𝑢 and item 𝑖.
+
+   • 𝑃𝑢 is user 𝑢’s embedding vector, and 𝑄𝑖 is item 𝑖’s embedding vector.
+
+                                                   ′
+• Interaction probability of user 𝑢 and item 𝑖 is 𝑟𝑢,𝑖 = 𝑃𝑢 𝑄𝑖T
+
+                                                                                          17
+Represent by matrix factorization
+• If we define an interaction probability function 𝑓(𝑃𝑢 , 𝑄𝑖T), 𝑃𝑢 is user 𝑢’s embedding vector,
+  and 𝑄𝑖 is item 𝑖’s embedding vector.
+
+       ′
+    • 𝑟𝑢,𝑖 = 𝑓(𝑃𝑢 , 𝑄𝑖T ) = 𝑃𝑢 𝑄𝑖T is a simple example for this function.
+
+• We can replace the matrix multiplication with a complex model 𝑀, such as MLP
+
+    • The objective function will be: min ∑𝑟           ′   𝑟𝑢,𝑖 − 𝑓(𝑃𝑢 , 𝑄𝑖T , 𝑀)
+                                        𝑃,𝑄,𝑀   𝑢,𝑖 ∈𝑅
+
+
+    • The model with higher complexity may have better prediction performance in big data scenario.
+
+
+
+
+                                                                                                   18
+To be continued
+
+
+
+
+                  19
+

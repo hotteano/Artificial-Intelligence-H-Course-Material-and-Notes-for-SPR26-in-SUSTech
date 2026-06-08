@@ -1,0 +1,229 @@
+\documentclass[UTF8,11pt,a4paper]{ctexart}
+
+\usepackage[margin=1.85cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,array,longtable}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\setlength{\headheight}{14pt}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=0.28em,topsep=0.25em}
+\renewcommand{\arraystretch}{1.2}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Artificial Intelligence(H)}
+\rhead{Mock Final Exam}
+\cfoot{\thepage}
+
+\newcommand{\pts}[1]{\hfill{\bfseries [#1 pts]}}
+\newcommand{\blank}{\vspace{1.0em}}
+
+\title{\textbf{Artificial Intelligence(H)}\\
+\large Mock Final Exam}
+\author{Southern University of Science and Technology}
+\date{Spring 2026}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\begin{tabular}{>{\bfseries}r p{0.68\textwidth}}
+Time: & 120 minutes \\
+Total: & 100 points \\
+Instructions: & Show necessary derivations. For search and pruning questions, follow the specified order.
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+This mock paper follows the style of the reconstructed final exam. All graphs, trees, and datasets are provided in text form so that the paper is self-contained.
+
+\section*{Problem 1: Search \pts{15}}
+
+Consider the following undirected graph. Every edge has uniform cost $c>0$.
+
+\[
+\begin{array}{c|l}
+\text{Node} & \text{Neighbors in alphabetical order}\\
+\hline
+A & B,C,D\\
+B & A,E,F\\
+C & A,D,F,G\\
+D & A,C,H\\
+E & B,I\\
+F & B,C,G,I\\
+G & C,F,H,I\\
+H & D,G\\
+I & E,F,G
+\end{array}
+\]
+
+The start node is $A$ and the goal node is $G$. If there are multiple nodes to expand, always use alphabetical order.
+
+\begin{enumerate}[label=(\alph*)]
+\item Draw the breadth-first search tree until the goal is found. State the expansion order. \pts{5}
+\item Now let $c=1$ and use the following heuristic function:
+\[
+\begin{array}{c|ccccccccc}
+n&A&B&C&D&E&F&G&H&I\\
+\hline
+h(n)&4&3&2&3&3&1&0&2&1
+\end{array}
+\]
+Draw the A* search tree until $G$ is selected for expansion. For each generated node, write $g(n)$, $h(n)$, and $f(n)=g(n)+h(n)$. \pts{7}
+\item For the same heuristic table, find the range of $c$ that guarantees admissibility. Show your calculation. \pts{3}
+\end{enumerate}
+
+\section*{Problem 2: Minimax and Alpha-Beta Pruning \pts{13}}
+
+Consider the following game tree. The root is a MAX node. Children are visited from left to right.
+
+\[
+\begin{array}{c|c|c}
+\text{Root child} & \text{Second-level child} & \text{Leaf utilities}\\
+\hline
+A\ (\text{MIN}) & A_1\ (\text{MAX}) & 3,\ 12\\
+                & A_2\ (\text{MAX}) & 8,\ 2\\
+                & A_3\ (\text{MAX}) & 4,\ 6\\
+\hline
+B\ (\text{MIN}) & B_1\ (\text{MAX}) & 14,\ 5\\
+                & B_2\ (\text{MAX}) & 2,\ 1\\
+                & B_3\ (\text{MAX}) & 7,\ 3\\
+\hline
+C\ (\text{MIN}) & C_1\ (\text{MAX}) & 6,\ 9\\
+                & C_2\ (\text{MAX}) & 4,\ 0\\
+                & C_3\ (\text{MAX}) & 10,\ 11
+\end{array}
+\]
+
+\begin{enumerate}[label=(\alph*)]
+\item Compute the minimax value of every internal node. \pts{4}
+\item Run alpha-beta pruning and write the final $\alpha$ and $\beta$ values for each visited internal node. If a node is pruned, write NA. \pts{5}
+\item Mark which branches are pruned. \pts{2}
+\item Mark the final path chosen by MAX. \pts{2}
+\end{enumerate}
+
+\section*{Problem 3: CSP and AC-3 \pts{12}}
+
+\begin{enumerate}[label=(\alph*)]
+\item State the worst-case time complexity of AC-3 and briefly explain why. \pts{4}
+\item Consider a CSP with variables $X,Y,Z$:
+\[
+D_X=D_Y=D_Z=\{1,2,3,4\},\qquad C=\{X<Y,\ Y<Z\}.
+\]
+Use AC-3 to enforce arc consistency. Show each domain pruning step and the final domains. \pts{8}
+\end{enumerate}
+
+\section*{Problem 4: Logic and CNF \pts{12}}
+
+\begin{enumerate}[label=(\alph*)]
+\item Convert the following propositional formula into CNF:
+\[
+(p\land q)\to \neg(p\leftrightarrow r).
+\]
+Simplify the result as much as possible. \pts{5}
+\item Four robots $R_1,R_2,R_3,R_4$ may be selected for a mission. Let $x_i$ mean robot $R_i$ is selected. Represent the following rules in propositional logic and convert them into CNF. \pts{5}
+\begin{enumerate}[label=(\roman*)]
+\item $R_1$ and $R_3$ must be selected together.
+\item Exactly one of $R_2$ and $R_4$ is selected.
+\item If $R_2$ is selected, then $R_1$ must also be selected.
+\end{enumerate}
+\item Suppose additionally $x_2$ is true. Use unit propagation to derive which of $x_1,x_3,x_4$ must be true or false. \pts{2}
+\end{enumerate}
+
+\section*{Problem 5: Perceptron and Logistic Regression \pts{10}}
+
+\begin{enumerate}[label=(\alph*)]
+\item Write the perceptron prediction rule and weight update rule for labels $y\in\{-1,+1\}$. \pts{3}
+\item Given $w=(-1,1)^T$, $b=0$, learning rate $\eta=0.5$, and one training example $x=(2,1)^T$, $y=+1$, perform one perceptron update if needed. \pts{3}
+\item Derive the gradient descent update for binary logistic regression with cross-entropy loss:
+\[
+J(w,b)=-\frac1m\sum_{i=1}^m\left[y_i\log h_i+(1-y_i)\log(1-h_i)\right],
+\quad h_i=\sigma(w^Tx_i+b).
+\]
+\pts{4}
+\end{enumerate}
+
+\section*{Problem 6: SVM \pts{10}}
+
+Consider two one-dimensional data points $(x_1,y_1)=(2,+1)$ and $(x_2,y_2)=(-2,-1)$.
+
+\begin{enumerate}[label=(\alph*)]
+\item Write the primal objective function and constraints of the soft-margin SVM. Use $C$ as the penalty parameter. \pts{4}
+\item For these two points, write the constraints explicitly in terms of $w,b,\xi_1,\xi_2$. \pts{2}
+\item Suppose the optimal $w$ is given by $w^*=\min(C,\frac12)$. Find the possible optimal value(s) of $b$ for the cases $C\ge\frac12$ and $0<C<\frac12$. \pts{4}
+\end{enumerate}
+
+\section*{Problem 7: Naive Bayes \pts{12}}
+
+The following dataset has four binary features and one binary label.
+
+\[
+\begin{array}{c|cccc|c}
+\text{ID} & X_1&X_2&X_3&X_4&Y\\
+\hline
+1&1&0&1&0&+\\
+2&1&1&1&0&+\\
+3&0&1&0&1&-\\
+4&0&0&0&1&-\\
+5&1&0&0&0&+\\
+6&0&1&1&1&-\\
+7&1&1&0&0&+\\
+8&0&0&1&1&-
+\end{array}
+\]
+
+Use Bernoulli Naive Bayes with Laplace smoothing $\alpha=1$.
+
+\begin{enumerate}[label=(\alph*)]
+\item Compute the class priors $P(Y=+)$ and $P(Y=-)$. \pts{2}
+\item Compute all conditional probabilities needed for prediction, i.e. $P(X_j=1\mid Y)$ and $P(X_j=0\mid Y)$ for all $j$. \pts{5}
+\item Predict the label of $x=(1,0,1,0)$. Show both class scores. \pts{3}
+\item If the Naive Bayes independence assumption is not used, how many feature-label combinations must be considered for four binary features and one binary label? How many independent parameters does the full joint distribution over the five binary variables have? \pts{2}
+\end{enumerate}
+
+\section*{Problem 8: Bayesian Networks and Sampling \pts{14}}
+
+Suppose $A\to B\to C\to D$ is a Bayesian network with:
+\[
+P(A)=\frac14,\quad
+P(B\mid A)=\frac15,\quad P(B\mid \neg A)=\frac34,
+\]
+\[
+P(C\mid B)=\frac12,\quad P(C\mid \neg B)=\frac13,\quad
+P(D\mid C)=\frac16,\quad P(D\mid \neg C)=\frac78.
+\]
+
+\begin{enumerate}[label=(\alph*)]
+\item Factorize the joint distribution $P(A,B,C,D)$ according to the network. \pts{2}
+\item Given these prior samples:
+\[
+\begin{aligned}
+&(A,B,\neg C,\neg D),\quad (A,\neg B,C,\neg D),\\
+&(\neg A,B,C,\neg D),\quad (\neg A,\neg B,C,\neg D),\\
+&(A,\neg B,\neg C,D),\quad (A,B,C,\neg D),\\
+&(\neg A,B,\neg C,D),\quad (\neg A,\neg B,C,\neg D),
+\end{aligned}
+\]
+estimate $P(C)$ by prior sampling. \pts{2}
+\item Use rejection sampling on the same samples to estimate $P(C\mid A,\neg D)$. State which samples are kept. \pts{3}
+\item For likelihood weighting to estimate $P(\neg A\mid B,\neg D)$, compute the weight of each sample:
+\[
+\neg A,B,C,\neg D;\quad A,B,C,\neg D;\quad A,B,\neg C,\neg D;\quad \neg A,B,\neg C,\neg D.
+\]
+\pts{4}
+\item From the four weighted samples in part (d), estimate $P(\neg A\mid B,\neg D)$. \pts{3}
+\end{enumerate}
+
+\section*{Problem 9: Genetic Algorithm and Course Projects \pts{12}}
+
+\begin{enumerate}[label=(\alph*)]
+\item Suppose we evolve the weights of a neural network using a genetic algorithm instead of backpropagation. Describe how to set up a fair experiment comparing these two training methods. \pts{5}
+\item In Project 1, the objective of information exposure maximization can be estimated by Monte Carlo simulation. Explain what the state/individual, fitness function, and stopping criterion could be for a GA-based solver. \pts{4}
+\item In Project 3, a recommender system is evaluated by AUC and nDCG@5. Briefly explain what each metric measures and why a model may improve one but not the other. \pts{3}
+\end{enumerate}
+
+\end{document}

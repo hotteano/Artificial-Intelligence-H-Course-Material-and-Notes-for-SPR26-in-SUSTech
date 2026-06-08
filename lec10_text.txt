@@ -1,0 +1,158 @@
+Artificial Intelligence (CS303)
+    Lecture 10: First-Order Logic
+
+
+
+
+                                    0
+Hints for this lecture
+
+• We prefer representations that are similar to natural language (at
+ least sometimes).
+
+
+
+
+                                                                       1
+I. Definitions
+
+
+
+
+                 2
+Why need FOL
+• A different knowledge representation that
+   • might be easier to construct KB
+
+   • or to inference
+
+   • more natural to human thoughts
+
+
+
+
+                         Boring to enumerate
+                         events for all squares
+
+                                                  3
+“Viewpoint” of FOL
+• The world is a “graph”
+
+
+
+
+                           What is model in such a definition?
+                                What is the advantages?
+                                                                 4
+Syntax of FOL
+                Propositional Logic
+
+
+
+
+                                      5
+Syntax of FOL
+
+
+
+
+                6
+Syntax of FOL
+
+
+
+
+                7
+Syntax of FOL - Universal/Existential Quantification and Equality
+
+
+
+
+                                                                    8
+Syntax of FOL - Universal/Existential Quantification and Equality
+
+
+
+
+                                                                    9
+Syntax of FOL - Universal/Existential Quantification and Equality
+
+
+
+
+                                                                    10
+II. Inference with FOL
+
+
+
+
+                         11
+Inference with FOL
+• naïve idea: reduce to propositional logic
+
+
+
+
+Universal Instantiation
+
+
+
+
+  UI can be applied several times to add new sentences; the new KB is logically equivalent to the old one
+                                                                                                   12
+Inference with FOL
+• naïve idea: reduce to propositional logic
+
+
+
+
+          Existential Instantiation
+
+
+
+
+EI can be applied once times to replace the existential sentence; the new KB is not equivalent to
+the old one, but is satisfiable is the old KB is satisfiable.                                       13
+Example: Reduction to Propositional Logic
+
+
+
+
+                                       14
+Problem with Reduction
+
+
+
+                            Representation unlikely
+                         changes the complexity, this
+                         is because FOL expresses a
+                            more complicated world.
+
+
+
+
+                                                 15
+Problem with Reduction
+
+
+
+
+                         16
+Better Ideas to Inference with FOL
+
+•   Unification
+
+    •   Resolution
+    •   Chaining Algorithms
+
+
+
+
+                                     17
+To be continued
+
+
+
+
+                  18
+

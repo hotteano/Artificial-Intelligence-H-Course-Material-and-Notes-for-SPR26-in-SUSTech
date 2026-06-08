@@ -1,0 +1,58 @@
+\contentsline {section}{\numberline {1}考点地图与复习策略}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}高概率题型}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Labs 与 Projects 对应关系}{4}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Search 与 Optimization}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}搜索问题定义}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}BFS, UCS, Greedy, A*}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}样卷题：求边权 $c$ 的范围}{6}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Beyond Classical Search 与 Project1}{6}{subsection.2.4}%
+\contentsline {section}{\numberline {3}Adversarial Search}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Minimax}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Alpha--Beta Pruning}{6}{subsection.3.2}%
+\contentsline {section}{\numberline {4}CSP 与 AC-3}{7}{section.4}%
+\contentsline {subsection}{\numberline {4.1}CSP 三元组}{7}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}AC-3}{7}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}AC-3 例题模板}{7}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Logic, CNF, DPLL 与 Resolution}{8}{section.5}%
+\contentsline {subsection}{\numberline {5.1}必背等价式}{8}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}CNF 转换模板}{8}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Logic and Bayesian Questions：排球队建模}{8}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}FOL Resolution}{9}{subsection.5.4}%
+\contentsline {section}{\numberline {6}Machine Learning 基本原则}{9}{section.6}%
+\contentsline {section}{\numberline {7}Perceptron 与 Logistic Regression}{10}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Perceptron}{10}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Logistic Regression}{10}{subsection.7.2}%
+\contentsline {section}{\numberline {8}SVM}{10}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Hard Margin}{10}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Soft Margin}{10}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Kernel Trick}{11}{subsection.8.3}%
+\contentsline {section}{\numberline {9}Naive Bayes 与 Bayesian Networks}{11}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Naive Bayes}{11}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Bayesian Network}{11}{subsection.9.2}%
+\contentsline {subsection}{\numberline {9.3}Bayes Rule 例题}{12}{subsection.9.3}%
+\contentsline {subsection}{\numberline {9.4}Sampling}{12}{subsection.9.4}%
+\contentsline {section}{\numberline {10}Evaluation, Tree 与 Generalization}{13}{section.10}%
+\contentsline {subsection}{\numberline {10.1}Confusion Matrix}{13}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}Generalization 与 Tuning}{13}{subsection.10.2}%
+\contentsline {subsection}{\numberline {10.3}Decision Tree}{14}{subsection.10.3}%
+\contentsline {section}{\numberline {11}Unsupervised Learning}{14}{section.11}%
+\contentsline {subsection}{\numberline {11.1}K-means}{14}{subsection.11.1}%
+\contentsline {subsection}{\numberline {11.2}PCA}{15}{subsection.11.2}%
+\contentsline {subsection}{\numberline {11.3}LLE}{15}{subsection.11.3}%
+\contentsline {section}{\numberline {12}Recommender Systems 与 Knowledge Graphs}{16}{section.12}%
+\contentsline {subsection}{\numberline {12.1}推荐系统基础}{16}{subsection.12.1}%
+\contentsline {subsection}{\numberline {12.2}Pearson Similarity}{16}{subsection.12.2}%
+\contentsline {subsection}{\numberline {12.3}Matrix Factorization}{17}{subsection.12.3}%
+\contentsline {subsection}{\numberline {12.4}Knowledge Graph}{17}{subsection.12.4}%
+\contentsline {subsubsection}{\numberline {12.4.1}KG Construction}{18}{subsubsection.12.4.1}%
+\contentsline {subsubsection}{\numberline {12.4.2}Knowledge Graph Completion}{18}{subsubsection.12.4.2}%
+\contentsline {subsubsection}{\numberline {12.4.3}KG-Based Recommender System}{19}{subsubsection.12.4.3}%
+\contentsline {section}{\numberline {13}PPT 强调的概念问答}{19}{section.13}%
+\contentsline {subsection}{\numberline {13.1}Search 与 Problem-Specific Search}{19}{subsection.13.1}%
+\contentsline {subsection}{\numberline {13.2}Beyond Classical Search 与 Evolutionary Search}{20}{subsection.13.2}%
+\contentsline {subsection}{\numberline {13.3}Machine Learning 与 Evaluation}{21}{subsection.13.3}%
+\contentsline {subsection}{\numberline {13.4}SVM, Neural Network 与 Unsupervised Learning}{21}{subsection.13.4}%
+\contentsline {subsection}{\numberline {13.5}Logic, FOL, BN 与 KG}{22}{subsection.13.5}%
+\contentsline {section}{\numberline {14}Genetic Algorithm 与 Fair Comparison}{23}{section.14}%
+\contentsline {section}{\numberline {15}Reinforcement Learning}{23}{section.15}%
+\contentsline {section}{\numberline {16}考前最后检查清单}{24}{section.16}%

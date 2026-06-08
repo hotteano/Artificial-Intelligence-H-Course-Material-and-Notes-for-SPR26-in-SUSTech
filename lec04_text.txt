@@ -1,0 +1,204 @@
+Artificial Intelligence (CS303)
+Lecture 4: Principles of Machine Learning
+
+
+
+
+                                            0
+Hints for this lecture
+
+• Learning = Search for hypothesis/functions that generalize well.
+
+
+
+
+                                                                     1
+Outline of this lecture
+• What is Learning
+
+• Key Questions for Learning
+
+• Learning Paradigms and Principles
+
+
+
+
+                                      2
+Why Learning is Important?
+• Scientific perspective
+   1. Human behavior is not a static program, i.e., we might behave differently as growing up.
+   2. Learning is universal and a major source of our behavioral change.
+
+
+• Engineering perspective
+   1. It might be too challenging for an engineer to design an agent function from scratch
+
+
+
+
+                                                                                             3
+What is Learning (in AI)?
+• Examples for human learning
+   • Learn similarity between objects
+   • Learn to recognize objects
+   • Learn to pass the college entrance examination
+
+
+• Machine Learning: Given some observations (data) from the environment,
+  how could an agent improve its agent function?
+
+• Intuitive assumptions
+   • the data share something in common
+   • “something” could be obtained by an algorithm/program
+                                                                      4
+To Learn What?
+• Ideally, the purpose of (Machine) Learning is to achieve
+   • a “universal” agent function that can give the appropriate output for any input that we
+     can imaging, or
+   • To be realistic, to automatically obtain domain-specific agent functions for specific
+     applications.
+
+
+• We take the task of learning to recognize a hand-written digit as an
+  illustrative example below, which should be much easier than to learn the to
+  make a good living.
+
+
+
+                                                                                         5
+An example
+• Hand-written Digit Recognition
+   • Data: image of a hand-written digit
+   • Agent function: a function mapping an image to a digit
+   • Improvement: how many images can be recognized correctly.
+
+
+
+
+                                                                 transform to a vector
+
+
+
+
+                                                                                    6
+A Naive Parametric Method
+• Classify a data to the class with the highest posteriori probability
+
+
+                                     𝑝 𝑥 𝑤! 𝑃(𝑤! )
+                           𝑃 𝑤! |𝑥 =
+                                         𝑝(𝑥)
+
+
+   𝑃 𝑤"|𝑥 > 𝑃 𝑤#|𝑥                ln 𝑝 𝑥 𝑤$ + ln 𝑃(𝑤$ )>ln 𝑝 𝑥 𝑤$ + ln 𝑃(𝑤$ )
+
+
+
+• Assumption: data follows independent identically distribution
+
+                                                                                7
+A Naive Parametric Method
+• In addition to the i. i. d assumption, further assume the data follows a
+  specific distribution (e.g., Gaussian distribution)
+
+
+• Estimate the prior and the likelihood.
+
+
+• “parametric”: the assumption on the probability density function.
+
+
+• Parametric methods usually do not involve parameters to fine-tune, while
+  Nonparametric methods usually do.
+
+                                                                       8
+Agent as A Linear Function
+• Find a straight line/hyper-plane to separate datum from different classes.
+
+
+
+
+                                                                               9
+Key Questions for Machine Learning
+• Given some observations (data) from the environment, how could an agent
+  improve its agent function?
+   • What is the format of the data? (data representation)
+   • What does the agent function look like? (model representation)
+   • How to measure the “improvement”? (objective function)
+   • What is the learning algorithm? (to get a good agent function)
+
+
+    Representation + Algorithm + Evaluation = Agent function/Model
+
+
+    Search in a model/hypothesis space
+
+                                                                       10
+Learning Principles
+Generalization, Generalization, Generalization: the learned agent function is
+expected to be able to handle previously unseen situations.（举一反三，不要刻舟求剑）
+
+
+• How to calculate/estimate the generalization?
+    • Design an appropriate objective function for learning
+
+
+• Overfitting: the model perfectly fit the seen data perfectly, but cannot generalize well.
+    • Occam’s Razor: An explanation of data should be made as simple as possible, but no simpler, i.e.,
+      model complexity should be controlled.
+
+
+
+
+                                                                                                  11
+Learning Paradigms
+
+A Machine Learning process typically involves two phases
+•    Training: build the agent function
+
+•    Testing/Inference: test the agent function/deploy the agent function in real use.
+
+
+
+Different ML techniques may use different training/learning paradigms
+• Supervised Learning: the correct answer is available to the learning algorithm.
+
+• Reinforcement Learning: the only feedback is the reward of an output, e.g., the output is correct
+    or not (the correct answer is not given).
+
+• Unsupervised Learning: no correct answer is available.
+                                                                                               12
+Summary
+• Machine learning is basically the search for a model/hypothesis/rule that can
+  map an input from the environment to an appropriate output, such that we
+  don’t need to program them in advance.
+
+• Different settings of learning may lead to different learning algorithms.
+
+• Generalization is the ultimate goal of learning, but usually uneasy to measure.
+
+• In this course, we mainly use classification problem as an example:
+   • Classification is a sufficiently abstract and have numerous applications.
+   • It has so far led to many successful applications of machine learning and AI.
+                                                                                     13
+What is classification?
+• Given a set of class labels and a set of training data, usually represented by
+  a set of features, to achieve a classifier that (ideally) can assign the correct
+  label to any previous unseen data.
+
+                              ID     Height   Weight
+                              John   1.75米    80KG
+                              Mike   1.8米     75KG
+
+
+• In most literature, classification refers to supervised learning, i.e., labels for
+  the training data are given to the learning algorithm.
+
+                                                                                14
+To be continued
+
+
+
+
+                  15
+

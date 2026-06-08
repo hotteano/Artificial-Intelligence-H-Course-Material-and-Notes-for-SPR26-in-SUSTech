@@ -1,0 +1,118 @@
+      Artificial Intelligence(H)
+      Southern University of Science and Technology
+      Mengxuan Wu
+      12212006
+
+
+
+                                  Final Exam
+                                    Mengxuan Wu
+
+
+   This final exam paper has been reconstructed from memory, and as a result, some
+data may be missing. I hope it serves as a useful reference and aid for future students.
+
+
+Problem 1: Search
+   Given an undirected graph G, with uniform cost c on each edge. Each node is marked
+with a letter. Let the starting node be A and the goal node be G. (The graph is given
+but not shown here.)
+
+(a)
+   Draw the search tree using breadth-first search. If there are multiple nodes to expand,
+expand the node in alphabetical order.
+
+(b)
+   Now we have a heuristic function h for each node (for example h(A) = 5, h(B) = 4,
+h(C) = 3 . . .), and let c = 1. Draw the search tree using A* search. (The heuristic
+function is given but not shown here.)
+
+(c)
+   What should the range of c be to guarantee that the heuristic function is admissible?
+
+
+Problem 2: Minimax and Alpha-Beta Pruning
+    Given a tree T , where each leaf node is marked with its utility value. (The tree is
+given but not shown here.)
+
+(a)
+   Draw the final alpha and beta values for each node in the tree, if the node is pruned,
+write NA.
+
+(b)
+   Mark each pruned branch with a cross.
+Artificial Intelligence(H): Final Exam                                          Mengxuan Wu
+
+
+
+(c)
+    Mark the final path chosen by the alpha-beta pruning algorithm with a check mark.
+
+
+Problem 3: CSP
+(a)
+    State the worst case time complexity of the AC-3 algorithm, and explain why.
+
+(b)
+   Given a CSP with 3 variables X, Y, Z, and 3 domains DX = {1, 2, 3}, DY = {1, 2, 3},
+DZ = {1, 2, 3}. The constraints are X < Y , Y < Z. Display how the AC-3 algorithm
+works on this CSP.
+
+
+Problem 4: Logic
+    Simplify p → (¬(p ⇔ q)) into a CNF form.
+
+
+Problem 5: Perceptron and Neural Network
+(a)
+    Write the formula for the perceptron weight update.
+
+(b)
+    Display how the formula for logistic regression weight update is derived.
+
+
+Problem 6: SVM
+    Given two data points (1, 1) and (−1, −1) (in the form of (x, y)).
+
+(a)
+   Write the object function for the soft margin SVM, with constraints. Let C denote
+the penalty parameter.
+
+(b)
+   Suppose we find w = min(C, 1) is the optimal solution for w, find the corresponding
+optimal b for each C (Hint: there might be multiple values for b).
+
+
+
+
+                                            2
+Artificial Intelligence(H): Final Exam                                       Mengxuan Wu
+
+
+
+Problem 7: Naive Bayes
+   Given a dataset with 4 features and 1 label (binary). (The dataset is given but not
+shown here.)
+
+(a)
+     Calculate all the probabilities needed for the Naive Bayes algorithm.
+
+(b)
+     Does the Naive Bayes algorithm give correct prediction on data point number 1, 3 and
+5?
+
+(c)
+    Suppose the strong assumption of Naive Bayes is not satisfied, how many data points
+are needed for the algorithm?
+
+
+Problem 8: Genetic Algorithm
+    Suppose we develop an algorithm to evolve the weights of a neural network, instead of
+using back-propagation. Please describe how to set up an experiment to compare these
+two ways of training, as fair as possible.
+
+
+
+
+                                             3
+

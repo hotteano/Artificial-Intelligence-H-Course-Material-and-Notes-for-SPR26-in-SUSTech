@@ -1,0 +1,436 @@
+Artificial Intelligence (CS303)
+ Lecture 3: Problem-Specific Search
+Hints for this lecture
+
+• The more we know about the problem characteristic/structure, the
+ better we can solve it.
+
+
+
+
+                                                                     1
+Outline of this lecture
+• Make Search Algorithms Less General
+
+• Gradient-based Methods for Numerical Optimization
+
+• Quadratic Programming Problems
+
+• Constraint Satisfaction Problems
+
+• Adversarial Search
+
+
+
+
+                                                      2
+Make Search Algorithms Less General
+• The search methods talked previously are rather general, i.e., applicable to any problem.
+
+
+
+• Generality is usually conflicts with the other desired features of algorithms, e.g., efficiency.
+
+
+
+• A search method is general because the characteristic/structure (no matter we know or
+  not) of the problem is not taken into account when designing the search method.
+
+
+
+
+                                                                                                 3
+Make Search Algorithms Less General
+• When designing an algorithm for a problem (class), taking the problem characteristics into
+  account usually helps us get the desired solution by searching only a part of the
+  search/state space, making the search more efficient.
+
+
+                                                                              We know all
+• In some cases, we do know something about problem.                          previous steps
+
+
+
+
+• As long as a problem (class) is of sufficient significance, it is worthy of designing
+  problem-specific algorithm for it.
+
+                                                                                               4
+Make Search Algorithms Less General
+• Again, consider the ubiquitous optimization problems.
+
+
+                             maximize f (x)
+                             subject to: gi (x) ≤ 0, i = 1...m
+                                         h j (x) = 0, j = 1... p
+
+• What do you mean by “problem characteristic”? Most basically:
+   • What is x ?
+   • What is f ?
+   • Does f fulfill some properties that would lead to a more efficient search?
+                                                                                  5
+Recall The General Framework for Search
+                                  tß0
+                     Generate an initial solution x(0)
+                      Evaluate the quality of x(0)
+      Search
+      operator
+                    Generate solution x’ based on x(t)
+                                                                 Repeat
+
+
+                           Evaluate the quality of x’
+
+      Evaluation
+       criterion
+                   Set x(t+1) as the better one of x’ and x(t)
+
+                                                                          6
+Gradient-based Methods for Numerical Optimization
+
+• Suppose the objective function f(x1 , y1, x2, y2, x3, y3) is continuous and
+ differentiable (thus the gradient could be calculated)
+
+
+
+
+                                                                                7
+Quadratic Programming Problems
+• The objective function is a quadratic function of x
+   • stronger condition than just differentiable.
+
+• The constraints are linear functions of x
+
+
+    maximize f (x)
+    subject to: gi (x) ≤ 0, i = 1...m
+                h j (x) = 0, j = 1... p
+
+
+                                                        8
+Quadratic Programming Problems
+• We take an even stronger condition as example
+   • no constraints.
+
+   • The objective function is not only quadratic, but also convex.
+
+       • f(x) is a convex function of x
+
+
+
+
+                                                                      9
+Quadratic Programming Problems
+• How to solve such a problem by search?
+   • Simply set the derivative of f to 0, and solve a linear system
+
+   • No need to search at all!
+
+
+
+
+• More practical cases still needs search (e.g., conjugate gradient method
+ for QP with (e.g., with constraints), recall the Lagrange multiplier technique.
+                                                                              10
+Quadratic Programming Problems
+• How do I know the objective function is convex?
+   • A sufficient condition: Q is positive definite.
+
+
+
+
+                                                       11
+Quadratic Programming Problems
+Lesson learned from the simple example
+• if the problem have very good property, we can even reduce the search process to a
+  single step (solve analytically).
+
+• Needs to carefully check whether the “good property” holds.                    Your target problem
+
+
+• Intuitively, better property corresponds to stronger conditions                  All problems
+
+    • more unlikely to hold
+
+    • application-domain of search algorithm developed based on such properties is more restrictive.
+
+
+
+                                                                                                   12
+Constraint Satisfaction Problems
+
+
+
+
+                                   13
+Example: Map Coloring
+
+
+
+
+                        14
+Variants of CSPs
+• Unary constraints involve a single variable.
+
+• Binary constraints involve pairs of variables.
+
+• Higher-order constraints involve 3 or more variables.
+
+• Preferences (Soft constraints), e.g., red is better than green, is often
+ represented by a cost for each variable assignment (i.e., the target is to
+ minimize the cost).
+
+
+                                                                              15
+Real-world CSPs
+• Assignment problems
+
+• Timetabling problems
+
+• Hardware configuration
+
+• Floorplanning
+
+• Factory scheduling
+
+•…
+
+                       What is the search tree of a CSP?
+                                                           16
+Characteristics of CSPs
+• Commutativity: the order of assigning values to variables does not
+ affect the final outcome.
+
+
+
+• The constrains provide additional information that could be
+ represented by a constraint graph.
+
+
+
+
+                                                                  17
+Commutativity
+• Commutativity help us formulate the search tree (only 1 variable needs to
+ be considered at each node in the search tree).
+
+
+
+
+                                                                              18
+Constraint Graph
+
+
+
+
+                   19
+Inference
+• A constraint graph allows the agent to do inference in addition to search.
+• Inference basically means checking local consistency (or detecting
+  inconsistency)
+   • Node consistency
+   • Arc Consistency
+   • Path Consistency
+   • K-consistency
+   • Global consistency
+
+
+• Inference helps prune the search tree, either before or during the search.
+
+                                                                          20
+Backtracking Search for CSP
+• Depth-first search, assign a value to unassigned variables recursively.
+• If inconsistency occurred, move 1 step back to try another value.
+
+
+
+
+                                                                            21
+   Improving Backtracking Search (1)
+
+Applying inference
+
+
+
+
+  Applying inference
+
+
+
+
+                                       22
+    Improving Backtracking Search (2)
+
+
+
+
+Choosing variables
+  with minimum
+   numbers of
+ remaining value
+
+
+
+
+                                        23
+    Improving Backtracking Search (3)
+
+
+
+
+Maintain a conflict
+   set and do
+  backjumping
+
+
+
+
+                                        24
+Local Search for CSP
+•   CSP can be actually reformulated as a constraint optimization problem, for which the
+    objective function is to minimize the constraint violation.
+•   Working in the solution space (complete solution formulation)
+•   Iteratively select a conflicted variable and assign a different value to it.
+•   Choose the value that leads to the minimum cost.
+
+
+
+
+                                                                                      25
+Games as A Search Problem
+• More than 1 agent/player, with conflicting goals.
+
+• We consider two players, zero-sum games.
+
+
+
+
+                                                      26
+Definition of a game
+
+
+
+
+                       27
+Tic-Tac-Toe Search Tree
+
+
+
+
+                          Two players: MAX and MIN
+
+
+
+
+                                                     28
+Optimal decision in games
+• Assume the game is deterministic and perfect information is available
+• Idea (for MAX): choose the move to position the highest minimax value
+
+
+
+                      “max”
+
+
+
+“mini”(optimal opponent)                                       “mini”
+
+
+
+
+                                                                          29
+Minimax Algorithm
+• Perform a complete depth-first search of the game tree.
+
+
+• Recursively compute the minimax values of each successor state.
+
+
+• Maximize the worst-case outcome for MAX.
+
+
+
+
+                                                                    30
+Alpha-Beta Pruning
+• A simplification of minimax algorithm.
+• Remove (unneeded) part of the minimax tree from consideration.
+
+
+                                           Alpha: the value of the best (i.e., highest-
+                                           value) choice we have found so far at any
+                                             choice point along the path for MAX.
+
+
+
+                                            Beta: the value of the best (i.e., lowest-
+                                           value) choice we have found so far at any
+                                             choice point along the path for MIN.
+
+
+
+                                                                                          31
+Alpha-Beta Pruning
+
+
+
+
+                     32
+The search order is important
+• It might be worthwhile to examine first the successors that are likely to be
+ the best.
+
+
+
+
+                                                                                 33
+Further acceleration?
+• Alpha-beta pruning does not affect the final result. (good!)
+• With perfect ordering, the time complexity is still high, i.e., O(bm/2). (bad…)
+
+In practice:
+• Replace the UTILITY function with a heuristic evaluation function EVAL
+• Use CUTTOFF-Test instead of TERMINAL-Test
+
+
+
+
+                                                                                34
+More Complex Situations
+• games with more than 2 players
+• 2-players game that is not zero-sum
+• Minimax or Alpha-Beta Pruning don’t apply
+
+
+                                              alliance?
+
+
+
+                  alliance?
+
+
+
+
+                                                          35
+Question to ask when tackling a search problem
+• How to represent the search space?
+    • Search Tree (state space)
+    • Solution space
+• What is the objective function and constraint, and algorithm in textbook already good enough?
+• Which algorithmic framework to choose?
+    • Tree search, e.g., Un-informed Search, Heuristic Search (A*...)
+    • Direct search in the solution space, e.g., Hill Climbing, Simulated Annealing, Genetic Algorithm...
+• How to define concrete components of the algorithm framework?
+    • General-purpose operators in literature
+    • Problem-specific operators, designed based on domain knowledge
+
+
+Always trade-off among solution quality, efficiency, and your domain knowledge
+                                                                                                      36
+The End of The Search Section.
+
+
+
+
+                                 37
+

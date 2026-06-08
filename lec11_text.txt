@@ -1,0 +1,306 @@
+       Artificial Intelligence (CS303)
+
+Lecture 11: Representing and Inference with Uncertainty
+
+
+
+                                                    0
+Hints for this lecture
+
+• An agent can seldom precisely know the state, knowledge should
+ be represented such that wise decisions/actions can still be made.
+
+
+
+
+                                                                      1
+I. Uncertainty and Rational Decisions
+
+
+
+
+                                        2
+The World is Uncertain
+• Things don’t always happen with simple true or false.
+
+• We never know what “state” we are in exactly, because the world is only partially observable.
+
+• We (agents) seldom make decisions with full certainty, while more often make rational
+  decision based on utility.
+
+
+
+
+                                                                                           3
+Alternative to Logic
+• Utility theory: Assign utility to each state/actions
+
+
+• Probability theory: Summarize the uncertainty associated with each state
+
+
+• Rational Decisions: Maximize the expected utility (Probability + Utility)
+
+
+• Thus we need to represent states in the language of probability.
+
+
+
+                                                                              4
+II. Basic Probability Theory and Its Use
+
+
+
+
+                                           5
+Basic Probability Theory and Its Use
+
+• Joint probability distribution specifies probability of every atomic event.
+
+
+• Queries can be answered by summing over atomic events.
+
+
+
+
+                                                                                6
+Basic Probability Theory and Its Use
+
+
+
+
+                                       7
+Basic Probability Theory and Its Use
+
+
+
+
+                                       8
+Basic Probability Theory and Its Use
+
+
+
+
+                                       9
+Basic Probability Theory and Its Use
+
+
+
+
+                                       10
+Basic Probability Theory and Its Use
+
+
+
+
+                                       11
+Basic Probability Theory and Its Use
+
+
+
+
+                                       12
+III. Bayesian Networks
+
+
+
+
+                         13
+What is a BN?
+• A Directed Acyclic Graph (DAG).
+
+• Each node is a random variable, associated with conditional distribution.
+
+• Each arc (link) represent direct influence of a parent node to a child node.
+
+
+
+
+                                                                              14
+A Simple Example of BN
+
+
+
+
+                         15
+   BN in the form of Conditional Probability Table
+
+• More compact representation (compared to propositional logic).
+
+
+
+
+• Easier to utilize independence and conditional dependence relations to define the joint distribution.
+                                                                                                16
+How to construct a CPT for BN?
+
+
+
+
+                                 17
+IV. Exact Inference with Bayesian Networks
+
+
+
+
+                                             18
+Inference with BN
+• Given a Bayesian Network, and an (or some) observed events, which
+  specifies the value for evidence variables, we want to know the probability
+  distribution of one (or several) query variables X, P (X | events).
+
+
+
+• E. g. :
+
+
+
+
+                                                                            19
+Enumeration
+
+
+               Need to consider all values
+                  of “hidden variables”,
+              e.g., alarm=true, alarm=false
+
+
+
+
+                                              d=2 for Boolean
+                                                 variables
+
+                                                                20
+Enumeration
+
+
+
+
+              21
+Enumeration by Variable Elimination
+
+
+
+
+                                      22
+V. Approximate Inference with Bayesian Networks
+
+
+
+
+                                                  23
+Basic Idea
+• Sampling/Monte Carlo/Stochastic Simulation…
+
+
+
+
+                                                24
+Sampling from an empty network
+
+
+
+
+           Assume the joint distribution could be easily sampled
+
+                                                                   25
+Rejection Sampling
+
+                     In case distribution of variable e is
+                             difficult to sample
+
+
+
+
+                                                        26
+Likelihood Weighting
+
+
+
+ Fix the evidence
+    variables to
+    reduce the
+ sampling space
+
+
+
+
+                       27
+Markov Chain Monte Carlo (MCMC)
+
+
+
+                                       Further reduce the
+                                     sampling space by only
+                                     considering variables in
+                                        Markov blanket
+
+
+
+
+                    Markov Blanket
+
+
+
+                                                           28
+Markov Chain Monte Carlo (MCMC)
+
+
+
+
+                                  29
+VI. How to construct a BN (or KB in general)
+
+
+
+
+                                               30
+The challenge brought by KB
+• Manual implement a KB is tedious (sometimes unaffordable)
+• Can we obtain it automatically from raw data?
+
+
+
+
+                   Raw data                              BN   31
+Constructing a BN from data
+• Structural Learning
+• Parameter Estimation
+
+
+                             !           !           !
+
+
+                         "       #   "       #   "       #
+
+
+
+                             !           !
+                                                     …………
+                                                      !$!$
+                         "       #   "       #
+
+
+                                                             32
+Similar to Neural Networks
+• Structural Learning: Identify the network structure
+• Parameter Estimation: find VALUEs for parameters associated with an edge
+   • Depending on how you define the relationship between events/nodes
+       • values in a CPT
+       • parameters of a probability density function
+
+
+
+• A machine learning or search problem again.
+
+
+
+
+                                                                         33
+To be continued
+
+
+
+
+                  34
+

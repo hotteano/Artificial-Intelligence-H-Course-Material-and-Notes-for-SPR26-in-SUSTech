@@ -1,0 +1,211 @@
+Artificial Intelligence (CS303)
+Lecture 7: Performance Evaluation and
+    Automated Machine Learning
+
+
+
+                                        0
+Hints for this lecture
+
+• Learning is more than models and training algorithms,
+ performance evaluation is crucial.
+
+
+
+
+                                                          1
+Outline of this lecture
+• Why?
+
+• Performance Metrics
+
+• Estimating the Generalization
+
+
+
+
+                                  2
+Why Performance Evaluation is Important?
+• Suppose you are an engineer responsible for developing a computing
+  system, say for surveillance purpose.
+
+
+• What you have is a set of data provided by your client.
+
+
+• Upon deliver of the system, you need to make him/her believe that you’ve
+  done a good job. What would you say?
+
+
+
+
+                                                                        3
+Why Performance Evaluation is Important?
+• A typical statement: my system has achieved a score of 99 in terms of XXX
+  (e.g., accuracy) in 5 seconds.
+
+• This statement sounds great but is highly risky because the environments for
+  development and deployment might be different, e.g.,
+   • What the client really want in his business is not consistent with XXX. (then no matter how you
+     improve your score on XXX, things might be hopeless)
+   • The data you got only reflect the reality partially. (Score of 99 does not hold in reality)
+   • The hardware used to run the system might be different. (5 seconds does not hold in reality)
+
+
+• Any of the above case happens à your reputation as an engineer will
+  decrease à you might lose your job
+                                                                                                       4
+General Remedy
+• Be careful when choosing your objective function, two principles:
+   •   Consistent with the user requirements?
+   •   Existing easy-to-use algorithm to optimize it (to train the model)?
+
+
+• Do internal tests as much as possible
+   •   estimate the generalization performance as accurate as possible.
+
+
+• Can only reduce rather than remove risk. There is no guarantee in life.
+
+
+                                                                             5
+I. Performance Metrics
+
+
+
+
+                         6
+Performance Metrics
+• For practical considerations, objective function for training could be different
+  from the performance metric we truly care.
+
+
+
+                                      Green: Consistent but difficult to optimize
+                                      Red: Easy to optimize but inconsistent
+
+
+
+
+                  Instance    Label         Classifier f    Classifier g
+                  x1          1             f(x1) = -0.1    g(x1) = 4
+                  x2          -1            f(x2) = 0.1     g(x2) = -2
+                                                                                    7
+Performance Metrics
+• There are many performance metric (i.e., XXX), e.g., for even for binary classification
+
+                                  Predicted Positive   Predicted Negative
+                       Positive   True Positive rate   False Negative rate
+                       Negative   False Positive rate True Negative rate
+
+
+                                          𝑇𝑃𝑅×𝑁 ! + 𝑇𝑁𝑅×𝑁 "
+                              a𝑐𝑐𝑢𝑟𝑎𝑐𝑦 =
+                                               𝑁! + 𝑁"
+                                               𝑇𝑃𝑅×𝑁 !
+                              𝑝𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 =
+                                          𝑇𝑃𝑅×𝑁 ! + 𝐹𝑃𝑅×𝑁 "
+                                             𝑇𝑃𝑅×𝑁 !
+                                𝑟𝑒𝑐𝑎𝑙𝑙 =
+                                         𝑇𝑃𝑅×𝑁 ! + 𝐹𝑁𝑅×𝑁 !
+                                            2×𝑝𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛×𝑟𝑒𝑐𝑎𝑙𝑙
+                             𝐹 − 𝑚𝑒𝑎𝑠𝑢𝑟𝑒 =
+                                             𝑝𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 + 𝑟𝑒𝑐𝑙
+                                                                                            8
+Performance Metrics
+• Receiver Operating Characteristic (ROC) analysis (for binary classification)
+    •   Mapping your classifier into the ROC space
+    •   Tune a threshold to get a set a points, connect them to get a ROC curve.
+
+
+
+
+                                                                                   9
+II. Estimating the Generalization
+
+
+
+
+                                    10
+Estimating the Generalization
+• Generalization performance is a random variable.
+
+• Split the data in hand into training and testing subsets.
+   • Random Split
+   • Cross-validation
+   • Bootstrap
+
+
+• Collecting the test performance for many times, calculate the average and
+  standard deviation.
+
+• Do statistical tests (check your textbook on statistics).
+                                                                              11
+Summary
+• If there is only one lecture that you could remember about learning, this
+ should be the one.
+
+
+
+
+                                                                          12
+Hints for this lecture (2)
+
+• Most (if not all) machine machine learning tasks involves hyper-
+ parameters, which need to be tuned.
+
+
+
+
+                                                                     13
+Hyper-parameters of ML Tasks
+• Supervised Learning
+   • SVM: Kernel Parameters and Regularization Parameters
+   • Neural Networks: Number of hidden nodes, activation functions, network architecture
+   • Decision Tree: Branching factor, Height of the tree
+• Unsupervised Learning
+   • Clustering: Number of clusters
+
+
+
+
+                                                                                       14
+Tuning Hyper-parameters
+• How to tune the hyper-parameters?
+   • No analytical solution to the optimization problem, since evaluating a value of hyper-
+     parameter involves estimating the generalization performance of the resultant model.
+
+   • Trial-and-error is the only methodology.
+
+
+
+
+                                                       No
+                                                                Yes    Take the
+        Pick up a
+                           Evaluation           Satisfactory?
+        new value                                                       value
+
+                                                                                              15
+Tuning Hyper-parameters
+• Grid Search
+   • Too costly
+• More efficient ways?
+   • Use heuristic Search (e.g., using Black-Box optimization algorithms)
+   • Sometimes, good surrogate of generalization is available to accelerate the evaluatio
+   • Take kernelized version of linear regression as an example
+       • Generalization could be estimated with leave-one-out cross-validation.
+
+
+       • With              , we can exactly calculate the LOOCV error with only one matrix inversion.
+
+
+
+                                                                                                 16
+To be continued
+
+
+
+
+                  17
+

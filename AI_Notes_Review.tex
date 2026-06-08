@@ -1,0 +1,1115 @@
+\documentclass[UTF8,11pt,a4paper]{ctexart}
+
+\usepackage[margin=1.8cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,longtable,array,multicol}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+
+\hypersetup{colorlinks=true, linkcolor=blue!55!black, urlcolor=blue!55!black}
+\setlist[itemize]{leftmargin=1.6em,itemsep=0.18em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=0.18em,topsep=0.25em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\renewcommand{\arraystretch}{1.22}
+
+\pagestyle{fancy}
+\setlength{\headheight}{14pt}
+\fancyhf{}
+\lhead{CS311H AI(H) 期末复习}
+\rhead{\leftmark}
+\cfoot{\thepage}
+
+\newcommand{\key}[1]{\textbf{\color{blue!55!black}#1}}
+\newcommand{\warn}[1]{\textbf{\color{red!60!black}#1}}
+\newcommand{\ans}[1]{\textbf{答题句式：}#1}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+
+\title{\textbf{AI(H) 期末复习讲义}\\
+\large 从 AI Notes、Labs、Projects、Review、样卷与 Logic/Bayes 题整理}
+\author{Yanqiao Chen}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{考点地图与复习策略}
+
+这份讲义把 \texttt{AI Notes.md} 的主线整理成可打印的 LaTeX 版本，并把前面 labs 和 projects 的内容合并到同一套考试视角里：先背公式和模板，再看典型题怎么落笔。
+
+\subsection{高概率题型}
+
+\begin{longtable}{>{\bfseries}p{0.12\textwidth}p{0.24\textwidth}p{0.56\textwidth}}
+\toprule
+优先级 & 主题 & 必须会做什么 \\
+\midrule
+高 & Search & 画 BFS/UCS/A* 搜索树；算 $g,h,f$；判断 heuristic 是否 admissible/consistent；求边权 $c$ 的范围。\\
+高 & Minimax/Alpha--Beta & 自底向上填 minimax 值；维护 $\alpha,\beta$；标出剪枝分支和最终路径。\\
+高 & CSP/AC-3 & 写 CSP 三元组；手跑 AC-3 domain pruning；说明 $O(ed^3)$。\\
+高 & Logic/CNF/DPLL & 自然语言建模；消去 $\to,\leftrightarrow$；转 CNF；用 unit propagation 或 resolution 推导。\\
+高 & Logistic/Perceptron/SVM & 写更新公式；推 cross-entropy 梯度；写 hard/soft-margin SVM primal；解释 $C$ 和 kernel。\\
+高 & Naive Bayes/BN & 算先验、条件概率、后验；解释独立性；会 prior/rejection/likelihood weighting/Gibbs sampling。\\
+中高 & ML Evaluation & confusion matrix、ROC/AUC、cross-validation、bootstrap、hyperparameter tuning。\\
+中高 & Tree/K-means/PCA/LLE & entropy/IG、聚类迭代、PCA 投影、LLE 局部重构流程。\\
+中高 & Recommender/KG & Pearson similarity、matrix factorization、RDF triples、NER、relation extraction、completion。\\
+中高 & GA/RL & GA 公平实验设计；Bellman equation；Q-learning update。\\
+\bottomrule
+\end{longtable}
+
+\subsection{Labs 与 Projects 对应关系}
+
+\begin{longtable}{p{0.16\textwidth}p{0.31\textwidth}p{0.45\textwidth}}
+\toprule
+材料 & 核心内容 & 考试中怎么用 \\
+\midrule
+Lab1 & Python/Numpy 基础 & 不太直接考，主要支撑矩阵、向量、数据处理。\\
+Lab2 & A* heuristic search & 搜索树、frontier、$g+h$、admissible heuristic。\\
+Lab3 & N-Queens & CSP 表示、约束、backtracking、局部搜索。\\
+Lab4 & CSP practice & AC-3、MRV、Degree、LCV。\\
+Lab5 & Adversarial search & Minimax 与 alpha-beta pruning。\\
+Lab6--7 & Credit-card fraud, MLP/SVM & 分类、混淆矩阵、precision/recall/F1、SVM。\\
+Lab8 & Perceptron, SVM, decision tree & 感知机更新、margin、entropy/IG/pruning。\\
+Lab9 & K-means & assignment/update、初始化敏感、outlier 敏感。\\
+Lab10 & PCA/LLE & 线性降维 vs 非线性流形学习。\\
+Lab11 & Matrix factorization & 推荐系统、$R\approx PQ^T$、embedding。\\
+Project1 & Information Exposure Maximization & IC diffusion、Monte Carlo、greedy heuristic、IMRank、GA、复杂度与实验公平性。\\
+Project2 & Classification/Retrieval/Feature Selection & softmax regression、distance metric、PCA/LLE、wrapper/filter feature selection、generalization。\\
+Project3 & KG-based recommender & KG triples、content-based + collaborative filtering、MF、BCE+BPR、AUC/nDCG。\\
+\bottomrule
+\end{longtable}
+
+\ans{如果题目让“结合课程项目说明”，优先把算法写成 Representation + Algorithm + Evaluation：数据怎么表示，怎么搜索/优化，用什么 metric 评价。}
+
+\section{Search 与 Optimization}
+
+\subsection{搜索问题定义}
+
+一个 classical search problem 通常包含：
+\[
+\text{Initial state},\quad Actions(s),\quad Result(s,a),\quad GoalTest(s),\quad PathCost.
+\]
+常用符号：
+\[
+b=\text{branching factor},\quad d=\text{shallowest goal depth},\quad
+m=\text{max depth},\quad C^*=\text{optimal path cost}.
+\]
+
+\subsection{BFS, UCS, Greedy, A*}
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+算法 & Evaluation & Complete & Optimal \\
+\midrule
+BFS & depth & 若 $b$ 有限 & 每步代价相同 \\
+UCS & $f(n)=g(n)$ & 若 step cost $>0$ & 是 \\
+Greedy & $f(n)=h(n)$ & 不保证 & 不保证 \\
+A* & $f(n)=g(n)+h(n)$ & 通常是 & tree: admissible; graph: consistent \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\key{Admissible}：
+\[
+h(n)\le h^*(n),\quad \forall n.
+\]
+启发函数不能高估到 goal 的真实最小代价。
+
+\key{Consistent}：
+\[
+h(n)\le c(n,a,n')+h(n'),\quad \forall(n,n').
+\]
+Consistent 一定 admissible；A* graph search 通常要求 consistent 才能保证 optimal。
+
+\subsection{样卷题：求边权 $c$ 的范围}
+
+若每条边代价都是 $c$，从 $n$ 到 goal 的最少边数为 $dist_{\rm edges}(n,G)$，则
+\[
+h^*(n)=c\cdot dist_{\rm edges}(n,G).
+\]
+Admissible 要求
+\[
+h(n)\le c\cdot dist_{\rm edges}(n,G),\quad
+c\ge \frac{h(n)}{dist_{\rm edges}(n,G)}.
+\]
+所以最终答案：
+\[
+\boxed{c\ge \max_{n\ne G}\frac{h(n)}{dist_{\rm edges}(n,G)}}.
+\]
+\warn{还要检查 $h(G)=0$。如果 $h(G)>0$，任何正 $c$ 都不 admissible。}
+
+\subsection{Beyond Classical Search 与 Project1}
+
+Beyond classical search 常直接在 solution space 搜索。通用框架：
+\[
+x^{(0)}\to f(x^{(0)})\to x'\to f(x')\to \text{accept/reject}.
+\]
+常见 operator：binary flip、swap、Gaussian perturbation。
+
+Project1 的 IEMP 是典型组合优化：
+\[
+\max_{S_1,S_2}\E\left[|V|-|R_1\oplus R_2|\right],
+\quad |S_1|+|S_2|\le k,\quad S_1\cap S_2=\varnothing.
+\]
+其中 $R_1,R_2$ 是 Independent Cascade diffusion 后被两个 campaign reached 的节点集合。因为精确期望很难算，所以用 Monte Carlo：
+\[
+\hat{\Phi}(S_1,S_2)=\frac1T\sum_{t=1}^T
+\left(|V|-|R_1^{(t)}\oplus R_2^{(t)}|\right).
+\]
+
+\ans{Project1 可以写成：candidate seed sets 是状态；MC evaluator 是 objective estimator；greedy/GA 是 search algorithm；final score 是 expected balanced exposure 的 Monte Carlo estimate。}
+
+\section{Adversarial Search}
+
+\subsection{Minimax}
+
+适用场景：deterministic, two-player, zero-sum, perfect-information games。
+\[
+V_{\rm MAX}(n)=\max_{c\in Children(n)}V(c),\qquad
+V_{\rm MIN}(n)=\min_{c\in Children(n)}V(c).
+\]
+
+\subsection{Alpha--Beta Pruning}
+
+\[
+\alpha=\text{MAX 当前路径能保证的最好值},\qquad
+\beta=\text{MIN 当前路径能保证的最好值}.
+\]
+剪枝条件：
+\[
+\boxed{\alpha\ge \beta}.
+\]
+
+做题步骤：
+\begin{enumerate}
+\item 从左到右访问叶子，除非题目指定顺序。
+\item MAX 节点初始 $v=-\infty$，更新 $v=\max(v,child)$ 和 $\alpha=\max(\alpha,v)$。
+\item MIN 节点初始 $v=+\infty$，更新 $v=\min(v,child)$ 和 $\beta=\min(\beta,v)$。
+\item 一旦 $\alpha\ge\beta$，剩余分支剪掉；被剪枝节点可写 NA。
+\item 最终路径从 root 开始，每层选等于父节点 minimax value 的 child。
+\end{enumerate}
+
+\warn{Alpha-beta pruning 不改变 minimax value，只减少访问节点数；剪枝多少依赖访问顺序。}
+
+\section{CSP 与 AC-3}
+
+\subsection{CSP 三元组}
+
+\[
+CSP=(X,D,C),
+\]
+其中 $X$ 是变量集合，$D$ 是 domains，$C$ 是 constraints。
+
+例：
+\[
+X=\{X,Y,Z\},\quad D_X=D_Y=D_Z=\{1,2,3\},\quad
+C=\{X<Y,Y<Z\}.
+\]
+
+\subsection{AC-3}
+
+Arc $(X_i,X_j)$ consistent 的含义：
+\[
+\forall x\in D_i,\exists y\in D_j\quad \text{s.t. constraint}(X_i=x,X_j=y)\text{ holds}.
+\]
+
+复杂度：
+\[
+\boxed{O(ed^3)}.
+\]
+原因：一次 \textsc{Revise} 最多 $O(d^2)$；每条 arc 最多因删除 domain value 被重新加入 $O(d)$ 次。
+
+\subsection{AC-3 例题模板}
+
+对 $D_X=D_Y=D_Z=\{1,2,3\}, C=\{X<Y,Y<Z\}$：
+\begin{enumerate}
+\item Revise $(X,Y)$：删 $X=3$，$D_X=\{1,2\}$。
+\item Revise $(Y,X)$：删 $Y=1$，$D_Y=\{2,3\}$。
+\item Revise $(Y,Z)$：删 $Y=3$，$D_Y=\{2\}$。
+\item 因 $D_Y$ 变化，重查相关 arcs。
+\item Revise $(Z,Y)$：只剩 $Z=3$，$D_Z=\{3\}$。
+\item Revise $(X,Y)$：只剩 $X=1$，$D_X=\{1\}$。
+\end{enumerate}
+最终：
+\[
+D_X=\{1\},\quad D_Y=\{2\},\quad D_Z=\{3\}.
+\]
+
+Backtracking 启发式：MRV 选合法值最少变量；Degree 打平时选约束最多变量；LCV 选限制别人最少的值。
+
+\section{Logic, CNF, DPLL 与 Resolution}
+
+\subsection{必背等价式}
+
+\[
+p\to q\equiv \neg p\lor q,\qquad
+p\leftrightarrow q\equiv(\neg p\lor q)\land(\neg q\lor p).
+\]
+\[
+\neg(p\land q)\equiv \neg p\lor\neg q,\qquad
+\neg(p\lor q)\equiv \neg p\land\neg q.
+\]
+\[
+p\lor(q\land r)\equiv(p\lor q)\land(p\lor r).
+\]
+
+CNF 是 AND of OR-clauses，例如
+\[
+(a\lor b\lor\neg c)\land(\neg a\lor d).
+\]
+
+\subsection{CNF 转换模板}
+
+\begin{enumerate}
+\item 消去 $\leftrightarrow$ 和 $\to$。
+\item 用 De Morgan 把 $\neg$ 推到 atom 前。
+\item 用 distributive law 把 OR 分配到 AND 上。
+\item 化简重复项、恒真项和吸收项。
+\end{enumerate}
+
+样卷公式：
+\[
+\begin{aligned}
+p\to \neg(p\lor q)
+&\equiv \neg p\lor \neg(p\lor q)\\
+&\equiv \neg p\lor(\neg p\land\neg q)\\
+&\equiv \neg p.
+\end{aligned}
+\]
+
+\subsection{Logic and Bayesian Questions：排球队建模}
+
+令 $x_i$ 表示 player $i$ plays。
+\[
+x_4\leftrightarrow x_6,\qquad
+\neg x_3\leftrightarrow \neg x_1 \equiv x_3\leftrightarrow x_1.
+\]
+\[
+x_3\oplus x_6\equiv(x_3\lor x_6)\land(\neg x_3\lor\neg x_6).
+\]
+\[
+(x_9\land x_{12})\to x_4\equiv
+\neg x_9\lor\neg x_{12}\lor x_4.
+\]
+加 evidence：$x_1,x_{12}$。
+
+完整 CNF：
+\[
+\begin{aligned}
+&(\neg x_4\lor x_6)\land(\neg x_6\lor x_4)
+\land(\neg x_3\lor x_1)\land(\neg x_1\lor x_3)\\
+&\land(x_3\lor x_6)\land(\neg x_3\lor\neg x_6)
+\land(\neg x_9\lor\neg x_{12}\lor x_4)
+\land x_1\land x_{12}.
+\end{aligned}
+\]
+DPLL unit propagation：
+\[
+x_1,x_{12}\Rightarrow x_3\Rightarrow \neg x_6\Rightarrow \neg x_4\Rightarrow \neg x_9.
+\]
+
+\subsection{FOL Resolution}
+
+UI: $\forall x\,P(x)\Rightarrow P(a)$。EI: $\exists x\,P(x)\Rightarrow P(k)$，其中 $k$ 必须是新常量。
+
+Unification 找 substitution。例如
+\[
+Knows(John,x),\ Knows(y,Mary)
+\]
+可用 $\{x/Mary,y/John\}$ 统一。
+
+证明 $Happy(z)$ 的典型 CNF：
+\[
+\neg PassAI(x)\lor\neg Prize(x)\lor Happy(x),
+\]
+\[
+\neg Willing(x)\lor PassAI(x),\quad
+\neg Lucky(x)\lor PassAI(x),\quad
+\neg Lucky(x)\lor Prize(x),
+\]
+\[
+\neg Willing(z),\quad Lucky(z),\quad \neg Happy(z).
+\]
+Resolution:
+\[
+Lucky(z)\Rightarrow PassAI(z),\quad Lucky(z)\Rightarrow Prize(z),
+\]
+\[
+PassAI(z),Prize(z)\Rightarrow Happy(z),
+\]
+与 $\neg Happy(z)$ 得 empty clause $\Box$。
+
+\section{Machine Learning 基本原则}
+
+\[
+\text{Learning}=\text{search in hypothesis/model space}.
+\]
+三件核心事：
+\[
+\text{Representation}+\text{Algorithm}+\text{Evaluation}=\text{Model}.
+\]
+Overfitting：training performance 好但 unseen data 差。Occam's Razor：在解释数据的前提下模型尽量简单。
+
+MAP 分类：
+\[
+\hat y=\argmax_{\omega_i}P(\omega_i\mid x)
+=\argmax_{\omega_i}p(x\mid\omega_i)P(\omega_i),
+\]
+因为 $p(x)$ 对所有类别相同。
+
+Project2 的三任务对应：
+\begin{itemize}
+\item Classification: 输入 256 维 feature，输出 10-class label。
+\item Retrieval: 给 query，从 repository 找 top-$k$ similar items。
+\item Feature selection: 选不超过 30 个 feature，使固定 classifier accuracy 尽量高。
+\end{itemize}
+
+\section{Perceptron 与 Logistic Regression}
+
+\subsection{Perceptron}
+
+若 $y\in\{-1,+1\}$：
+\[
+\hat y=\operatorname{sign}(w^Tx+b).
+\]
+分类错误时：
+\[
+w\leftarrow w+\eta yx,\qquad b\leftarrow b+\eta y.
+\]
+若 $y\in\{0,1\}$，常写为
+\[
+w\leftarrow w+\eta(y-\hat y)x,\qquad b\leftarrow b+\eta(y-\hat y).
+\]
+
+\subsection{Logistic Regression}
+
+\[
+\sigma(z)=\frac{1}{1+e^{-z}},\qquad h_w(x)=\sigma(w^Tx+b).
+\]
+Binary cross-entropy:
+\[
+J(w,b)=-\frac1m\sum_{i=1}^m
+\left[y_i\log h_i+(1-y_i)\log(1-h_i)\right].
+\]
+关键梯度：
+\[
+\frac{\partial J}{\partial w}=\frac1m\sum_{i=1}^m(h_i-y_i)x_i,\qquad
+\frac{\partial J}{\partial b}=\frac1m\sum_{i=1}^m(h_i-y_i).
+\]
+更新：
+\[
+w\leftarrow w-\alpha\frac1m\sum_i(h_i-y_i)x_i,\qquad
+b\leftarrow b-\alpha\frac1m\sum_i(h_i-y_i).
+\]
+
+\ans{推导题写：令 $z_i=w^Tx_i+b,h_i=\sigma(z_i)$，cross-entropy 对 $z_i$ 的导数是 $h_i-y_i$，再链式法则乘 $x_i$ 或 1。}
+
+\section{SVM}
+
+\subsection{Hard Margin}
+
+标签 $y_i\in\{-1,+1\}$：
+\[
+\min_{w,b}\frac12\|w\|^2
+\quad\text{s.t.}\quad
+y_i(w^Tx_i+b)\ge 1.
+\]
+Margin width:
+\[
+\frac{2}{\|w\|}.
+\]
+
+\subsection{Soft Margin}
+
+\[
+\min_{w,b,\xi}\frac12\|w\|^2+C\sum_{i=1}^m\xi_i
+\]
+\[
+\text{s.t.}\quad y_i(w^Tx_i+b)\ge 1-\xi_i,\qquad \xi_i\ge0.
+\]
+等价 hinge loss:
+\[
+\min_{w,b}\frac12\|w\|^2
+C\sum_i\max(0,1-y_i(w^Tx_i+b)).
+\]
+$C$ 大：更重视训练错误，regularization 弱；$C$ 小：允许更多 violation，regularization 强。
+
+\subsection{Kernel Trick}
+
+\[
+K(x,z)=\phi(x)^T\phi(z).
+\]
+常见 kernel：
+\[
+K(x,z)=x^Tz,\quad K(x,z)=(x^Tz+c)^d,\quad
+K(x,z)=\exp(-\gamma\|x-z\|^2).
+\]
+分别对应 linear、polynomial、RBF。
+
+\section{Naive Bayes 与 Bayesian Networks}
+
+\subsection{Naive Bayes}
+
+\[
+P(Y\mid X)=\frac{P(X\mid Y)P(Y)}{P(X)},\qquad
+\hat y=\argmax_y P(y)P(x\mid y).
+\]
+Naive assumption:
+\[
+P(x_1,\ldots,x_n\mid y)=\prod_{j=1}^nP(x_j\mid y).
+\]
+预测：
+\[
+\hat y=\argmax_y\left[\log P(y)+\sum_j\log P(x_j\mid y)\right].
+\]
+Laplace smoothing:
+\[
+P(x_j=v\mid y)=\frac{count(x_j=v,y)+\alpha}{count(y)+\alpha K}.
+\]
+
+若 4 个 binary features 加 1 个 binary label：feature patterns 有 $2^4=16$ 种；feature-label 组合有 $2\cdot2^4=32$ 种；full joint 独立参数是 $2^5-1=31$。
+
+\subsection{Bayesian Network}
+
+BN 用 DAG 分解 joint distribution：
+\[
+P(X_1,\ldots,X_n)=\prod_iP(X_i\mid Parents(X_i)).
+\]
+PPT 视角下，一个 BN 包含三层意思：
+\begin{itemize}
+\item 图结构是 DAG；每个 node 是一个 random variable。
+\item 每条 arc 表示 parent 对 child 的 direct influence。
+\item 每个 node 关联一个 conditional distribution/CPT，即 $P(X_i\mid Parents(X_i))$。
+\end{itemize}
+
+BN 的好处是可以用 independence 和 conditional dependence 更紧凑地定义 joint distribution。给定 parents 后，一个节点与其 non-descendants 条件独立。Markov blanket 包括 parents、children、children 的其他 parents。
+
+Exact inference:
+\[
+P(X\mid e)=\alpha P(X,e)=\alpha\sum_Y P(X,e,Y).
+\]
+Variable elimination 通过局部 factors 相乘并逐个 sum out hidden variables，通常比 naive enumeration 高效。
+
+构建 BN/KB 的挑战：手工写 KB 很繁琐。PPT 中把学习 BN 类比为两件事：
+\begin{itemize}
+\item \textbf{Structural learning}: 学 network structure，也就是哪些变量之间有边。
+\item \textbf{Parameter estimation}: 学边和节点上的参数，例如 CPT 中的概率值，或某个概率密度函数的参数。
+\end{itemize}
+
+\subsection{Bayes Rule 例题}
+
+给定
+\[
+P(Boy)=0.7,\quad P(Girl)=0.3,\quad
+P(Short\mid Boy)=0.9,\quad P(Short\mid Girl)=0.2.
+\]
+\[
+P(Girl\mid Short)=
+\frac{P(Short\mid Girl)P(Girl)}
+{P(Short\mid Boy)P(Boy)+P(Short\mid Girl)P(Girl)}
+=\frac{0.06}{0.69}=\frac{2}{23}.
+\]
+
+\subsection{Sampling}
+
+Prior sampling：按 topological order 逐个采样。若 8 个样本中 $C=True$ 有 5 个：
+\[
+\hat P(C)=5/8.
+\]
+
+Rejection sampling：估计 $P(C\mid A,\neg D)$ 时只保留 evidence $A=True,D=False$ 的样本。若保留 3 个，其中 2 个 $C=True$：
+\[
+\hat P(C\mid A,\neg D)=2/3.
+\]
+
+Likelihood weighting：evidence 固定，non-evidence 正常采样，每个样本权重
+\[
+w=\prod_{E_i\in Evidence}P(E_i=e_i\mid Parents(E_i)).
+\]
+若网络为 $A\to B\to C\to D$，估计 $P(\neg A\mid B,\neg D)$，则权重要乘
+\[
+P(B\mid A)\cdot P(\neg D\mid C),
+\]
+其中第一项看样本里的 $A$，第二项看样本里的 $C$。
+
+Gibbs sampling：evidence variables 固定；每一步只重采样一个 non-evidence variable；相邻样本最多一个非 evidence 变量变化。
+
+\section{Evaluation, Tree 与 Generalization}
+
+\subsection{Confusion Matrix}
+
+\begin{center}
+\begin{tabular}{c|cc}
+ & Predicted + & Predicted -\\
+\hline
+Actual + & TP & FN\\
+Actual - & FP & TN
+\end{tabular}
+\end{center}
+
+\[
+Accuracy=\frac{TP+TN}{TP+TN+FP+FN},\quad
+Precision=\frac{TP}{TP+FP},
+\]
+\[
+Recall=\frac{TP}{TP+FN},\quad
+F1=2\frac{Precision\cdot Recall}{Precision+Recall}.
+\]
+\[
+TPR=Recall,\qquad FPR=\frac{FP}{FP+TN}.
+\]
+ROC 横轴 FPR，纵轴 TPR；AUC 衡量排序能力，0.5 近似随机，1.0 完美。
+
+Project3 中 CTR 用 AUC，top-5 recommendation 用 nDCG@5：
+\[
+DCG@5=\sum_{j=1}^5\frac{\mathbb{I}[i_j\in T_u^+]}{\log_2(j+1)},\qquad
+nDCG@5=\frac{DCG@5}{IDCG@5}.
+\]
+
+\subsection{Generalization 与 Tuning}
+
+常见估计方法：random split、$k$-fold cross-validation、bootstrap。报告多次实验最好写
+\[
+mean\pm std.
+\]
+Hyperparameter tuning 标准流程：training set 训练；validation set 选参数；test set 只做最终报告。
+
+\warn{Training objective 不一定等于 performance metric。例如训练优化 cross-entropy，但最终可能关心 F1、AUC 或 nDCG。}
+
+PPT 中特别强调：``accuracy=99\% in 5 seconds'' 这类说法风险很高，因为测试环境和真实环境可能不同。内部测试只能尽量降低风险，不能完全消除风险。Generalization performance 本身是 random variable，所以需要多次 split/CV/bootstrap 来估计均值和方差。
+
+常见 hyperparameters：
+\begin{itemize}
+\item SVM：kernel type、kernel parameters、regularization parameter $C$。
+\item Neural network：hidden nodes、activation function、architecture、learning rate。
+\item Decision tree：branching factor、height/max depth。
+\item Clustering：number of clusters $K$。
+\end{itemize}
+
+调参没有解析解，因为每试一个 hyperparameter 都要重新估计 generalization performance。基础方法是 trial-and-error；更高效的方法包括 heuristic search、black-box optimization，或者用 surrogate evaluation 加速，例如某些 kernelized linear regression 可以用 LOOCV 近似快速估计泛化误差。
+
+\subsection{Decision Tree}
+
+Entropy:
+\[
+H(S)=-\sum_i p_i\log_2p_i.
+\]
+Information gain:
+\[
+IG(S,A)=H(S)-\sum_{v\in Values(A)}\frac{|S_v|}{|S|}H(S_v).
+\]
+Gini:
+\[
+Gini(S)=1-\sum_i p_i^2.
+\]
+防止 overfitting：限制 max depth、minimum samples per leaf、pruning、bagging/random forest。
+
+\section{Unsupervised Learning}
+
+PPT 对 unsupervised learning 的定位：人类学习不总是依赖监督信号；现实中标注数据昂贵，但未标注数据相对容易积累。它和 supervised learning 仍然共享
+\[
+\text{representation}+\text{algorithm}+\text{evaluation}
+\]
+三要素，只是 unsupervised learning 的 evaluation/objective 往往更主观、更模糊，因此问题更容易 ill-defined，输出也可能偏离人的直觉。
+
+Clustering 是 classification 在无监督场景下的对应问题：给定数据，把它们分成 $K$ 个 groups，使同一 cluster 内实例相似，不同 clusters 之间不相似。但“相似”没有唯一标准；PPT 里强调，clustering 对很多 objective 都可能是 NP-hard，本质上是在巨大 solution space 中搜索。
+
+\subsection{K-means}
+
+目标函数：
+\[
+\min_{\{c_i\},\{\mu_j\}}\ J
+=\min\sum_{i=1}^m\|x_i-\mu_{c_i}\|^2.
+\]
+它等价于最小化 intra-cluster distance / within-cluster sum of squares。
+
+迭代：
+\[
+c_i=\argmin_j\|x_i-\mu_j\|^2,\qquad
+\mu_j=\frac1{|C_j|}\sum_{x_i\in C_j}x_i.
+\]
+PPT 中的算法流程：
+\begin{enumerate}
+\item 预先给定 $K$。
+\item 随机初始化 $K$ 个 cluster centers。
+\item Assignment step：把每个 instance 分到最近的 center。
+\item Update step：把每个 center 更新为该 cluster 内所有 instances 的 mean。
+\item 重复 assignment/update，直到 centers 不再变化或达到迭代上限。
+\end{enumerate}
+
+特点与易错点：
+\begin{itemize}
+\item 不仅要定义 similarity metric，通常还要能计算 average，所以最自然适合 Euclidean feature vectors。
+\item 对初始化敏感，只保证收敛到 local optimum；K-means++ 可以改善初始化。
+\item 对 outliers 敏感；需要提前选择 $K$。
+\item 对 graph data，数据不一定是 feature vector。PPT 中提到 social network community detection 可以先把图嵌入到 Euclidean space，也可以直接做 graph-cut/community detection。
+\end{itemize}
+
+\subsection{PCA}
+
+目标：给定 $n\times d$ 数据集，用 linear transformation 映射到低维空间，并尽量引入最小 information loss。PPT 中强调，这两个条件会把 PCA 变成 eigenvalue decomposition 问题。
+\[
+X_c=X-\bar X,\qquad
+\Sigma=\frac1mX_c^TX_c,\qquad
+Z=X_cW_k.
+\]
+$W_k$ 由前 $k$ 个最大 eigenvalues 对应 eigenvectors 构成。
+
+复习时可以这样写：
+\begin{itemize}
+\item PCA 找最大 variance directions。
+\item 用 covariance matrix 的 eigenvectors 作为 principal components。
+\item 选最大 eigenvalues 对应的前 $k$ 个方向投影。
+\item 用途：visualization、noise reduction、compression。
+\item 局限：linear mapping，不能展开明显非线性的 manifold。
+\end{itemize}
+
+\subsection{LLE}
+
+Locally Linear Embedding 保留局部邻域结构：
+\begin{enumerate}
+\item 为每个点找 nearest neighbors。
+\item 用 neighbors 线性重构该点，求 weights。
+\item 在低维空间中保持这些 reconstruction weights。
+\end{enumerate}
+
+更完整的考试写法：
+\[
+\min_{\{w_{ij}\}}\sum_i\left\|x_i-\sum_{j\in N(i)}w_{ij}x_j\right\|^2,
+\qquad \sum_{j\in N(i)}w_{ij}=1.
+\]
+然后在低维表示 $z_i$ 中解：
+\[
+\min_{\{z_i\}}\sum_i\left\|z_i-\sum_{j\in N(i)}w_{ij}z_j\right\|^2.
+\]
+直觉：如果高维空间中一个点可以由邻居线性重构，那么低维空间中也应保持同样的局部重构关系。LLE 比 PCA 更适合非线性 manifold，但依赖 neighborhood size，且对噪声和采样密度敏感。
+
+Project2 经验：PCA/LLE 能提速或降噪，但如果 hidden ground truth 与原距离度量一致，过强降维可能改变 ranking，需用 validation/proxy metric 判断。
+
+\section{Recommender Systems 与 Knowledge Graphs}
+
+\subsection{推荐系统基础}
+
+目标：学习
+\[
+score(user,item).
+\]
+PPT 中把 recommender system 的核心说得很直接：推荐系统本质上估计 user 与 item 之间发生 interaction 的概率。输入是 user 和 item，输出 score，score 越高表示用户越可能感兴趣。
+
+类型：
+\begin{itemize}
+\item Content-based：关注 item 的 side information/attributes/features，为每个用户学习偏好模型，再推荐与用户历史行为相似的 items。
+\item Collaborative filtering：只依赖 historical user-item interaction records，通过其他 users/items 的行为来预测偏好。
+\item Hybrid：融合多种信号。
+\end{itemize}
+挑战：cold start、sparsity、scalability、accuracy-efficiency trade-off。实际系统可能有百万级 users/items，因此 score function 既要准，也要能在秒级完成推荐。
+
+图视角：
+\begin{itemize}
+\item Interaction records 可以看成 user-item bipartite graph。
+\item 推荐就是预测 user 和 item 之间是否应有一条 edge。
+\item 如果加入 KG，interaction graph 与 heterogeneous directed KG 可以合成一个更大的 mixed graph。
+\end{itemize}
+
+\subsection{Pearson Similarity}
+
+\[
+sim(u,v)=
+\frac{\sum_i(r_{u,i}-\bar r_u)(r_{v,i}-\bar r_v)}
+{\sqrt{\sum_i(r_{u,i}-\bar r_u)^2}\sqrt{\sum_i(r_{v,i}-\bar r_v)^2}}.
+\]
+它衡量 normalized covariance，可用于 user-user 或 item-item neighbor recommendation。
+
+基于 correlation 的表示：
+\begin{itemize}
+\item 一个 user/item 可以被表示成它与所有其他 users/items 的 correlation vector。
+\item 优点：interpretability 高，容易解释“为什么推荐”。
+\item 缺点：scalability 差；当 users/items 很多时，向量高维、稀疏且昂贵。
+\end{itemize}
+
+简单 score function 例子：
+\[
+f(u,i)=\sum_{u'\in U}c_{u,u'}r_{u',i},
+\qquad
+f(u,i)=\sum_{i'\in M}c_{i,i'}r_{u,i'}.
+\]
+前者是 user-user CF，后者是 item-item CF。
+
+\subsection{Matrix Factorization}
+
+\[
+R\approx PQ^T,\qquad
+P\in\mathbb{R}^{n\times d},\quad Q\in\mathbb{R}^{m\times d}.
+\]
+预测：
+\[
+\hat r_{u,i}=P_uQ_i^T.
+\]
+训练目标：
+\[
+\min_{P,Q}\sum_{(u,i)\in R'}(r_{u,i}-P_uQ_i^T)^2.
+\]
+其中 $R'$ 是已知 interaction records 的集合，因为完整 $R$ 通常不可观测。$P_u$ 和 $Q_i$ 是低维 embedding vectors。
+
+如果不用简单 dot product，也可以定义更复杂的 interaction probability function：
+\[
+\hat r_{u,i}=f(P_u,Q_i;M),
+\]
+其中 $M$ 可以是 MLP 等模型。矩阵乘法是最简单、最高效、最常考的形式。
+
+Project3 的 MF 打分还可带 bias：
+\[
+s_{\rm mf}(u,i)=p_u^Tq_i+b_u+b_i+b_0.
+\]
+BCE:
+\[
+\mathcal{L}_{BCE}=-\frac1{|\mathcal{B}|}\sum_{(u,i,y)}
+\left[y\log\sigma(s)+(1-y)\log(1-\sigma(s))\right].
+\]
+BPR:
+\[
+\mathcal{L}_{BPR}=\frac1{|\mathcal{B}^+|}\sum_{(u,i^+,i^-)}
+\log\left(1+\exp(s(u,i^-)-s(u,i^+))\right).
+\]
+
+\subsection{Knowledge Graph}
+
+KG 是更 practical 的知识表示方式。PPT 中的核心定义：Knowledge Graph 是 large-scale semantic network，用 vertices 和 edges 图形化表示知识。
+\begin{itemize}
+\item Vertices：entities 和 concepts。
+\item Edges：relations 和 properties。
+\item KG 通常是 heterogeneous directed graph。
+\end{itemize}
+
+为什么需要 KG：
+\begin{itemize}
+\item 大部分人类知识以自然语言表达，但很多应用更关心 entities 及其 relationships。
+\item 相比完整逻辑 KB，KG 缩小 commonsense knowledge 的边界，更容易落地。
+\item KG 可用于 recommender system、Q\&A system、information retrieval 等。
+\end{itemize}
+
+KG 存储 RDF-style triples：
+\[
+(head,\ relation,\ tail),\qquad \langle h,r,t\rangle.
+\]
+其中 head entity 是 subject，relation type 是关系类别，tail entity 是 object。
+
+\subsubsection{KG Construction}
+
+构建来源：structured databases、information extraction、人工领域知识。PPT 给出的半自动构建流程：
+\begin{enumerate}
+\item Human experts 写 rules/templates 或 dictionaries。
+\item 从 corpus 中识别 entities，得到 vertex set。
+\item 做 relation extraction，得到 edge set。
+\item 进行 automatic annotation 或人工校正。
+\item 对已有 KG 做 completion，补全缺失关系。
+\end{enumerate}
+
+Automatic entity recognition：
+\begin{itemize}
+\item 统计方法：TF-IDF。如果一个词在当前文档频繁出现、在其他文档不常出现，更可能是 meaningful entity。
+\item Entropy。如果一个词的左右邻居很多样，entropy 高，更可能是 meaningful entity：
+\[
+H(u)=-\sum_{x\in\mathcal{X}}p(x)\log p(x).
+\]
+这里 $p(x)$ 可以表示某个 left/right neighbor word 出现的概率。
+\item 机器学习方法：NER，把 entity recognition 建模为 sequence labeling。典型标签是 BIO，例如 B-People, I-People, O, B-Contest。
+\end{itemize}
+
+Automatic relation extraction：
+\begin{itemize}
+\item 输入：包含两个 entities 的句子。
+\item 输出：句子表达的 relation category。
+\item 可视作 supervised text classification，常用 RNN、Transformer 等。
+\end{itemize}
+
+\subsubsection{Knowledge Graph Completion}
+
+KGC 的目标是在已有 KG 中寻找 missing relations。需要 KGC 的原因：
+\begin{itemize}
+\item 完整 rule base 太贵。
+\item relation extraction 不能抽出所有关系。
+\item 原始文本本身包含的关系信息也不完整。
+\end{itemize}
+
+两类方法：
+\begin{itemize}
+\item Path-based methods：把两个 entities 之间的 relation-type sequence 当作 feature。比如一条路径可写为
+\[
+\langle \text{work at},\ \text{locate at},\ \text{belongs to}\rangle,
+\]
+它可以提示某种隐含关系。
+\item Embedding-based methods：把 entities 和 relations 表示为低维向量，设计 score function $g(\mathbf{h},\mathbf{r},\mathbf{t})$。分数越高，triple $(h,r,t)$ 越可能为真。
+\end{itemize}
+
+常见训练思想：
+\[
+g(\mathbf{h},\mathbf{r},\mathbf{t})\ \text{for true triples}
+\quad > \quad
+g(\mathbf{h}',\mathbf{r}',\mathbf{t}')\ \text{for corrupted/false triples}.
+\]
+答题时不必死记具体损失，重点说清楚“真 triple 高分，假 triple 低分”。
+
+\subsubsection{KG-Based Recommender System}
+
+Project3 的复习表达：
+\[
+\text{final score}=\text{popularity}+\text{temporal prior}+\text{KG content}+\text{item CF}+\text{MF}.
+\]
+这体现 hybrid recommendation：KG 缓解 sparsity，CF 捕捉协同偏好，MF 学 latent representation。
+
+PPT 中的 KG-based RS 图视角：
+\begin{itemize}
+\item Interaction records 是 bipartite graph。
+\item KG 是 heterogeneous directed graph。
+\item 两者可以融合为 mixed graph。
+\item 从 mixed graph 中可得到 paths between users and items、correlations among users/items、embeddings of users/items。
+\item GNN 是典型方法：每个节点有 initial embedding，最终 embedding 由 neighborhood embeddings 聚合得到，再用 MLP 或 matrix multiplication 计算 $f(u,i)$。
+\end{itemize}
+
+\ans{知识图谱题常见答法：KG 是 heterogeneous directed semantic graph；RDF triple 写成
+$\langle head, relation, tail\rangle$；construction 包括 entity recognition、relation extraction 和 completion；KGC 可用 path-based 或 embedding-based missing relation prediction。}
+
+\section{PPT 强调的概念问答}
+
+这一节整理 PPT 中反复出现的 ``What/Why/How'' 型问题。它们不一定是手算题，但很适合出简答题、解释题或 project-style 综合题。
+
+\subsection{Search 与 Problem-Specific Search}
+
+\begin{enumerate}
+\item \textbf{What is search?}\\
+Search 是从很多 possible options 中找一个 satisfactory/user-defined option。AI 中很多思考过程都可视作 search。
+
+\item \textbf{为什么不能简单 enumerate and compare?}\\
+因为 state/solution space 往往巨大，枚举所有 options 成本太高。因此需要 organized search process，用 frontier/search tree 或 solution-space operator 有选择地探索。
+
+\item \textbf{What is a good search method?}\\
+四个标准：completeness、optimality、time complexity、space complexity。复杂度通常由 branching factor $b$、最浅目标深度 $d$、最大深度 $m$ 等决定。
+
+\item \textbf{为什么需要 heuristic search?}\\
+因为 cost is an issue。Heuristic search 利用 problem-specific knowledge 给 tree search 加 bias，不再均匀枚举所有可能。
+
+\item \textbf{如何设计 admissible heuristic?}\\
+PPT 强调两条思路：relaxed problem 和 sub-problem。Relaxed problem 去掉部分约束，得到的最优代价不会超过原问题最优代价；sub-problem 只看原问题一部分，也常给出 lower bound。
+
+\item \textbf{实践中为什么 completeness/optimality 没有课上那么强调?}\\
+很多实际问题中 admissible heuristic 难设计；即使能保证 optimality，时间复杂度也可能不可承受。所以工程上常更看重 acceptable solution under budget。
+
+\item \textbf{拿到一个 search problem 先问什么?}\\
+PPT 总结：
+\begin{itemize}
+\item 如何表示 search space：state-space tree 还是 solution space?
+\item Objective function 和 constraints 是什么?
+\item 用 tree search、heuristic search，还是 hill climbing/SA/GA 等 solution-space search?
+\item Search operator、evaluation criterion、replacement strategy 怎么定义?
+\item 有没有 problem-specific knowledge 可加入 operator 或 heuristic?
+\end{itemize}
+\end{enumerate}
+
+\subsection{Beyond Classical Search 与 Evolutionary Search}
+
+\begin{enumerate}
+\item \textbf{Classical search 和 solution-space search 的区别?}\\
+Classical search 通常用 tree representation，每个节点是 partial decision/state；solution-space search 中每个元素就是 complete candidate solution。
+
+\item \textbf{Local search 的两个核心组件是什么?}\\
+Search operator：如何生成新候选解；evaluation/replacement criterion：如何决定是否接受新解。
+
+\item \textbf{Simulated Annealing 相比 hill climbing 解决什么问题?}\\
+Hill climbing 只接受更好解，容易卡在 local optimum；SA 在高温时可按概率接受更差解，温度降低后逐渐变贪心。
+
+\item \textbf{Tabu Search 的 key idea 是什么?}\\
+Incorporate memory：用 tabu list 避免短期内访问重复解或重复操作。挑战是如何定义 tabu list。
+
+\item \textbf{Bayesian Optimization 的 key idea 与限制?}\\
+Key idea：build a model to guess which solution is good。限制：模型构建不平凡，可能需要较多数据，通常更适合 low-dimensional problems。
+
+\item \textbf{为什么 population-based search 可能有益?}\\
+Population 同时维护多个 candidate solutions，相当于在寻找一个较好的 sampling distribution，有 smoothing effect，能降低单点搜索过早陷入局部最优的风险。
+\end{enumerate}
+
+\subsection{Machine Learning 与 Evaluation}
+
+\begin{enumerate}
+\item \textbf{What is learning in AI?}\\
+Given observations/data from environment, an agent improves its agent function。课程总结为：learning is search for hypothesis/functions that generalize well。
+
+\item \textbf{Machine learning 的四个 key questions?}\\
+\begin{itemize}
+\item Data 的 format 是什么? 即 data representation。
+\item Agent function/model 长什么样? 即 model representation。
+\item 如何衡量 improvement? 即 objective/evaluation function。
+\item 用什么 learning algorithm 找到好的 function?
+\end{itemize}
+总式：
+\[
+\text{Representation}+\text{Algorithm}+\text{Evaluation}=\text{Model}.
+\]
+
+\item \textbf{为什么 performance evaluation crucial?}\\
+因为模型和训练算法之外，用户真正关心的是部署环境中的表现。一个 ``accuracy 99\%, 5 seconds'' 的说法可能有三类风险：metric 不符合业务需求；数据只部分反映现实；运行硬件或部署环境不同。
+
+\item \textbf{选择 objective function 的两个原则?}\\
+第一，与 user requirements consistent；第二，最好有 existing easy-to-use algorithm 可以优化它。若目标和优化代理不一致，即使代理指标提升，真实任务也可能无改善。
+
+\item \textbf{为什么 generalization performance 是 random variable?}\\
+因为 train/test split、采样数据、随机初始化、训练过程都会影响估计结果。应通过 random split、cross-validation、bootstrap 多次评估，报告 average 和 standard deviation。
+
+\item \textbf{为什么 hyperparameter tuning 没有解析解?}\\
+每个 hyperparameter 的好坏都要训练模型并估计 generalization performance 才知道，所以本质上是 trial-and-error 或 black-box optimization。
+\end{enumerate}
+
+\subsection{SVM, Neural Network 与 Unsupervised Learning}
+
+\begin{enumerate}
+\item \textbf{为什么实际中常用 soft-margin SVM?}\\
+即使用 kernel trick，也很难保证训练数据完全 linearly separable；soft margin 允许 margin violation，用 $C$ 平衡 margin 和 training errors。
+
+\item \textbf{为什么早期 deep MLP 难训练?}\\
+PPT 提到多隐藏层 fully connected NN 很难训练，历史上常见问题包括优化困难、梯度传播问题、参数多导致过拟合。现代方法通常依赖更好的 activation、initialization、normalization、optimizer 和 architecture。
+
+\item \textbf{Unsupervised learning 和 supervised learning 最大区别?}\\
+二者都需要 representation、algorithm、evaluation；但 UL 没有明确 ground truth，evaluation/objective 更 subjective/vague，所以更容易 ill-defined。
+
+\item \textbf{为什么 clustering 是 ill-defined?}\\
+因为 ``similarity'' 和 ``cluster quality'' 没有唯一标准。不同 metric/objective 会得到不同分组；很多 clustering objective 的 solution space 很大，求全局最优困难。
+
+\item \textbf{PCA 和 LLE 的概念区别?}\\
+PCA 是 linear dimensionality reduction，寻找最大方差方向；LLE 是 nonlinear manifold learning，保持每个点由近邻线性重构的局部关系。
+\end{enumerate}
+
+\subsection{Logic, FOL, BN 与 KG}
+
+\begin{enumerate}
+\item \textbf{为什么 knowledge representation 对 AI 重要?}\\
+人类不只基于 instinct/program 行动，也会积累 knowledge，并通过 inference 从已知推出未知。AI agent 也需要 represent, store, exploit knowledge。
+
+\item \textbf{Logic 在知识表示中的作用?}\\
+Logic 是 formal language for representing knowledge。Inference 是从已有 sentence 推出新 sentence 的过程；model checking 和 theorem proving 是两类基本推理思想。
+
+\item \textbf{CSP 和 SAT 有什么关系?}\\
+CSP 的变量、domains、constraints 可以编码为 propositional variables 和 clauses，从而转化为 SAT/CNF 推理问题。直觉上，SAT 是 binary-domain CSP 的一种核心形式。
+
+\item \textbf{为什么需要 FOL?}\\
+Propositional logic 对对象、关系和量词表达不够自然；FOL 更接近自然语言，可用 objects、predicates、functions、quantifiers 表示结构化世界，KB 构建有时更方便。
+
+\item \textbf{为什么需要概率表示状态?}\\
+现实世界 partially observable，agent 很少精确知道自己处于哪个 state；因此要用 probability 表示 uncertainty，并结合 utility 做 rational decision。
+
+\item \textbf{What is a Bayesian Network?}\\
+BN 是 DAG：node 是 random variable，每个 node 带 CPT/conditional distribution，edge 表示 parent 对 child 的 direct influence。BN 用条件独立紧凑表示 joint distribution。
+
+\item \textbf{构建 BN 或 KB 的挑战是什么?}\\
+手工写 KB 很 tedious，甚至 unaffordable。可从 raw data 中学习：structural learning 学网络结构，parameter estimation 学 CPT 或概率分布参数。
+
+\item \textbf{为什么需要 Knowledge Graph?}\\
+完整逻辑 KB 很难写，也难表达 hidden knowledge。KG 缩小 knowledge 的边界，用 entities 和 relations 表示知识，更 practical，适合 RS、QA、IR 等应用。
+
+\item \textbf{KG 和 logic KB 的区别?}\\
+Logic KB 更 rigorous，适合严格推理；KG less rigorous but more practical，用 heterogeneous directed graph/RDF triples 存储实体关系，便于从文本和结构化数据中构建。
+
+\item \textbf{为什么 KG-based recommender 需要 side information?}\\
+核心数据是 user-item interactions，但 interaction sparse、cold-start 严重。KG 提供 item/entity side information，可和 interaction graph 融合成 mixed graph，帮助学习 user/item features 或 embeddings。
+\end{enumerate}
+
+\section{Genetic Algorithm 与 Fair Comparison}
+
+GA 流程：
+\begin{enumerate}
+\item Encode individual/chromosome。
+\item Initialize population。
+\item Compute fitness。
+\item Select parents。
+\item Crossover 产生 offspring。
+\item Mutation。
+\item Survivor selection。
+\item 达到收敛、代数或时间预算后停止。
+\end{enumerate}
+
+GA vs backpropagation 训练神经网络的公平比较：
+\begin{enumerate}
+\item 相同 dataset split。
+\item 相同 neural network architecture。
+\item 相同 preprocessing 和 input features。
+\item 相同 evaluation metric。
+\item 相同 compute 或 wall-clock budget。
+\item 两者都在 validation set 调参。
+\item 多 random seeds，报告 mean/std。
+\item untouched test set 只做最终一次评价。
+\end{enumerate}
+
+\ans{For GA, one individual is the flattened vector of all network weights. Fitness is validation accuracy or negative validation loss. Backprop trains the same architecture using SGD/Adam under the same budget.}
+
+\section{Reinforcement Learning}
+
+核心元素：
+\[
+s,a,r,\pi(a\mid s),\gamma,V(s),Q(s,a).
+\]
+Return:
+\[
+G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\cdots.
+\]
+Bellman optimality:
+\[
+V^*(s)=\max_a\sum_{s'}P(s'\mid s,a)
+\left[R(s,a,s')+\gamma V^*(s')\right].
+\]
+Q-learning update:
+\[
+Q(s,a)\leftarrow Q(s,a)+\alpha
+\left[r+\gamma\max_{a'}Q(s',a')-Q(s,a)\right].
+\]
+$\epsilon$-greedy:
+\[
+\begin{cases}
+\text{random action},&\epsilon\\
+\argmax_a Q(s,a),&1-\epsilon.
+\end{cases}
+\]
+
+\section{考前最后检查清单}
+
+\begin{multicols}{2}
+\begin{enumerate}
+\item 会按 tie-breaking 画 BFS/A* 搜索树。
+\item 会计算 $f(n)=g(n)+h(n)$。
+\item 会求 admissible 的边权 $c$ 范围。
+\item 会解释 local search、SA、tabu。
+\item 会填 alpha/beta 并标剪枝。
+\item 会跑 AC-3，写 domain 变化。
+\item 会把 $p\to\neg(p\lor q)$ 转成 $\neg p$。
+\item 会自然语言建模并转 CNF。
+\item 会 DPLL unit propagation。
+\item 会 FOL resolution 得 contradiction。
+\item 会写 perceptron update。
+\item 会推 logistic gradient。
+\item 会写 hard/soft-margin SVM。
+\item 会解释 kernel trick 和 $C$。
+\item 会用 smoothing 做 Naive Bayes。
+\item 会算 $P(Girl\mid Short)$。
+\item 会 exact inference 与 VE。
+\item 会 prior/rejection/LW/Gibbs。
+\item 会算 accuracy/precision/recall/F1。
+\item 会解释 ROC/AUC/threshold。
+\item 会 entropy/information gain。
+\item 会 K-means assignment/update。
+\item 会 PCA 与 LLE 流程。
+\item 会写 $R\approx PQ^T$。
+\item 会解释 KG triples/NER/RE/KGC。
+\item 会写 GA 公平比较方案。
+\item 会 Bellman 与 Q-learning。
+\end{enumerate}
+\end{multicols}
+
+\section*{来源说明}
+
+本讲义综合整理自 \texttt{AI Notes.md}、\texttt{ppts/AI Review(1).pdf}、\texttt{ppts/Exam Paper (3).pdf}、\texttt{ppts/Logic and Bayesian Questions(1).pdf}、\texttt{ppts/AI\_Lec06-Lec12}、Labs 1--11 以及 Projects 1--3 的报告与代码材料。
+
+\end{document}

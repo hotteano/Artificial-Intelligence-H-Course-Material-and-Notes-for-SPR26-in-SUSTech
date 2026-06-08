@@ -1,0 +1,508 @@
+Artificial Intelligence (CS303)
+  Lecture 2: Beyond Classical Search
+Hints for this lecture
+
+• “Classical” search: use a tree representation
+
+• “Beyond”: generalize to other types of representation
+
+
+
+
+                                                          1
+Outline of this lecture
+• More Representations
+
+• General Search Methods
+
+• More complex real-world search scenarios
+
+
+
+
+                                             2
+More representations
+• Route planning on Romania map again…
+
+• In lecture 1, we formulated the problem with tree representation.
+
+• Any different way to formulate it?
+                                                       Romania
+• In other words, what is a “state”?                     Map
+
+• Alternative: permutations of cities
+
+• Which one is better?
+
+
+                                                                      3
+More representations
+• As long as the state space is finite (finite set), tree representation can be
+  used to formulate any problem.
+
+
+• Any problem solved on modern computing hardware can be viewed as
+  having a finite state space.
+
+
+• In many cases, Search Tree is not the most appropriate representation.
+
+
+
+
+                                                                                  4
+More representations
+• Consider the ubiquitous optimization problems.
+
+
+
+
+                                                                            maximize f (x)
+ Transportation: Railway timetabling      Energy: Wind turbine design       subject to: gi (x) ≤ 0, i = 1...m
+                                                                                        h j (x) = 0, j = 1... p
+
+
+
+
+Architecture: Truss design (Birds nest)   Finance: Portfolio optimization                                5
+More representations
+• How to represent the positions of a set of truss?
+
+
+
+                            ???          maximize f (x)
+                                         subject to: gi (x) ≤ 0, i = 1...m
+                                                        h j (x) = 0, j = 1... p
+
+       Truss Design
+                               What is the mathematical formulation of these functions?
+
+
+                                                                                      6
+Direct Search in the Solution Space
+• When tackling an optimization problem, it is more natural to imaging
+ searching for a solution in the solution space.
+• Each element of the solution space is a complete solution.
+
+
+
+
+                                                                         7
+Direct Search in the Solution Space
+• Representations of a solution space can be roughly categorized as:
+   • Continuous
+   • Discrete
+      • Binary
+      • Integer
+      • Permutation
+      • …
+
+
+• Different representations may favor different search methods, but
+  most of them share a common framework.
+                                                                       8
+A General Framework for Search
+                                 tß0
+                    Generate an initial solution x(0)
+                     Evaluate the quality of x(0)
+      Search
+      operator
+                   Generate solution x’ based on x(t)
+                                                                Repeat
+
+
+                          Evaluate the quality of x’
+
+    Replacement
+      criterion
+                  Set x(t+1) as the better one of x’ and x(t)
+
+                                                                         9
+General Search Methods
+•   Typical Frameworks:
+    • Local Search
+    • Simulated Annealing
+    • Tabu Search
+    • Population-based search
+
+•   Two basic issues (differs over concrete search methods):
+    • search operator (how to generate a new candidate solution)
+    • evaluation criterion (or replacement strategy)
+
+
+                                                                   10
+Typical Search Operators
+•   A Search Operator generate a new solution based on previous ones.
+
+
+                               𝜙: x → x ! , ∀x, x′ ∈ 𝒳
+
+
+•   “Un-informed” Search Operators in the solution space: sampling
+    •   For a binary string: Flip 1 (or n) bit
+    •   For a permutation: Exchange the positions of two elements
+    •   For a continuous number/vector: sample a Gaussian distribution
+
+
+•   In the rest of this lecture, we take continuous case as an example.
+                                                                          11
+Greedy Local Search Framework
+•   A greedy-type search framework in the solution space
+    •   Given a predefined Local Search Operator
+    •   Iteratively generate new solutions
+    •   Always pick the best solution so far, sometimes also known as Hill Climbing.
+
+
+    Do while （halt condition is not satisfied）
+    •   Generate solution x’ based on x(t)
+                                                                        Greedy~
+    •   Evaluate the f (x’)                                          Hill Climbing~
+    •   If f(x’)>f(xi)，                                             Steepest Ascent
+    •   Then x(t+1) = x’，otherwise x(t+1) = x
+    •   i=i+1
+                 assume a maximization problem                                         12
+Greedy idea may fail
+•   On multimodal problems
+
+
+                            3
+                       Trapped in local optimum
+                            2
+                                                                           Optimum
+                            1
+                     f(x)
+
+
+
+                            0
+
+
+                            -1
+
+
+                            -2
+                            Initial
+                            -3
+                              0   500   1000   1500   2000   2500   3000
+                                                 x
+                                                                                     13
+Simulated Annealing
+
+
+
+
+  temperature from high to low
+  when high temperature, form the shape
+  when low temperature, polish the detail
+                                            14
+Simulated Annealing
+• Hill Climbing à Simulated Annealing
+                            Do while （halt condition is not satisfied）
+                            •   Generate solution x’ based on x(t)
+                            •   Evaluate the f (x’)
+  Replace this line with    •   If f(x’)>f(xi)，
+    a probability p         •   Then x(t+1) = x’，otherwise x(t+1) = x
+                            •   i=i+1
+
+                 $           &                  !#   # " "! ! < # " "!' !
+                 !
+               %=#       # " "! ! & # " "!' !
+                 !"#$%"&         $
+                                              ! !#   # " "! ! % # " "!' !
+                                                                            15
+Simulated Annealing
+• Generate an initial x(0)
+• Set the initial temperature T(0);
+• Do while (halt condition is not satisfied)
+   Get current temperature T(i);
+   Generate solution x’ based on x(i)
+   Calculate f(x’) and Df = f(x(i)) - f(x’)
+   If Df ＜0 (for maximization) ，then x(i+1)= x’
+   Otherwise, p = exp(- Df /T(i));
+        If c = random[0,1] < p, x(i+1)= x’;
+        Otherwise x(i+1)= x(i);
+   i=i+1
+   Update T(i);
+• End Do
+                                                  16
+Other “single-point” Search Framework
+•   Hill Climbing à Tabu Search
+    •   Key idea: Incorporate MEMORY. Don’t visit the sample candidate solution twice.
+
+    •   Challenge: How to define the Tabu list?
+
+
+•   Hill Climbing à Bayesian Optimization
+    •   Key idea: Build a model to ”guess” which solution is good.
+
+    •   Challenge:
+        •   model building is non-trivial
+
+        •   may need lots of data to build the model, limited to low-dimensional problem
+                                                                                           17
+Population-based Search
+•   Since we sample from a probability distribution, why 1 at a time?
+
+•   A naive approach: Local Beam Search
+
+
+
+
+                                                                        18
+Population-based Search
+• Conceptually, a search process that iteratively generates-and-tests a
+ population of solutions is similar to the biological evolution process.
+
+
+
+
+                                                                           19
+Population-based Search
+                                '                                                                          $
+                              �Xin
+                              c    Yao                                                                     3
+
+
+• Different PBS methods have different names, but more often than not,
+                                              What Is an Evolutionary Algorithm?
+ they are known as Evolutionary Algorithms.
+                                  (OK, you can open your eyes and wake up now.)
+                                    1. Generate the initial population P (0) at random, and set
+                                       i ← 0;
+                                    2. REPEAT
+                                         (a) Evaluate the fitness of each individual in P (i);
+                                     (b) Select parents from P (i) based on their fitness in P (i);
+                                         (c) Generate oﬀspring from the parents using crossover and
+                                             mutation to form P (i + 1);
+                                     (d) i ← i + 1;
+                                    3. UNTIL halting criteria are satisfied
+                                &                                                                          %
+                                                                                                      20
+Population-based Search: A Concrete Example
+• Set i=0; Population_size = N
+• Generate N initial solutions, X(0);
+• Do while (halt condition is not satisfied)
+   Evaluate the quality of the solutions in X(i); (% calculate f(x) for each solution)
+   Use the top k solutions in X(i) to build a Gaussian Distribution Pi
+   Sample another N according to Pi , as X(i+1)
+   i=i+1
+• End Do
+
+The example could be viewed as searching for a good probability distribution
+(parameters of the Probability Density Function), from which good solutions could be
+sampled.
+                                                                                         21
+Why “Population” could be Beneficial?
+
+•    Seeking a good distribution: maximize the following “objective function”
+
+
+
+
+                                         probability density function parameterized by 𝜃!
+
+
+
+• One advantage for such a transformation (and thus for using a population):
+    the original objective function is “smoothed”.
+
+
+
+                                                                                            22
+Why “Population” could be Beneficial?
+
+• The smoothing effect
+• Beneficial with appropriate hyper-parameters, e.g., variance of a Gaussian distribution
+
+
+
+
+                                                                                            23
+Making Population Even More Beneficial?
+
+• Suppose the algorithm has converged to some (global or local) optimum
+
+
+
+
+• If run the algorithm again, we hope the algorithm (i.e., the distribution corresponding to
+  the final population) converge to a different optimum (and thus a different PDF).
+
+
+
+                                                                     similarity of the two PDFs
+
+
+                                                                                                  24
+      '                                                                       $
+   Yao: Intro to Evolutionary Computation                                     7
+
+
+
+
+More Examples
+           How   Evolutionary
+              ofDoes a Simple EA Algorithms
+                                 Work
+
+         Let’s use the simple EA to maximise the function f (x) = x2 with x
+         in the integer interval [0, 31], i.e., x = 0, 1, · · · , 30, 31.
+         The first step of EA applications is encoding (i.e., the
+         representation of chromosomes). We adopt binary representation
+         for integers. Five bits are used to represent integers up to 31.
+         Assume that the population size is 4.
+          1. Generate initial population at random, e.g., 01101, 11000,
+             01000, 10011. These are chromosomes or genotypes.
+          2. Calculate fitness value for each individual.
+            (a) Decode the individual into an integer (called phenotypes),
+
+                        01101 ! 13, 11000 ! 24, 01000 ! 8, 10011 ! 19;
+      &                                                                       %25
+    Examples of Evolutionary Algorithms
+More'
+  Yao: Intro to Evolutionary Computation
+
+                                                                              $
+                                                                              8
+
+
+
+           (b) Evaluate the fitness according to f (x) = x2 ,
+                             13 ! 169, 24 ! 576, 8 ! 64, 19 ! 361.
+
+         3. Select two individuals for crossover based on their fitness. If
+            roulette-wheel selection is used, then
+                                                 fi
+                                           pi = P       .
+                                                 j fj
+
+            Two oﬀspring are often produced and added to an intermediate
+            population. Repeat this step until the intermediate population
+            is filled. In our example,
+                    p1 (13) = 169/1170 = 0.14     p2 (24) = 576/1170 = 0.49
+                     p3 (8) = 64/1170 = 0.06      p4 (19) = 361.1170 = 0.31
+      Assume we have crossover(01101, 11000) and
+      crossover(10011, 11000). We may obtain oﬀspring 0110 0 and
+     &                                                                        %
+                                                                                  26
+ '                                                                           $
+Yao: Intro to Evolutionary Computation                                       9
+
+More Examples of Evolutionary Algorithms
+          1100 1 from crossover(01101, 11000) by choosing a random
+          crossover point at 4, and obtain 10 000 and 11 011 from
+          crossover(10011, 11000) by choosing a random crossover point
+          at 2. Now the intermediate population is
+
+                                01100, 11001, 10000, 11011
+
+       4. Apply mutation to individuals in the intermediate population
+          with a small probability. A simple mutation is bit-flipping. For
+          example, we may have the following new population P (1) after
+          random mutation:
+
+                                01101, 11001, 00000, 11011
+
+       5. Goto Step 2 if not stop.
+
+   &                                                                         %
+                                                                                 27
+More Examples of Evolutionary Algorithms
+
+
+
+
+                                           28
+Some applications of EAs
+
+
+
+
+                           29
+Some applications of EAs
+
+
+
+
+                           30
+Some applications of EAs
+
+
+
+
+                           31
+ Extended Information – Constrained Optimization
+  Most realistic problems are subject to constraints
+  • f(x): the objective function
+  • gi(x): the inequality constraints
+  • hj(x): the equality constraints
+  But they could be transformed into unconstrained problems.
+
+
+minimize f (x)
+subject to: gi (x) ≤ 0, i = 1...m
+             h j (x) = 0, j = 1... p
+
+
+                                                               32
+Extended Information – Multi-Objective Optimization
+• Multi-objective optimization problem:
+                       minimize F(X) = ( f1 (x),..., fm (x))
+• The objective functions may be conflicting or incommensurable.
+• Instead of a single optimal solution, a set of the best trade-off solutions (Pareto
+  optimal solutions) are sought.
+
+
+
+
+                                                                                        33
+Extended Information – Multi-Objective Optimization
+Multi-objective optimization itself involves multiple criteria.
+Intuitively, we want a set of solutions that is good in terms of:
+• Convergence (to the Pareto front)
+• Spread (along the Pareto front)
+
+
+You can also transform them into single-objective problems, or
+Use population-based search
+• If interested, check the Non-dominated Sorting Genetic Algorithm II paper published in 2002 to start.
+• Or consult with Prof. Hisao Ishibuchi.
+
+
+                                                                                                   34
+Remarks
+• All search methods talked in this lecture are general-purpose search frameworks (like A*),
+  rather than search algorithms. Each search frameworks encompasses many concrete
+  instantiations (algorithms).
+
+• When addressing a specific problem
+    • You can use the off-the-shelf version, or
+
+    • heuristics derived from domain knowledge could be incorporated in forms of search operators
+      to obtain better performance.
+
+
+
+
+                                                                                               35
+Remarks
+• A quick google search would direct you to some of the off-the-shelf versions, e.g.,
+    • Greedy Algorithm (hill-climbing for 0-1 optimization problem)
+
+    • Genetic Algorithm (mostly for 0-1 problem)
+
+    • Bayesian Optimization Algorithm (for continuous problem)
+
+    • Covariance-Matrix Adaptation Evolution Strategies (for continuous problem)
+
+
+
+
+                                                                                        36
+To be continued
+
+
+
+
+                  37
+

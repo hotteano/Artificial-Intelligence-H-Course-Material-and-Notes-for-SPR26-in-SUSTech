@@ -1,0 +1,248 @@
+                              Artificial Intelligence(H)
+                                           Mock Final Exam
+
+
+                          Southern University of Science and Technology
+
+                                                Spring 2026
+
+
+                Time:    120 minutes
+                Total:   100 points
+         Instructions:   Show necessary derivations. For search and pruning questions, follow
+                         the specified order.
+
+
+This mock paper follows the style of the reconstructed final exam. All graphs, trees, and datasets are
+provided in text form so that the paper is self-contained.
+
+
+
+Problem 1: Search                                                                             [15 pts]
+
+Consider the following undirected graph. Every edge has uniform cost c > 0.
+
+
+                                Node Neighbors in alphabetical order
+                                  A     B, C, D
+                                  B     A, E, F
+                                  C     A, D, F, G
+                                  D     A, C, H
+                                  E     B, I
+                                  F     B, C, G, I
+                                  G     C, F, H, I
+                                  H     D, G
+                                   I    E, F, G
+
+The start node is A and the goal node is G. If there are multiple nodes to expand, always use alphabetical
+order.
+
+(a) Draw the breadth-first search tree until the goal is found. State the expansion order.        [5 pts]
+
+
+
+
+                                                     1
+Artificial Intelligence(H)                                                                Mock Final Exam
+
+
+(b) Now let c = 1 and use the following heuristic function:
+
+                                       n    A B C D E F                 G H I
+                                     h(n)   4   3   2       3   3   1   0     2    1
+
+    Draw the A* search tree until G is selected for expansion. For each generated node, write g(n),
+    h(n), and f (n) = g(n) + h(n).                                                                 [7 pts]
+
+(c) For the same heuristic table, find the range of c that guarantees admissibility. Show your calculation.
+    [3 pts]
+
+
+
+Problem 2: Minimax and Alpha-Beta Pruning                                                      [13 pts]
+
+Consider the following game tree. The root is a MAX node. Children are visited from left to right.
+
+
+                                Root child Second-level child Leaf utilities
+                                 A (MIN)        A1 (MAX)                3, 12
+                                                A2 (MAX)                    8, 2
+                                                A3 (MAX)                    4, 6
+                                 B (MIN)        B1 (MAX)                14, 5
+                                                B2 (MAX)                    2, 1
+                                                B3 (MAX)                    7, 3
+                                 C (MIN)        C1 (MAX)                    6, 9
+                                                C2 (MAX)                    4, 0
+                                                C3 (MAX)                10, 11
+
+(a) Compute the minimax value of every internal node.                                              [4 pts]
+
+(b) Run alpha-beta pruning and write the final α and β values for each visited internal node. If a node
+    is pruned, write NA.                                                                           [5 pts]
+
+(c) Mark which branches are pruned.                                                                [2 pts]
+
+(d) Mark the final path chosen by MAX.                                                             [2 pts]
+
+
+
+Problem 3: CSP and AC-3                                                                        [12 pts]
+
+(a) State the worst-case time complexity of AC-3 and briefly explain why.                          [4 pts]
+
+(b) Consider a CSP with variables X, Y, Z:
+
+                             DX = DY = DZ = {1, 2, 3, 4},           C = {X < Y, Y < Z}.
+
+    Use AC-3 to enforce arc consistency. Show each domain pruning step and the final domains.           [8
+    pts]
+
+                                                        2
+Artificial Intelligence(H)                                                                   Mock Final Exam
+
+
+Problem 4: Logic and CNF                                                                            [12 pts]
+
+(a) Convert the following propositional formula into CNF:
+
+                                                (p ∧ q) → ¬(p ↔ r).
+
+    Simplify the result as much as possible.                                                          [5 pts]
+
+(b) Four robots R1 , R2 , R3 , R4 may be selected for a mission. Let xi mean robot Ri is selected. Represent
+    the following rules in propositional logic and convert them into CNF.                             [5 pts]
+
+     (i) R1 and R3 must be selected together.
+
+    (ii) Exactly one of R2 and R4 is selected.
+
+   (iii) If R2 is selected, then R1 must also be selected.
+
+(c) Suppose additionally x2 is true. Use unit propagation to derive which of x1 , x3 , x4 must be true or
+    false.                                                                                            [2 pts]
+
+
+
+Problem 5: Perceptron and Logistic Regression                                                       [10 pts]
+
+(a) Write the perceptron prediction rule and weight update rule for labels y ∈ {−1, +1}.              [3 pts]
+
+(b) Given w = (−1, 1)T , b = 0, learning rate η = 0.5, and one training example x = (2, 1)T , y = +1,
+    perform one perceptron update if needed.                                                          [3 pts]
+
+(c) Derive the gradient descent update for binary logistic regression with cross-entropy loss:
+
+                                  1 ∑
+                                     m
+                    J(w, b) = −       [yi log hi + (1 − yi ) log(1 − hi )] ,   hi = σ(wT xi + b).
+                                  m
+                                     i=1
+
+                                                                                                      [4 pts]
+
+
+
+Problem 6: SVM                                                                                      [10 pts]
+
+Consider two one-dimensional data points (x1 , y1 ) = (2, +1) and (x2 , y2 ) = (−2, −1).
+
+(a) Write the primal objective function and constraints of the soft-margin SVM. Use C as the penalty
+    parameter.                                                                                        [4 pts]
+
+(b) For these two points, write the constraints explicitly in terms of w, b, ξ1 , ξ2 .                [2 pts]
+
+(c) Suppose the optimal w is given by w∗ = min(C, 12 ). Find the possible optimal value(s) of b for the
+    cases C ≥ 12 and 0 < C < 12 .                                                                     [4 pts]
+
+
+
+Problem 7: Naive Bayes                                                                              [12 pts]
+
+The following dataset has four binary features and one binary label.
+
+                                                        3
+Artificial Intelligence(H)                                                                 Mock Final Exam
+
+
+
+
+                                        ID X1 X2 X3 X4 Y
+                                        1    1     0       1    0   +
+                                        2    1     1       1    0   +
+                                        3    0     1       0    1   −
+                                        4    0     0       0    1   −
+                                        5    1     0       0    0   +
+                                        6    0     1       1    1   −
+                                        7    1     1       0    0   +
+                                        8    0     0       1    1   −
+
+Use Bernoulli Naive Bayes with Laplace smoothing α = 1.
+
+(a) Compute the class priors P (Y = +) and P (Y = −).                                               [2 pts]
+
+(b) Compute all conditional probabilities needed for prediction, i.e. P (Xj = 1 | Y ) and P (Xj = 0 | Y )
+    for all j.                                                                                      [5 pts]
+
+(c) Predict the label of x = (1, 0, 1, 0). Show both class scores.                                  [3 pts]
+
+(d) If the Naive Bayes independence assumption is not used, how many feature-label combinations must
+    be considered for four binary features and one binary label? How many independent parameters
+    does the full joint distribution over the five binary variables have?                           [2 pts]
+
+
+
+Problem 8: Bayesian Networks and Sampling                                                       [14 pts]
+
+Suppose A → B → C → D is a Bayesian network with:
+                                    1                  1                    3
+                             P (A) = ,      P (B | A) = ,       P (B | ¬A) = ,
+                                    4                  5                    4
+                            1                  1                      1                   7
+                 P (C | B) = ,     P (C | ¬B) = ,          P (D | C) = ,      P (D | ¬C) = .
+                            2                  3                      6                   8
+(a) Factorize the joint distribution P (A, B, C, D) according to the network.                       [2 pts]
+
+(b) Given these prior samples:
+                                     (A, B, ¬C, ¬D),        (A, ¬B, C, ¬D),
+                                     (¬A, B, C, ¬D),        (¬A, ¬B, C, ¬D),
+                                     (A, ¬B, ¬C, D),        (A, B, C, ¬D),
+                                     (¬A, B, ¬C, D),        (¬A, ¬B, C, ¬D),
+    estimate P (C) by prior sampling.                                                               [2 pts]
+
+(c) Use rejection sampling on the same samples to estimate P (C | A, ¬D). State which samples are
+    kept.                                                                                           [3 pts]
+
+
+
+                                                       4
+Artificial Intelligence(H)                                                             Mock Final Exam
+
+
+(d) For likelihood weighting to estimate P (¬A | B, ¬D), compute the weight of each sample:
+
+                       ¬A, B, C, ¬D;   A, B, C, ¬D;       A, B, ¬C, ¬D;   ¬A, B, ¬C, ¬D.
+
+                                                                                                [4 pts]
+
+(e) From the four weighted samples in part (d), estimate P (¬A | B, ¬D).                        [3 pts]
+
+
+
+Problem 9: Genetic Algorithm and Course Projects                                            [12 pts]
+
+(a) Suppose we evolve the weights of a neural network using a genetic algorithm instead of backpropa-
+    gation. Describe how to set up a fair experiment comparing these two training methods.           [5
+    pts]
+
+(b) In Project 1, the objective of information exposure maximization can be estimated by Monte Carlo
+    simulation. Explain what the state/individual, fitness function, and stopping criterion could be for
+    a GA-based solver.                                                                          [4 pts]
+
+(c) In Project 3, a recommender system is evaluated by AUC and nDCG@5. Briefly explain what each
+    metric measures and why a model may improve one but not the other.                          [3 pts]
+
+
+
+
+                                                      5
+

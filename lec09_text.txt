@@ -1,0 +1,231 @@
+Artificial Intelligence (CS303)
+     Lecture 9: Logical Agents
+
+
+
+
+                                  0
+Hints for this lecture
+
+• Human not only act based on instinct (gene? Program?), but also act
+ based on knowledge.
+
+• Represent, store, and exploit knowledge should also be important (or
+ at least useful) for AI.
+
+
+
+
+                                                                     1
+Outline of this lecture
+
+• Knowledge-based Agents
+
+• Represent Knowledge with Logic
+
+• (Propositional) Logic
+
+• Inference with Propositional Logic
+
+
+
+
+                                       2
+I. Knowledge-based Agents
+
+
+
+
+                            3
+Knowledge is important
+• We (human) perceive the world, accumulate our knowledge, and act
+  based on our perception and knowledge.
+• Human can derive what we don’t know from knowledge through inference.
+
+
+
+
+                                                                          4
+But what is knowledge?
+• Human gain knowledge from experience.
+
+• Knowledge is something abstract.
+
+• A neural network trained with data fulfills the above two conditions, but does
+ not fit our intuition about knowledge.
+   • We prefer knowledge to be represented/stored/transferred/...through language.
+
+• A “language” to represent knowledge should be defined first.
+   • The language should be understandable by human.
+
+                                                                                     5
+II. Represent Knowledge with Logic
+
+
+
+
+                                     6
+Sentences
+
+
+
+
+     Logic is a formal language for representing knowledge
+                                                             7
+How to inference?
+
+
+
+
+                    8
+How to inference?
+
+
+
+
+                    9
+How to inference?
+Inference: the procedure of deriving a sentence from another sentence
+
+Model Checking: A basic (and general) idea to inference
+
+
+
+
+                                                                        10
+Propositional Logic: Syntax
+
+
+
+
+                              11
+Propositional Logic: Semantics
+
+
+
+
+                                 12
+Example for the Wumpus World
+
+
+
+•   Examples of sentences
+
+
+
+
+•   Can we infer that “position [3, 1] is safe (⍺)” in the Wumpus world given a KB?
+                                                                                      13
+Inference by Enumeration
+
+
+
+
+                           14
+Inference by Enumeration
+
+
+
+
+                           15
+Conjunctive Normal Form (CNF)
+• To make inference more efficient/effective, we need more
+• Any sentence of propositional logic is equivalent to a conjunction of clauses.
+
+
+
+
+                                                                             16
+Conversion to CNF
+
+
+                    What is the relationship
+                    between CSP and SAT?
+
+
+
+
+                                               17
+Satisfiability Problem
+• Propositional model checking could be done by solving a satisfiability problem.
+   • Put the KB and ASK into CNF, and solve the SAT problem.
+
+
+
+
+                                                       SAT: (Boolean) Satisfiability Problem
+
+                                                                                          18
+Backtracking Algorithm for SAT (DPLL)
+• A search algorithm for SAT.
+
+• Similar to Backtracking for CSP, but using different problem-dependent
+ information/heuristics, such as
+   • Early Termination
+
+   • Pure symbol heuristic
+
+   • Unit clause heuristic
+
+
+
+
+                                                                           19
+Backtracking Algorithm for SAT (DPLL)
+
+
+
+
+                                        20
+Inference by Theorem Proving
+
+
+
+
+                               21
+Inference by Theorem Proving
+• Apply inference rules to generate new sentences based on old ones (i.e.,
+  without searching in the model space).
+
+• Inference rules works like search operators.
+
+• Example: Resolution algorithm
+   • Convert the sentence to “ASK” (or to proof) into CNF.
+   • Use Resolution rules as the inference rule.
+
+
+
+
+                                                                             22
+Inference by Theorem Proving
+
+          An example of resolution algorithm
+
+
+
+
+                                               23
+    Wumpus Again
+Before Playing
+• Write KB in the form of propositional logic
+• Transform the prior knowledge into CNF
+During Playing
+• Inference based on the KB
+     •   Formulate a query (e.g., P1, 2 is true) in CNF
+     •   Combine the query and the KB as a sentence in CNF, leading to a SAT problem.
+     •   Use a heuristic search algorithm (e.g., PDLL) to solve the Boolean SAT problem.
+     •   If the SAT is satisfiable, then the query is false.
+     •   Otherwise, it is true.
+     •   Repeat
+•   Make decisions based on the results of inference
+•   Action (move to a new place)
+•   Update the KB with the newly acquired knowledge (e.g., P2,1 is false)
+•   Repeat
+                                                                                           24
+To be continued
+
+
+
+
+                  25
+

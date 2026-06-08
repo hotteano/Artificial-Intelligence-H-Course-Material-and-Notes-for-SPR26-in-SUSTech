@@ -1,0 +1,458 @@
+Artificial Intelligence (CS311)
+      Lecture 1: AI as Search
+Outline of This Lecture
+
+• What is search
+
+• From searching to search tree
+
+• Uninformed Search Methods
+
+• Heuristic (informed) Search
+
+• Further Studies on Heuristics
+
+                                  1
+What is Search?
+• Search is ubiquitous (our thought process can usually be viewed as a search process).
+
+   • To find a satisfactory (user-defined) option from many options
+
+
+
+
+          Play Klotski                                    Design a fancy car
+                                                                                          2
+Technical Question
+• In general, how could an agent find the satisfactory option？
+
+    • Enumerate and compare, sometimes fine, but in many cases too costly
+
+    • Any smarter approach: don’t enumerate
+
+        • to test which options?àneed a better organized search process
+
+
+
+                                      Traveling Salesman Problem: find the shortest path
+                                      from NY to visit all states of USA and back to NY
+                                      • No. of options = 50!
+
+                                                                                           3
+Search in A Tree
+• Search Tree: A universal representation to organize the search process
+
+
+
+
+                                                                           4
+Search in A Tree
+• Search methods are defined by picking the order of node expansion.
+   • aim to identify the ‘best’ solution.
+
+   • differ in how they explore the space, i.e., how they choose the node to expand NEXT.
+
+
+
+
+                                                                                            5
+Un-informed Search Methods
+• Use only the information available in the problem definition.
+• Use NO problem-specific knowledge.
+
+
+Ø Breadth-first search (BFS)
+Ø Uniform-cost search (UCS)
+Ø Depth-first search (DFS)
+Ø Depth-limited search (DLS)
+Ø Iterative deepening search (IDS)
+Ø Bidirectional search
+
+                                                                  6
+Breadth-First Search (BFS)
+• Expand shallowest unexpected node.
+• Implementation: a FIFO queue.
+
+
+
+
+                                       7
+Uniform-Cost Search (UCS)
+• The costs in the search tree may be different.
+• Expand the cheapest unexpanded node.
+• Implementation: a queue ordered by path cost, lowest first.
+• Task: from Sibiu to Bucharest.
+   • [0] {[Sibiu, 0]}
+   • [1] {[SibiuàRimnicu, 80]; [SibiuàFagaras, 99]}
+   • [2] {[SibiuàRimnicuàPitesti, 177]; [SibiuàFagaras, 99]}
+   • [3] {[SibiuàRimnicuàPitesti, 177];
+     [SibiuàFagarasàBucharest, 310]}
+   • [4] {[SibiuàRimnicuàPitestiàBucharest, 278];
+     [SibiuàFagarasàBucharest, 310]}                            8
+Depth-first Search (DFS)
+
+• Expand deepest unexpanded node.
+
+• Implementation: LIFO stack.
+• Task: Search from A to M.
+
+• Note: Once a node is expanded, it is
+ removed from memory as soon as all its
+ children are explored.
+
+
+                                          9
+Depth-Limited Search (DLS)
+
+• DFS with depth limit 𝑙: nodes at depth 𝑙 have no successors.
+   • Limit 𝑙 is defined based on domain knowledge.
+      • e.g. a traveller problem with 20 cities à 𝑙 < 20.
+
+   • DLS is the variant of DFS.
+
+
+
+• DLS overcomes the failure of DFS in infinite-depth space.
+
+
+                                                                 10
+Iterative Deepening Search (IDS)
+• Apply DLS with increasing limits.
+• Combine the benefits of BFS and DFS.
+
+
+
+
+                                         11
+Iterative Deepening Search (IDS)
+• Apply DLS with increasing limits.
+• Combine the benefits of BFS and DFS.
+
+
+
+
+                                         12
+Iterative Deepening Search (IDS)
+• Apply DLS with increasing limits.
+• Combine the benefits of BFS and DFS.
+
+
+
+
+                                         13
+Iterative Deepening Search (IDS)
+• Apply DLS with increasing limits.
+• Combine the benefits of BFS and DFS.
+
+
+
+
+                                         14
+Bidirectional Search
+• Search from both directions simultaneously.
+   • Replace single search tree with two smaller sub trees.
+
+   • Forward tree: forward search from source to goal.
+
+   • Backward tree: backward search from goal to source.
+
+• Disadvantage: Not always applicable
+   • Reversible actions?
+
+   • Explicitly stated goal state?
+
+
+                                                              15
+   What is A Good Search Method?
+• Completeness:   Does it always find a solution (a satisfactory option) if it exists?
+
+• Optimality:     Does it always find the least-cost solution?
+
+• Time complexity: # nodes generated/expanded.
+
+• Space complexity: maximum #nodes in memory.
+
+
+
+
+                                                                                         16
+What is A Good Search Method?
+In general, time and space complexity depend on:
+
+• 𝑏 – maximum # successors of any node in search tree.
+
+• 𝑑 – depth of the least-cost solution.
+
+• 𝑚 – maximum length of any path in the state space.
+
+
+
+
+                                                         17
+Un-informed Search Methods
+     Generally, not efficient, not that intelligent
+
+PF Metric    Breadth-first Uniform-cost       Depth-first   Depth-         Iterative      Di-
+             Search        Search             Search        limited        Deepening      directional
+                                                            Search                        Search
+Complete? Yes*,             Yes*,             No,           No.            Yes            Yes*,
+          if 𝑏 is finite.   if step costs≥    infinite      (Eps. 𝑙 < 𝑑)                  if BFS used
+                            𝜖.                loops can                                   for both
+                                              occur.                                      search.
+Optimal?     Yes*,           Yes              No,           No             Yes*,          Yes*,
+             if costs on the                                               if costs on    if BFS is used
+             edge are                                                      the edge are   & paths have
+             non-                                                          non-           uniform cost.
+             negative.                                                     negative.
+                                      ∗
+Time?           𝑂(𝑏 !"# )     𝑂(𝑏#"⌊% /'⌋ )      𝑂(𝑏 ) )         𝑂(𝑏 * )      𝑂(𝑏 ! )       𝑂(𝑏 !/+ )
+                                      ∗
+Space?          𝑂(𝑏 !"# )     𝑂(𝑏#"⌊% /'⌋ )      𝑂(𝑏𝑚)           𝑂(𝑏𝑙)        𝑂(𝑏𝑑)         𝑂(𝑏 !/+ )
+                                                                                                           18
+From Basic Search to Heuristic Search
+• Uninformed search uses NO domain (problem-specific) knowledge.
+
+
+
+• Which node to expand is decided arbitrarily (sometimes randomly).
+
+
+
+• Heuristic search uses domain knowledge.
+   • Heuristics: which part of the search space to explore? ⇒ help direct the search.
+
+
+
+                                                                                        19
+Heuristic Search
+• How to make use of domain knowledge?
+
+   • Define an evaluation function 𝑓(𝑥) at node 𝑥.
+
+   • node 𝑥 with the lowest 𝑓(𝑥) is expanded first
+
+• Define a good 𝑓 endows with some intelligence è A little AI now.
+
+
+
+
+                                                                     20
+How to Design the Evaluation Function?
+• Critical! But depends on your own...
+
+• Basically, introduce a heuristic function 𝑓(𝑥) to estimate the cheapest cost
+ from 𝑥 to the goal state.
+   (1) 𝑓 𝑥 = 0 if 𝑥 is the goal node.
+   (2) nonnegative.
+   (3) problem-specific.
+• Interpretation: Expand the node that seems the best
+   • a generalization of UCS.
+
+                                                                                 21
+A not-so-good illustration
+
+
+                                                                       𝒇 𝒙 = 𝒉𝑺𝑳𝑫 𝒙
+
+
+
+
+                                                                                      22
+       Example: ℎ/01 𝑥 = straight-line distance from node 𝑥 to goal.
+A not-so-good illustration
+
+
+
+
+                             23
+A not-so-good illustration
+
+
+
+
+                             24
+A not-so-good illustration
+
+
+
+
+                             25
+A not-so-good illustration
+
+
+
+
+                             26
+PF Metrics
+
+
+• Complete? Yes in finite space with repeated-state checking.
+
+• Optimal?   No. (due to the bad heuristic function)
+
+• Time?      𝑂(𝑏 1 ), but a good heuristic can give drastic improvement.
+
+• Space?     𝑂(𝑏 1 ), keep all nodes in memory.
+
+
+
+                                                                           27
+A* Search
+
+• Expand the node 𝑛 that has the minimal 𝑓 𝑥 = ℎ 𝑥 + 𝑔 𝑥
+
+  • 𝑔(𝑥): cost so far to reach 𝑥.
+
+     • avoid expanding paths that are already expensive.
+
+  • ℎ(𝑥): estimated cost to goal from 𝑥.
+
+  • 𝑓 𝑥 : estimated total cost of path through 𝑥 to goal.
+
+
+
+                                                            28
+A*: PF Metrics
+
+• Complete? Yes.
+
+• Optimal? Yes*, if ℎ is admissible.
+
+• Time? 𝑂(𝑏 " ).
+
+• Space? 𝑂(𝑏 " ), keep every node in memory.
+
+
+
+
+                                               29
+Admissible Heuristic
+• Heuristic function ℎ is admissible if:
+
+               ∀𝑥 → ℎ 𝑥 ≤ ℎ∗ 𝑥 ,                  ℎ∗ (𝑥): the true cost from 𝑥 to goal.
+• A* with ℎ is optimal if ℎ is admissible.
+Notation: 𝑆 – start, 𝐺 – goal, 𝑥 – a node on optimal path, 𝑥′ – a non-optimal goal, 𝑐 ∗ – cost of the optimal path.
+
+[Proof] A* is always finds the optimal path ⇔ A* always pick 𝑥 over 𝑥 3 ⇔ 𝑓 𝑥 < 𝑓(𝑥′).
+
+Known: ℎ is admissible ⇒ ℎ 𝑥 < 𝑐 ∗ (𝑥, 𝐺). (% 𝐺 is a goal state)
+
+① 𝑓 𝑥 3 = 𝑔 𝑥 3 + ℎ 𝑥 3 = 𝑔 𝑥 3 + 0 > 𝑐 ∗ . (% 𝑥′ is the goal node & 𝑐 ∗ the smallest cost)
+
+② 𝑓 𝑥 = 𝑔 𝑥 + ℎ 𝑥 < 𝑔 𝑥 + 𝑐 ∗ 𝑥, 𝐺 = 𝑐 ∗ 𝑆, 𝑥 + 𝑐 ∗ 𝑥, 𝐺 = 𝑐 ∗ .
+
+Conclusion: combine ① &② ⇒ 𝑓 𝑥 < 𝑓(𝑥 3 ) □
+                                                                                                                30
+Admissible Heuristic: Examples
+• Route Planning: ℎ?@A 𝑛 : Admissible, since no solution path will ever
+ shorter than straight-line connection.
+
+• Eight-puzzle: ℎ1BC 𝑛 = #misplaced titles ∈ 0,8 : Admissible.
+
+
+
+
+                                                                          31
+Search Efficiency of Admissible Heuristic
+• In general, an A* with an admissible heuristic
+   • may expands all nodes with 𝑓 𝑥   ≤ 𝑐 ∗ (already a reduction compared to enumeration)
+   • output the optimal solution.
+
+• Different heuristic functions could lead to huge difference in efficiency.
+
+
+
+
+                                                        Data are averaged over 100 instances of
+                                                        the 8-puzzle problem.
+                                                        See Fig. 3.29 of the AIAMA book.
+                                                                                                  32
+Search Efficiency of Admissible Heuristic
+• For admissible ℎD and ℎE, if ℎE 𝑥 ≥ ℎD 𝑥 , ∀𝑥, then ℎE dominates ℎD and is
+  more efficient for search.
+    • The closer of the estimated cost to the true cost, the less nodes will be tested.
+
+
+
+
+• Two extreme examples
+(1) The trivial ℎ" 𝑥 = 0: No help for searching ⇒ Not efficient.
+
+(2) The perfect ℎ∗ 𝑥 = the true cost from 𝑥 to the goal: lead directly to the best path
+
+
+
+                                                                                          33
+How to Design Admissible Heuristics
+Consider relaxed problems
+For eight puzzle:
+
+• Rule: A tile can only move to the adjacent empty square.
+
+• Relaxed rules:
+    • R1: A tile can move anywhere ⇒ ℎ!"# 𝑛 = #(misplaced titles).
+    • R2: A tile can move one step in any direction regardless of an occupied neighbour ⇒
+      ℎ$#%& 𝑛 = #(1-step move) to reach goal.
+    Ø ℎ!"# and ℎ$#%& are admissible.
+
+• Note: optimal solutions with R1, R2 are easier to find.
+
+
+                                                                                            34
+How to Design Admissible Heuristics
+Consider sub-problems
+For eight puzzle:
+
+• Subproblem: See Fig.1.
+
+    • Task: get tiles 1, 2, 3 and 4 into their correct positions.
+
+    • Relaxation: move them disregard the other tiles.
+
+• Theory: cost*(subproblem)<cost*(8-puzzle).
+
+
+
+
+                                                                    A sub-problem of 8-puzzle.
+                                                                                                 35
+Summary of Heuristic Search
+• We can obtain INTELLIGENCE through enumeration, if cost is not a problem.
+
+• Heuristic search is needed because cost IS an issue
+   • Instead of enumerate, try a part of all possibilities/options.
+
+   • We need some way to “generate” solutions to try since it is usually impossible to store all
+     options in advance.
+
+   • Tree structure is a natural choice if a problem could be formulated as a multi-step decision
+     making problem.
+
+
+
+
+                                                                                                    36
+Summary of Heuristic Search
+• Leverage on problem-specific knowledge to introduce search biases into a tree search
+  process, to more efficiently obtain a desired solution (than un-informed search).
+
+• Search bias: among many options, which to test in the next step?
+
+• Completeness and Optimality is less emphasized in practice than in our lectures, for:
+    • Very difficult (if not impossible) to design a good admissible heuristic.
+
+    • For many problems, optimality could NOT be guaranteed with affordable time complexity.
+
+
+
+                                      The Christofides‘ algorithm has an approximation ratio of 3/2 and
+                                 time complexity of O 𝑛!log(𝑛) for the metric Traveling Salesman Problem.
+
+                                                                                                            37
+To be continued
+
+
+
+
+                  37
+
