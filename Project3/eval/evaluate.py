@@ -1,4 +1,6 @@
 import logging
+import os
+import sys
 import time
 from collections import defaultdict
 from copy import deepcopy
@@ -9,6 +11,8 @@ import torch
 from pytorch_lightning import seed_everything
 from sklearn.metrics import roc_auc_score
 
+# Allow running directly from eval/ without setting PYTHONPATH manually
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from reference_submit.kgrs import KGRS
 
 
@@ -69,8 +73,9 @@ def split_by_user(records, train_ratio=0.8, seed=1088):
 
 
 def load_data():
-    full_pos = np.load("../data/train_pos.npy")
-    full_neg = np.load("../data/train_neg.npy")
+    data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
+    full_pos = np.load(os.path.join(data_dir, "train_pos.npy"))
+    full_neg = np.load(os.path.join(data_dir, "train_neg.npy"))
     train_pos, test_pos = split_by_user(full_pos, train_ratio=0.8, seed=1088)
     train_neg, test_neg = split_by_user(full_neg, train_ratio=0.8, seed=1089)
     return train_pos, train_neg, test_pos, test_neg
@@ -102,9 +107,10 @@ def evaluate():
     auc, ndcg5 = 0, 0
     init_timeout, train_timeout, ctr_timeout, topk_timeout = False, False, False, False
     start_time, init_time, train_time, ctr_time, topk_time = time.time(), 0, 0, 0, 0
+    kg_path = os.path.join(os.path.dirname(__file__), "..", "data", "kg.txt")
     kgrs = KGRS(train_pos=deepcopy(train_pos),
                 train_neg=deepcopy(train_neg),
-                kg_lines=open('../data/kg.txt', encoding='utf-8').readlines())
+                kg_lines=open(kg_path, encoding='utf-8').readlines())
     init_time = time.time() - start_time
 
     kgrs.training()
