@@ -1,5 +1,5 @@
+"""Tune embedding dimension (model capacity)."""
 import logging
-import os
 import sys
 import time
 from collections import defaultdict
@@ -11,10 +11,8 @@ import torch
 from pytorch_lightning import seed_everything
 from sklearn.metrics import roc_auc_score
 
-# Allow running directly from eval/ without setting PYTHONPATH manually
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, '..')
 from reference_submit.kgrs import KGRS
-
 
 
 def nDCG(sorted_items, pos_item, train_pos_item, k=5):
@@ -31,12 +29,12 @@ def nDCG(sorted_items, pos_item, train_pos_item, k=5):
         else:
             valid_num += 1
             if sorted_items[index] in filter_item and sorted_items[index] not in recommended_items:
-                dcg += 1 / math.log2(index - train_hit_num + 2)  # Rank starts from 0
+                dcg += 1 / math.log2(index - train_hit_num + 2)
                 recommended_items.add(sorted_items[index])
             if valid_num >= k:
                 break
     idcg = sum([1 / math.log2(i + 2) for i in range(max_correct)])
-    return dcg / idcg
+    return dcg / idcg if idcg > 0 else 0.0
 
 
 def split_by_user(records, train_ratio=0.8, seed=1088):
@@ -49,9 +47,6 @@ def split_by_user(records, train_ratio=0.8, seed=1088):
     for rows in user_records.values():
         rows = np.asarray(rows, dtype=records.dtype)
         rng.shuffle(rows)
-
-        # Keep every user visible in training; split the remaining records globally
-        # so the final train size stays close to the requested 80%.
         train_parts.append(rows[:1])
         if len(rows) > 1:
             remaining_parts.append(rows[1:])
@@ -73,9 +68,8 @@ def split_by_user(records, train_ratio=0.8, seed=1088):
 
 
 def load_data():
-    data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
-    full_pos = np.load(os.path.join(data_dir, "train_pos.npy"))
-    full_neg = np.load(os.path.join(data_dir, "train_neg.npy"))
+    full_pos = np.load("../data/train_pos.npy")
+    full_neg = np.load("../data/train_neg.npy")
     train_pos, test_pos = split_by_user(full_pos, train_ratio=0.8, seed=1088)
     train_neg, test_neg = split_by_user(full_neg, train_ratio=0.8, seed=1089)
     return train_pos, train_neg, test_pos, test_neg
@@ -98,44 +92,54 @@ def get_user_pos_items(train_pos, test_pos):
     return user_pos_items, user_train_pos_items
 
 
-def evaluate():
+def evaluate_one(dim, epoch_num=20, lr=2e-3, bpr_weight=0.7):
     train_pos, train_neg, test_pos, test_neg = load_data()
     user_pos_items, user_train_pos_items = get_user_pos_items(train_pos=train_pos, test_pos=test_pos)
     logging.disable(logging.INFO)
     seed_everything(1088, workers=True)
     torch.set_num_threads(8)
-    auc, ndcg5 = 0, 0
-    init_timeout, train_timeout, ctr_timeout, topk_timeout = False, False, False, False
-    start_time, init_time, train_time, ctr_time, topk_time = time.time(), 0, 0, 0, 0
-    kg_path = os.path.join(os.path.dirname(__file__), "..", "data", "kg.txt")
+
+    start = time.time()
     kgrs = KGRS(train_pos=deepcopy(train_pos),
                 train_neg=deepcopy(train_neg),
-                kg_lines=open(kg_path, encoding='utf-8').readlines())
-    init_time = time.time() - start_time
-
+                kg_lines=open('../data/kg.txt', encoding='utf-8').readlines(),
+                dim=dim, lr=lr, bpr_weight=bpr_weight, epoch_num=epoch_num)
     kgrs.training()
-    train_time = time.time() - start_time - init_time
+    train_elapsed = time.time() - start
 
+    # CTR AUC
     test_data = np.concatenate((deepcopy(test_neg), deepcopy(test_pos)), axis=0)
     np.random.shuffle(test_data)
     test_label = test_data[:, 2]
     test_data = test_data[:, :2]
-    kgrs.eval_ctr(test_data)
     scores = kgrs.eval_ctr(test_data=test_data)
     auc = roc_auc_score(y_true=test_label, y_score=scores)
-    ctr_time = time.time() - start_time - init_time - train_time
 
+    # TopK nDCG@5
     users = list(user_pos_items.keys())
     user_item_lists = kgrs.eval_topk(users=users)
-    ndcg5 = np.mean([nDCG(user_item_lists[index], user_pos_items[user], user_train_pos_items[user]) for index, user in
-                     enumerate(users)])
+    ndcg5 = np.mean([nDCG(user_item_lists[index], user_pos_items[user], user_train_pos_items[user])
+                     for index, user in enumerate(users)])
 
-    topk_time = time.time() - start_time - init_time - train_time - ctr_time
+    return auc, ndcg5, train_elapsed
 
-    return auc, ndcg5, init_timeout, train_timeout, ctr_timeout, topk_timeout, init_time, train_time, ctr_time, topk_time
+
+def main():
+    dims = [32, 48, 64, 80, 96, 128]
+    print("Tuning embedding dimension (original baseline dim=48):")
+    print(f"{'dim':>5} | {'AUC':>8} | {'nDCG@5':>8} | {'time(s)':>8}")
+    print("-" * 40)
+    results = []
+    for dim in dims:
+        auc, ndcg5, t = evaluate_one(dim=dim)
+        results.append((dim, auc, ndcg5, t))
+        print(f"{dim:>5} | {auc:>8.5f} | {ndcg5:>8.5f} | {t:>8.1f}")
+
+    best_auc = max(results, key=lambda x: x[1])
+    best_ndcg = max(results, key=lambda x: x[2])
+    print(f"\nBest AUC   : dim={best_auc[0]}, AUC={best_auc[1]:.5f}")
+    print(f"Best nDCG@5: dim={best_ndcg[0]}, nDCG@5={best_ndcg[2]:.5f}")
 
 
 if __name__ == '__main__':
-    start = time.time()
-    print(evaluate())
-    print(time.time() - start)
+    main()

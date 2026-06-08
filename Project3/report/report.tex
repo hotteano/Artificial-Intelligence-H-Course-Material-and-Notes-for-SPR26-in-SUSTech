@@ -33,7 +33,7 @@
 \maketitle
 
 \begin{abstract}
-This report presents a hybrid knowledge graph-based recommender system for click-through-rate prediction and top-5 recommendation. The proposed method combines popularity priors, local temporal preference estimation, knowledge-graph content profiles, item-based collaborative filtering, and a neural matrix factorization model. The trainable component is optimized by a mixed objective consisting of binary cross-entropy and Bayesian personalized ranking loss, so that both pointwise classification accuracy and pairwise ranking quality are considered. On the local user-aware 80/20 validation protocol, the final system achieves an AUC of 0.7606 and an nDCG@5 of 0.1456, exceeding the highest grading threshold for nDCG@5.
+This report presents a hybrid knowledge graph-based recommender system for click-through-rate prediction and top-5 recommendation. The proposed method combines popularity priors, local temporal preference estimation, knowledge-graph content profiles, item-based collaborative filtering, and a neural matrix factorization model. The trainable component is optimized by a mixed objective consisting of binary cross-entropy and Bayesian personalized ranking loss, so that both pointwise classification accuracy and pairwise ranking quality are considered. For CTR prediction, the final system learns a lightweight logistic fusion layer on an internal holdout split instead of relying on manually tuned user-ID-dependent weights. On the local user-aware 80/20 validation protocol, the final system achieves an AUC of 0.8570 and an nDCG@5 of 0.1456.
 \end{abstract}
 
 \section{Introduction}
@@ -54,7 +54,7 @@ where $h$ and $t$ are entities and $r$ is a typed relation such as genre, direct
 
 Classical recommender systems usually follow either collaborative filtering or content-based filtering. Collaborative filtering estimates user preference from interaction similarity, for example through matrix factorization or item-based nearest-neighbor models. Content-based recommendation instead describes items by observable attributes and recommends items whose attributes match a user's historical profile.
 
-Knowledge graph-based recommendation extends content-based modeling by representing item attributes and semantic relations as structured triplets. In embedding-based KG recommenders, users, items, and relations are mapped into latent vectors and trained by link prediction objectives. However, in a small CPU-only setting, a purely neural KG embedding model may be less stable and less time-efficient. Therefore, this project adopts a pragmatic hybrid architecture: sparse KG features and collaborative signals provide robust ranking priors, while matrix factorization supplies trainable personalized scores.
+Knowledge graph-based recommendation extends content-based modeling by representing item attributes and semantic relations as structured triplets. In embedding-based KG recommenders, users, items, and relations are mapped into latent vectors and trained by link prediction objectives. However, in a small CPU-only setting, a purely neural KG embedding model may be less stable and less time-efficient. Therefore, this project adopts a pragmatic hybrid architecture: sparse KG features and collaborative signals provide robust ranking priors, while matrix factorization supplies trainable personalized scores. A learned CTR fusion layer is used to calibrate heterogeneous scores for AUC, while the top-5 branch keeps a ranking-oriented score combination.
 
 \section{Method}
 
@@ -178,19 +178,28 @@ The final training objective is
 
 \subsection{Final Scoring Functions}
 
-For CTR prediction, the final score combines user-position prior, cold-user indicator, local temporal score, popularity, KG content, item-CF, and matrix factorization:
+For CTR prediction, the submitted system first extracts five candidate scores:
 \begin{equation}
-\begin{aligned}
-    f_{\mathrm{CTR}}(u,i)
-    =&\;1.10z(u)
-    +0.95\mathbb{I}[u\notin\mathcal{U}_{\mathrm{train}}]
-    +0.70z(s_{\mathrm{tmp}}(u,i)) \\
-    &+0.40z(s_{\mathrm{pop}}(i))
-    +0.55z(s_{\mathrm{kg}}(u,i))
-    +0.45z(s_{\mathrm{cf}}(u,i))
-    +0.30z(s_{\mathrm{mf}}(u,i)).
-\end{aligned}
+    \mathbf{x}_{u,i}
+    =
+    \left[
+    s_{\mathrm{mf}}(u,i),
+    s_{\mathrm{tmp}}(u,i),
+    s_{\mathrm{kg}}(u,i),
+    s_{\mathrm{cf}}(u,i),
+    s_{\mathrm{pop}}(i)
+    \right].
 \end{equation}
+Instead of using user-ID-dependent features such as the raw user index or a cold-user indicator, the final CTR branch learns a small logistic fusion model on an internal holdout split of the training data. Let $\boldsymbol{\mu}$ and $\boldsymbol{\sigma}$ be the feature mean and standard deviation on this holdout set. The CTR score is
+\begin{equation}
+    f_{\mathrm{CTR}}(u,i)
+    =
+    b
+    +
+    \mathbf{w}^{\top}
+    \frac{\mathbf{x}_{u,i}-\boldsymbol{\mu}}{\boldsymbol{\sigma}+\epsilon}.
+\end{equation}
+The fusion weights $\mathbf{w}$ and bias $b$ are optimized by binary cross-entropy with a small $\ell_2$ penalty. If the learned fusion does not improve holdout AUC over the default robust mixture, the implementation falls back to the default mixture.
 
 For top-5 recommendation, the score for an observed user is
 \begin{equation}
@@ -217,8 +226,9 @@ Items appearing in the user's training positive set are filtered out before sele
 \State Extract sparse KG item features $\tilde{\phi}_i$ and user profiles $c_u$
 \State Build item similarity matrix $\mathrm{sim}(i,j)$ from positive co-occurrence
 \State Train matrix factorization by minimizing $\mathcal{L}_{\mathrm{BCE}}+0.7\mathcal{L}_{\mathrm{BPR}}$
+\State Learn CTR fusion weights on an internal holdout split
 \For{each CTR query $(u,i)$}
-    \State Return $f_{\mathrm{CTR}}(u,i)$
+    \State Extract $\mathbf{x}_{u,i}$ and return $f_{\mathrm{CTR}}(u,i)$
 \EndFor
 \For{each top-5 query user $u$}
     \State Score all items by $f_{\mathrm{top}}$ or $f_{\mathrm{cold}}$
@@ -304,17 +314,17 @@ where $\mathcal{T}_u^{+}$ is the positive test item set of user $u$.
 \toprule
 Metric & Value & Grading threshold \\
 \midrule
-AUC & 0.7606 & 0.7000 \\
+AUC & 0.8570 & 0.7000 \\
 nDCG@5 & 0.1456 & 0.1200 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The final model exceeds the highest threshold for both AUC and nDCG@5. The measured runtime is also well below the project limits: initialization takes about 0.58 seconds, training takes about 1.94 seconds for 20 epochs, CTR evaluation takes about 1.10 seconds, and top-5 evaluation takes about 3.06 seconds.
+The final model exceeds the highest threshold for both AUC and nDCG@5. The measured runtime is also well below the project limits: initialization takes about 0.66 seconds, training including CTR fusion takes about 4.47 seconds, CTR evaluation takes about 1.22 seconds, and top-5 evaluation takes about 4.38 seconds.
 
 \begin{table}[h]
 \centering
-\caption{Effect of matrix factorization training epochs}
+\caption{Effect of matrix factorization training epochs before learned CTR fusion}
 \begin{tabular}{rrrr}
 \toprule
 Epochs & AUC & nDCG@5 & Training time (s) \\
@@ -330,7 +340,26 @@ Epochs & AUC & nDCG@5 & Training time (s) \\
 \end{tabular}
 \end{table}
 
-Increasing the number of epochs improves AUC steadily, but nDCG@5 peaks at 20 epochs and slightly decreases afterwards. This suggests that longer training improves pointwise discrimination but may start to overfit the ranking objective. Therefore, 20 epochs are used in the final implementation.
+Before adding the learned CTR fusion layer, increasing the number of epochs improves AUC steadily, but nDCG@5 peaks at 20 epochs and slightly decreases afterwards. This suggests that longer training improves pointwise discrimination but may start to overfit the ranking objective. Therefore, 20 epochs are used for matrix factorization, and the final CTR calibration is then learned on an internal holdout split.
+
+\subsection{External MovieLens-1M Sanity Check}
+
+To test whether the model behavior is reasonable beyond the released project arrays, an additional sanity check is conducted on the original MovieLens-1M files. Ratings greater than or equal to 4 are treated as positive implicit feedback. For the implicit setting, negative samples are drawn from movies that the corresponding user has not rated. Movie genre, year, and decade are converted into simple KG triplets. This external test is not part of the official grading protocol, but it helps verify that the model is not only exploiting the specific project split.
+
+\begin{table}[h]
+\centering
+\caption{External MovieLens-1M validation}
+\begin{tabular}{lrr}
+\toprule
+Negative sampling protocol & AUC & nDCG@5 \\
+\midrule
+Low explicit ratings as negatives & 0.8917 & 0.2348 \\
+Unrated movies as negatives & 0.9388 & 0.2798 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The model obtains high AUC and nDCG@5 under both protocols. The unrated-negative protocol is closer to an implicit-feedback recommendation scenario and gives stronger performance, indicating that the hybrid signals generalize to a standard recommendation benchmark.
 
 \subsection{Comparison with a RotatE Variant}
 
@@ -359,27 +388,27 @@ where $\mathbf{r}_r$ is a complex-valued rotation with $|\mathbf{r}_r|=1$. The t
 
 \begin{table}[h]
 \centering
-\caption{Comparison between the final MF+BPR model and the RotatE variant}
+\caption{Comparison between the learned-fusion final model and the RotatE variant}
 \begin{tabular}{lrrrr}
 \toprule
 Model & AUC & nDCG@5 & Training time (s) & Top-5 time (s) \\
 \midrule
-MF+BPR hybrid & 0.7606 & 0.1456 & 1.65 & 3.70 \\
+MF+BPR hybrid with learned CTR fusion & 0.8570 & 0.1456 & 4.47 & 4.38 \\
 RotatE variant & 0.7527 & 0.1401 & 13.45 & 33.16 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The RotatE variant is theoretically more expressive for KG link prediction, but it is less effective in this recommendation setting. It requires scoring all candidate items through a complex-valued relation transformation during top-5 evaluation, which substantially increases CPU inference time. Moreover, the target task is user--item ranking rather than pure KG completion, so the simpler matrix factorization component trained with BCE+BPR provides a more direct inductive bias. Therefore, the final submitted system keeps the MF+BPR model and uses KG information through sparse content profiles.
+The RotatE variant is theoretically more expressive for KG link prediction, but it is less effective in this recommendation setting. It requires scoring all candidate items through a complex-valued relation transformation during top-5 evaluation, which substantially increases CPU inference time. Moreover, the target task is user--item ranking rather than pure KG completion, so the simpler matrix factorization component trained with BCE+BPR provides a more direct inductive bias. Therefore, the final submitted system keeps the MF+BPR model, uses KG information through sparse content profiles, and calibrates the CTR branch with learned fusion weights.
 
 \section{Discussion}
 
 The main advantage of the proposed system is that it combines heterogeneous evidence sources. Popularity and local temporal priors are robust for sparse or cold-start cases. KG content profiles exploit semantic item attributes and make recommendations less dependent on exact co-occurrence. Item-based collaborative filtering captures neighborhood-level preference transfer. Matrix factorization adds a trainable latent representation, and the BPR term directly encourages positive items to be ranked above negative items.
 
-The current implementation also has limitations. First, the fusion weights are manually tuned rather than learned end-to-end. Second, the KG component is based on sparse relation-neighbor features instead of deep relational message passing. Third, the local temporal prior uses user ID order as an empirical signal, which is effective for the provided data but may not generalize if the test distribution is randomly permuted.
+The current implementation also has limitations. First, the CTR fusion layer is learned only as a shallow logistic model rather than as an end-to-end neural architecture. Second, the KG component is based on sparse relation-neighbor features instead of deep relational message passing. Third, the local temporal prior uses user ID order as an empirical signal, which is effective for the provided data but may not generalize if the test distribution is randomly permuted. To reduce this risk in CTR prediction, the final system avoids raw user-ID and cold-user indicator features and relies on learned fusion of interaction, KG, CF, temporal, and popularity scores.
 
 \section{Conclusion}
 
-This project implements a hybrid KG-based recommender system for CTR prediction and top-5 recommendation. The final algorithm integrates popularity, temporal locality, KG content profiles, item-based collaborative filtering, and BCE+BPR-trained matrix factorization. A user-aware 80/20 validation protocol is adopted to avoid artificial cold-start bias caused by sorted interaction arrays. The final system obtains an AUC of 0.7606 and an nDCG@5 of 0.1456, satisfying the highest score thresholds under the local validation setting while remaining computationally efficient on CPU.
+This project implements a hybrid KG-based recommender system for CTR prediction and top-5 recommendation. The final algorithm integrates popularity, temporal locality, KG content profiles, item-based collaborative filtering, BCE+BPR-trained matrix factorization, and a learned logistic CTR fusion layer. A user-aware 80/20 validation protocol is adopted to avoid artificial cold-start bias caused by sorted interaction arrays. The final system obtains an AUC of 0.8570 and an nDCG@5 of 0.1456, satisfying the highest score thresholds under the local validation setting while remaining computationally efficient on CPU.
 
 \end{document}

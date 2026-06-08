@@ -357,15 +357,14 @@ class MatrixFactorModel(torch.nn.Module):
 
 
 class KGRS:
-    def __init__(self, train_pos: np.array, train_neg: np.array, kg_lines: List[str],
-                 dim=96, epoch_num=25):
+    def __init__(self, train_pos: np.array, train_neg: np.array, kg_lines: List[str]):
         rel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "relation2id.txt")
         self.rel_path = rel_path
         self.kg_lines = list(kg_lines)
         self.data = DataStore(train_pos, train_neg, kg_lines, rel_path)
         self.dataloader = self.data
-        self.model = MatrixFactorModel(self.data, dim=dim)
-        self.epoch_num = epoch_num
+        self.model = MatrixFactorModel(self.data)
+        self.epoch_num = 20
         self.ctr_weights = np.asarray([1.00, 0.40, 0.35, 0.30, 0.25], dtype=np.float32)
         self.ctr_bias = 0.0
         self.ctr_mean = np.zeros(len(self.ctr_weights), dtype=np.float32)
